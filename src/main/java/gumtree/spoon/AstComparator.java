@@ -1,8 +1,14 @@
 package gumtree.spoon;
 
 import java.io.File;
+import java.util.Base64;
 import java.util.Map;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+
+import gumtree.spoon.builder.Json4SpoonGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
@@ -17,6 +23,8 @@ import spoon.support.DefaultCoreFactory;
 import spoon.support.StandardEnvironment;
 import spoon.support.compiler.VirtualFile;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
+
+import static spark.Spark.*;
 
 /**
  * Computes the differences between two CtElements.
@@ -152,12 +160,47 @@ public class AstComparator {
 	}
 
 	public static void main(String[] args) throws Exception {
-		if (args.length != 2) {
-			System.out.println("Usage: DiffSpoon <file_1>  <file_2>");
-			return;
-		}
 
-		final Diff result = new AstComparator().compare(new File(args[0]), new File(args[1]));
-		System.out.println(result.toString());
+		port(8087);
+		get("/spoon", (req, res) -> {
+			res.header("Content-Type", "application/json");
+			res.header("Access-Control-Allow-Origin", "http://127.0.0.1:8080");
+			res.header("Access-Control-Allow-Credentials", "true");
+			String code = new String(Base64.getDecoder().decode(req.queryParams("code")));
+
+			Json4SpoonGenerator x = new Json4SpoonGenerator();
+			final Diff result = new AstComparator().compare(
+				"",
+				code);
+			System.out.println(result.getAllOperations().get(0));
+
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+			JsonObject r = x.getJSONasJsonObject(new AstComparator().getCtType(code));
+
+			return gson.toJson(r);
+		});
+		get("/gumtree", (req, res) -> {
+			res.header("Content-Type", "application/json");
+			res.header("Access-Control-Allow-Origin", "http://127.0.0.1:8080");
+			res.header("Access-Control-Allow-Credentials", "true");
+			String old = new String(Base64.getDecoder().decode(req.queryParams("old")));
+			String neww = new String(Base64.getDecoder().decode(req.queryParams("new")));
+
+			Json4SpoonGenerator x = new Json4SpoonGenerator();
+			final Diff result = new AstComparator().compare(
+				old,
+				neww);
+			// System.out.println(old);
+			// System.out.println(neww);
+			System.out.println(result.getAllOperations().get(0));
+
+			Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+			JsonObject r = x.getJSONasJsonObject(new AstComparator().getCtType(neww));
+
+			return gson.toJson(r);
+		});
 	}
+
 }
