@@ -9,11 +9,14 @@ import com.github.gumtreediff.tree.TreeContext;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import gumtree.spoon.builder.jsonsupport.NodePainter;
 import gumtree.spoon.builder.jsonsupport.OperationNodePainter;
 import gumtree.spoon.diff.operations.Operation;
+import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 
 /**
@@ -52,6 +55,18 @@ public class Json4SpoonGenerator {
 		JsonObject o = new JsonObject();
 		o.addProperty(JSON_PROPERTIES.label.toString(), tree.getLabel());
 		o.addProperty(JSON_PROPERTIES.type.toString(), context.getTypeLabel(tree));
+		CtElement e = (CtElement) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+		if (e != null) {
+			SourcePosition p = e.getPosition();
+			try {
+				o.add("loc", positionToJson(p));
+				o.addProperty("start", p.getSourceStart());
+				o.addProperty("end", p.getSourceEnd());
+			} catch (Exception ee) {
+				System.out.println(p);
+				System.out.println(ee);
+			}
+		}
 
 		JsonArray nodeChildens = new JsonArray();
 		o.add(JSON_PROPERTIES.children.toString(), nodeChildens);
@@ -62,7 +77,6 @@ public class Json4SpoonGenerator {
 				nodeChildens.add(childJSon);
 		}
 		return o;
-
 	}
 
 	/**
@@ -101,6 +115,19 @@ public class Json4SpoonGenerator {
 		}
 		return o;
 
+	}
+
+	public JsonElement positionToJson(SourcePosition pos) {
+		JsonObject loc = new JsonObject();
+		JsonObject start = new JsonObject();
+		JsonObject end = new JsonObject();
+		loc.add("start", start);
+		start.addProperty("line", pos.getLine());
+		start.addProperty("column", pos.getColumn());
+		loc.add("end", end);
+		end.addProperty("line", pos.getEndLine());
+		end.addProperty("column", pos.getEndColumn());
+		return loc;
 	}
 
 }
