@@ -204,7 +204,9 @@ public abstract class Operation<T extends Action> {
 		}
 
 		JsonObject curr = new JsonObject();
-		curr.add("name", new JsonPrimitive(element.getParent(CtClass.class).getQualifiedName()));
+		if (element.getParent(CtClass.class)!=null) {
+			curr.add("name", new JsonPrimitive(element.getParent(CtClass.class).getQualifiedName()));
+		}
 		if (element.getPosition() != null && !(element.getPosition() instanceof NoSourcePosition)) {
 			curr.add("start", new JsonPrimitive(element.getPosition().getSourceStart()));
 			curr.add("end", new JsonPrimitive(element.getPosition().getSourceEnd()));
@@ -215,7 +217,9 @@ public abstract class Operation<T extends Action> {
 			o.add("from", curr);
 			CtElement elementDest = (CtElement) this.action.getNode().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST);
 			JsonObject then = new JsonObject();
-			then.add("name", new JsonPrimitive(elementDest.getParent(CtClass.class).getQualifiedName()));
+			if (elementDest.getParent(CtClass.class)!=null) {
+				then.add("name", new JsonPrimitive(elementDest.getParent(CtClass.class).getQualifiedName()));
+			}
 			if (elementDest.getPosition() != null && !(elementDest.getPosition() instanceof NoSourcePosition)) {
 				then.add("start", new JsonPrimitive(elementDest.getPosition().getSourceStart()));
 				then.add("end", new JsonPrimitive(elementDest.getPosition().getSourceEnd()));
