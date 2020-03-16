@@ -1,6 +1,5 @@
 package gumtree.spoon.diff.operations;
 
-import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Update;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import spoon.reflect.declaration.CtElement;

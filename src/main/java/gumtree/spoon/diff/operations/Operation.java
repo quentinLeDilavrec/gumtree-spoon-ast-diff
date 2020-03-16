@@ -3,14 +3,12 @@ package gumtree.spoon.diff.operations;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.actions.model.Update;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
 import gumtree.spoon.builder.Json4SpoonGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
-import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtElement;
@@ -69,7 +67,7 @@ public abstract class Operation<T extends Action> {
 		}
 		String position = " at ";
 		if (parent instanceof CtType) {
-			position += ((CtType) parent).getQualifiedName();
+			position += ((CtType<?>) parent).getQualifiedName();
 		}
 		if (element.getPosition() != null && !(element.getPosition() instanceof NoSourcePosition)) {
 			position += ":" + element.getPosition().getLine();
@@ -163,39 +161,25 @@ public abstract class Operation<T extends Action> {
 		Json4SpoonGenerator x = new Json4SpoonGenerator();
 		JsonObject o = new JsonObject();
 
-		JsonArray nodeChildens = new JsonArray();
-
-		// String newline = System.getProperty("line.separator");
-		// StringBuilder stringBuilder = new StringBuilder();
-
 		// action name
-		Class aaa = this.action.getClass();
+		Class<?> actionClass = this.action.getClass();
 		// o.add("class0", new JsonPrimitive(aaa.toString()));
 		// o.add("class01", new JsonPrimitive(aaa.toGenericString()));
-		aaa.getSimpleName(); // TODO make an issue or report the bug, result change with the number of calls
-		o.add("class", new JsonPrimitive(aaa.getSimpleName()));
-		// o.add("class2", new JsonPrimitive(this.action.getClass().getSimpleName()));
-		// o.add("class_noaction", new JsonPrimitive(this.getClass().getSimpleName()));
-		// o.add("class3", new JsonPrimitive(this.action.getClass().getSimpleName()));
-		// stringBuilder.append(this.getClass().getSimpleName());
+		actionClass.getSimpleName(); // TODO make an issue or report the bug, result change with the number of calls
+		o.add("type", new JsonPrimitive(actionClass.getSimpleName()));
 
 		CtElement element = this.node;
 
 		if (element == null) {
-			// 
 			// some elements are only in the gumtree for having a clean diff but not in the Spoon metamodel
 			o.add("fake_node", new JsonPrimitive(this.action.getNode().getMetadata("type").toString()));
 			return o;
-			// return stringBuilder.toString() + " fake_node(" + this.getNode().getMetadata("type") + ")";
 		}
 
 		// node type
 		String nodeType = element.getClass().getSimpleName();
 		nodeType = nodeType.substring(2, nodeType.length() - 4);
 		o.add("node type", new JsonPrimitive(nodeType));
-		// String nodeType = element.getClass().getSimpleName();
-		// nodeType = nodeType.substring(2, nodeType.length() - 4);
-		// stringBuilder.append(" ").append(nodeType);
 
 		// action position
 		CtElement parent = element;
@@ -226,18 +210,22 @@ public abstract class Operation<T extends Action> {
 				then.add("loc", x.positionToJson(elementDest.getPosition()));
 			}
 			if (this.action instanceof Move) {
-				o.addProperty("value", elementDest.toString());
+				// o.addProperty("value", elementDest.toString());
 				o.add("valueAST", x.getJSONasJsonObject(elementDest));
+				// curr.addProperty("value", element.toString());
+				curr.add("valueAST", x.getJSONasJsonObject(element));
+				// then.addProperty("value", elementDest.toString());
+				then.add("valueAST", x.getJSONasJsonObject(elementDest));
 				o.add("to", then);
 			} else if(this.action instanceof Update) {
 				o.add("into", then);
-				then.addProperty("value", elementDest.toString());
+				// then.addProperty("value", elementDest.toString());
 				then.add("valueAST", x.getJSONasJsonObject(elementDest));
-				curr.addProperty("value", partialElementPrint(element));
+				// curr.addProperty("value", partialElementPrint(element));
 				curr.add("valueAST", x.getJSONasJsonObject(element));
 			}
 		} else {
-			curr.addProperty("value", partialElementPrint(element));
+			// curr.addProperty("value", partialElementPrint(element));
 			curr.add("valueAST", x.getJSONasJsonObject(element));
 			o.add("at", curr);
 		}

@@ -131,8 +131,8 @@ public class DiffImpl implements Diff {
 	@Override
 	public CtElement commonAncestor() {
 		final List<CtElement> copy = new ArrayList<>();
-		for (Operation operation : rootOperations) {
-			CtElement el = operation.getNode();
+		for (Operation<?> operation : rootOperations) {
+			CtElement el = operation.getSrcNode();
 			if (operation instanceof InsertOperation) {
 				// we take the corresponding node in the source tree
 				el = (CtElement) _mappingsComp.getSrc(operation.getAction().getNode().getParent())
@@ -220,7 +220,7 @@ public class DiffImpl implements Diff {
 		String result = "";
 		for (Operation operation : ops) {
 			ITree node = operation.getAction().getNode();
-			final CtElement nodeElement = operation.getNode();
+			final CtElement nodeElement = operation.getSrcNode();
 			String nodeType = context.getTypeLabel(node.getType());
 			if (nodeElement != null) {
 				nodeType += "(" + nodeElement.getClass().getSimpleName() + ")";
