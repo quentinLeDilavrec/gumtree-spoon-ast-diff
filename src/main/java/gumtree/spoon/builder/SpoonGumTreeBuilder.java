@@ -31,6 +31,7 @@ import spoon.reflect.declaration.CtElement;
 public class SpoonGumTreeBuilder {
 	public static final String SPOON_OBJECT = "spoon_object";
 	public static final String SPOON_OBJECT_DEST = "spoon_object_dest";
+	public static final String GT_OBJECT_DEST = "gumtree_object_dest";
 	public static final String GUMTREE_NODE = "gtnode";
 
 	private final TreeContext treeContext = new TreeContext();

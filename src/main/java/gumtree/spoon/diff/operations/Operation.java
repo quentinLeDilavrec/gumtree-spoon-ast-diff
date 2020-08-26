@@ -3,6 +3,7 @@ package gumtree.spoon.diff.operations;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.actions.model.Update;
+import com.github.gumtreediff.tree.ITree;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -12,28 +13,29 @@ import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.visitor.DefaultJavaPrettyPrinter;
 
 public abstract class Operation<T extends Action> {
-	private final CtElement node;
 	private final T action;
 
 	public Operation(T action) {
 		this.action = action;
-		this.node = (CtElement) action.getNode().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 	}
 
 	/** use {@link #getSrcNode()} or {@link #getDstNode()} instead. */
 	@Deprecated
 	public CtElement getNode() {
-		return node;
+		return (CtElement) action.getNode().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 	}
 
 	public T getAction() {
 		return action;
 	}
+
+	public abstract OperationKind getKind();
 
 	@Override
 	public String toString() {
@@ -45,14 +47,14 @@ public abstract class Operation<T extends Action> {
 		StringBuilder stringBuilder = new StringBuilder();
 
 		// action name
-		stringBuilder.append(action.getClass().getSimpleName());
+		stringBuilder.append(getAction().getClass().getSimpleName());
 
-		CtElement element = node;
+		CtElement element = getSrcNode();
 
 		if (element == null) {
 			// some elements are only in the gumtree for having a clean diff but not in the
 			// Spoon metamodel
-			return stringBuilder.toString() + " fake_node(" + action.getNode().getMetadata("type") + ")";
+			return stringBuilder.toString() + " fake_node(" + getAction().getNode().getMetadata("type") + ")";
 		}
 
 		// node type
@@ -62,6 +64,10 @@ public abstract class Operation<T extends Action> {
 
 		// action position
 		CtElement parent = element;
+		CtElement directParent = element;
+		if (directParent.getParent() != null && !(directParent.getParent() instanceof CtPackage)) {
+			directParent = directParent.getParent();
+		}
 		while (parent.getParent() != null && !(parent.getParent() instanceof CtPackage)) {
 			parent = parent.getParent();
 		}
@@ -72,16 +78,12 @@ public abstract class Operation<T extends Action> {
 		if (element.getPosition() != null && !(element.getPosition() instanceof NoSourcePosition)) {
 			position += ":" + element.getPosition().getLine();
 		}
-		if (action instanceof Move) {
-			CtElement elementDest = (CtElement) action.getNode().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST);
-			position = " from " + element.getParent(CtClass.class).getQualifiedName();
-			if (element.getPosition() != null && !(element.getPosition() instanceof NoSourcePosition)) {
-				position += ":" + element.getPosition().getLine();
-			}
-			position += " to " + elementDest.getParent(CtClass.class).getQualifiedName();
-			if (elementDest.getPosition() != null && !(elementDest.getPosition() instanceof NoSourcePosition)) {
-				position += ":" + elementDest.getPosition().getLine();
-			}
+		position += "(";
+		position += toStringPath(getSrc());
+		position += ")";
+		if (getAction() instanceof Move) {
+			position = " from " + toStringPath(getSrc());
+			position += " to " + toStringPath(getDst());
 		}
 		stringBuilder.append(position).append(newline);
 
@@ -91,14 +93,68 @@ public abstract class Operation<T extends Action> {
 			label = element.toString();
 		}
 		if (action instanceof Update) {
-			CtElement elementDest = (CtElement) action.getNode().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST);
-			label += " to " + elementDest.toString();
+			label += " to " + getDstNode().toString();
 		}
 		String[] split = label.split(newline);
 		for (String s : split) {
 			stringBuilder.append("\t").append(s).append(newline);
 		}
 		return stringBuilder.toString();
+	}
+
+	private static CtElement getElement(ITree node) {
+		return (CtElement) node.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+	}
+
+	private static String toStringPath(ITree node) {
+		// CtElement element = getElement(node);
+		ITree parent = node.getParent();
+		CtElement parentEle = getElement(parent);
+		String str = "";
+		while (parent != null && parentEle != null) {
+			if (parentEle instanceof CtType) {
+				str = ((CtType<?>) parentEle).getQualifiedName() + "[" + parent.getChildPosition(node) + "]" + str;
+				break;
+			} else if (parentEle instanceof CtExecutable) {
+				str = "#" + ((CtExecutable<?>) parentEle).getSimpleName() + "[" + parent.getChildPosition(node) + "]" + str;
+			} else {
+				str = "[" + parent.getChildPosition(node)+ "]" + str;
+			}
+			node = parent;
+			// element = getElement(node);
+			parent = node.getParent();
+			parentEle = getElement(parent);
+		}
+
+		// CtType<?> parentType = getElement(node).getParent(CtType.class);
+		// CtExecutable<?> parentExe = getElement(node).getParent(CtExecutable.class);
+		// if (parentExe != null) {
+		// 	str += parentExe.getReference().getDeclaringType() + "#" + parentExe.getSimpleName() + "()";
+		// } else if (parentType != null) {
+		// 	str += parentType.getQualifiedName();
+		// }
+
+		// if (element instanceof CtType) {//TODO
+		// 	str += ((CtType<?>) element).getQualifiedName();
+		// 	if (element.getPosition() != null && !(element.getPosition() instanceof NoSourcePosition)) {
+		// 		str += ":" + element.getPosition().getLine();
+		// 	}
+		// 	str += "(";
+		// 	str += element.getLabel();
+		// 	str += "[" + node.getParent().getChildPosition(node);
+		// 	str += "])";
+		// } else if (element instanceof CtExecutable) {//TODO
+		// 	str += (element.getParent(CtType.class) != null ? element.getParent(CtType.class).getQualifiedName()
+		// 			: ((CtType<?>) element).getQualifiedName());
+		// 	if (element.getPosition() != null && !(element.getPosition() instanceof NoSourcePosition)) {
+		// 		str += ":" + element.getPosition().getLine();
+		// 	}
+		// 	str += "(";
+		// 	str += node.getParent().getLabel();
+		// 	str += "[" + node.getParent().getChildPosition(node);
+		// 	str += "])";
+		// }
+		return str;
 	}
 
 	private String partialElementPrint(CtElement element) {
@@ -116,13 +172,25 @@ public abstract class Operation<T extends Action> {
 		return print.getResult();
 	}
 
-	/** returns the changed (inserded/deleted/updated) element */
+	/** returns the changed (inserded/deleted/updated/moved) element */
 	public CtElement getSrcNode() {
-		return node;
+		return (CtElement) getSrc().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 	}
 
-	/** returns the new version of the node (only for update) */
+	public ITree getSrc() {
+		return action.getNode();
+	}
+
+	/** 
+	 * returns the new version of the node (only for update and move) 
+	 * should not really be used like that
+	 * better use the mapper?
+	 */
 	public CtElement getDstNode() {
+		return null;
+	}
+
+	public ITree getDst() {
 		return null;
 	}
 
@@ -130,8 +198,8 @@ public abstract class Operation<T extends Action> {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((action == null) ? 0 : action.hashCode());
-		result = prime * result + ((node == null) ? 0 : node.hashCode());
+		result = prime * result + ((getAction() == null) ? 0 : getAction().hashCode());
+		result = prime * result + ((getSrcNode() == null) ? 0 : getSrcNode().hashCode());
 		return result;
 	}
 
@@ -144,15 +212,15 @@ public abstract class Operation<T extends Action> {
 		if (getClass() != obj.getClass())
 			return false;
 		Operation other = (Operation) obj;
-		if (action == null) {
-			if (other.action != null)
+		if (getAction() == null) {
+			if (other.getAction() != null)
 				return false;
-		} else if (!action.equals(other.action))
+		} else if (!getAction().equals(other.getAction()))
 			return false;
-		if (node == null) {
-			if (other.node != null)
+		if (getSrcNode() == null) {
+			if (other.getSrcNode() != null)
 				return false;
-		} else if (!node.equals(other.node))
+		} else if (!getSrcNode().equals(other.getSrcNode()))
 			return false;
 		return true;
 	}
@@ -162,17 +230,17 @@ public abstract class Operation<T extends Action> {
 		JsonObject o = new JsonObject();
 
 		// action name
-		Class<?> actionClass = this.action.getClass();
+		Class<?> actionClass = getAction().getClass();
 		// o.add("class0", new JsonPrimitive(aaa.toString()));
 		// o.add("class01", new JsonPrimitive(aaa.toGenericString()));
 		actionClass.getSimpleName(); // TODO make an issue or report the bug, result change with the number of calls
 		o.add("type", new JsonPrimitive(actionClass.getSimpleName()));
 
-		CtElement element = this.node;
+		CtElement element = getSrcNode();
 
 		if (element == null) {
 			// some elements are only in the gumtree for having a clean diff but not in the Spoon metamodel
-			o.add("fake_node", new JsonPrimitive(this.action.getNode().getMetadata("type").toString()));
+			o.add("fake_node", new JsonPrimitive(getAction().getNode().getMetadata("type").toString()));
 			return o;
 		}
 
@@ -188,7 +256,7 @@ public abstract class Operation<T extends Action> {
 		}
 
 		JsonObject curr = new JsonObject();
-		if (element.getParent(CtClass.class)!=null) {
+		if (element.getParent(CtClass.class) != null) {
 			curr.add("name", new JsonPrimitive(element.getParent(CtClass.class).getQualifiedName()));
 		}
 		if (element.getPosition() != null && !(element.getPosition() instanceof NoSourcePosition)) {
@@ -197,11 +265,12 @@ public abstract class Operation<T extends Action> {
 			curr.add("loc", x.positionToJson(element.getPosition()));
 		}
 
-		if (this.action instanceof Move || this.action instanceof Update) {
+		if (getAction() instanceof Move || getAction() instanceof Update) {
 			o.add("from", curr);
-			CtElement elementDest = (CtElement) this.action.getNode().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST);
+			CtElement elementDest = (CtElement) getAction().getNode()
+					.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST);
 			JsonObject then = new JsonObject();
-			if (elementDest.getParent(CtClass.class)!=null) {
+			if (elementDest.getParent(CtClass.class) != null) {
 				then.add("name", new JsonPrimitive(elementDest.getParent(CtClass.class).getQualifiedName()));
 			}
 			if (elementDest.getPosition() != null && !(elementDest.getPosition() instanceof NoSourcePosition)) {
@@ -209,7 +278,7 @@ public abstract class Operation<T extends Action> {
 				then.add("end", new JsonPrimitive(elementDest.getPosition().getSourceEnd()));
 				then.add("loc", x.positionToJson(elementDest.getPosition()));
 			}
-			if (this.action instanceof Move) {
+			if (getAction() instanceof Move) {
 				// o.addProperty("value", elementDest.toString());
 				o.add("valueAST", x.getJSONasJsonObject(elementDest));
 				// curr.addProperty("value", element.toString());
@@ -217,7 +286,7 @@ public abstract class Operation<T extends Action> {
 				// then.addProperty("value", elementDest.toString());
 				then.add("valueAST", x.getJSONasJsonObject(elementDest));
 				o.add("to", then);
-			} else if(this.action instanceof Update) {
+			} else if (getAction() instanceof Update) {
 				o.add("into", then);
 				// then.addProperty("value", elementDest.toString());
 				then.add("valueAST", x.getJSONasJsonObject(elementDest));
@@ -233,53 +302,18 @@ public abstract class Operation<T extends Action> {
 	}
 }
 
+// 
+// 
+// 
 
-	
-		
-		
-		
-		
-			
-			
-		
-		
-			
-			
-			
-			
-		
-	
+// 
+// 
+// 
 
-	
-
-	
-	
-	
-	
-	 
-	 
-	
-	 
-	
-	
-	 
-	 
-	// 
-	 
-	 
-	// 
-	 
-	// 
-	 
-
-	 
-	
-	
-	
-	 
-	
-
-	
-	
-	
-	
+// 
+// 
+// 
+// 
+// 
+// 
+// 

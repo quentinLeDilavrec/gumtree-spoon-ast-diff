@@ -6,4 +6,10 @@ public class InsertOperation extends AdditionOperation<Insert> {
 	public InsertOperation(Insert action) {
 		super(action);
 	}
+
+	@Override
+	public OperationKind getKind() {
+		return OperationKind.Insert;
+	}
+
 }

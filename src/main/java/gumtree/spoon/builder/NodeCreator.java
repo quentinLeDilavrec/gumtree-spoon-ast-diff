@@ -4,11 +4,11 @@ import com.github.gumtreediff.tree.ITree;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtModifiable;
 import spoon.reflect.declaration.CtVariable;
-import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtInheritanceScanner;
+import spoon.support.reflect.CtExtendedModifier;
 
 import java.util.Comparator;
 import java.util.Set;
@@ -36,23 +36,23 @@ public class NodeCreator extends CtInheritanceScanner {
 		ITree modifiers = builder.createNode(type, "");
 
 		// We create a virtual node
-		modifiers.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new CtVirtualElement(type, m, m.getModifiers()));
+		modifiers.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new CtVirtualElement(type, m, m.getExtendedModifiers()));
 
 		// ensuring an order (instead of hashset)
 		// otherwise some flaky tests in CI
-		Set<ModifierKind> modifiers1 = new TreeSet<>(new Comparator<ModifierKind>() {
+		Set<CtExtendedModifier> modifiers1 = new TreeSet<>(new Comparator<CtExtendedModifier>() {
 			@Override
-			public int compare(ModifierKind o1, ModifierKind o2) {
-				return o1.name().compareTo(o2.name());
+			public int compare(CtExtendedModifier o1, CtExtendedModifier o2) {
+				return o1.getKind().name().compareTo(o2.getKind().name());
 			}
 		});
-		modifiers1.addAll(m.getModifiers());
+		modifiers1.addAll(m.getExtendedModifiers());
 
-		for (ModifierKind kind : modifiers1) {
-			ITree modifier = builder.createNode("Modifier", kind.toString());
+		for (CtExtendedModifier mod : modifiers1) {
+			ITree modifier = builder.createNode("Modifier", mod.toString());
 			modifiers.addChild(modifier);
 			// We wrap the modifier (which is not a ctelement)
-			modifier.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new CtWrapper(kind, m));
+			modifier.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new CtWrapper(mod, m));
 		}
 		builder.addSiblingNode(modifiers);
 
@@ -98,8 +98,6 @@ public class NodeCreator extends CtInheritanceScanner {
 
     @Override
     public void scanCtReference(CtReference reference) {
-
-
         if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.SUPER_TYPE) {
             ITree superType = builder.createNode("SUPER_TYPE", reference.toString());
             CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent());

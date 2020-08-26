@@ -1,5 +1,6 @@
 package gumtree.spoon.diff;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +20,7 @@ import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 
+import gnu.trove.map.TIntObjectMap;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.operations.DeleteOperation;
 import gumtree.spoon.diff.operations.InsertOperation;
@@ -62,13 +64,19 @@ public class DiffImpl implements Diff {
 		final ActionGenerator actionGenerator = new ActionGenerator(rootSpoonLeft, rootSpoonRight,
 				matcher.getMappings());
 		actionGenerator.generate();
+		List<Action> actions;
+		String b = System.getProperty("gumtree.match.gt.ag.nomove");
+		if (b != null && b.equals("true")) {
+			actions = removeMovesAndUpdates(actionGenerator);
+		} else {
+			actions = actionGenerator.getActions();
+		}
 
-		ActionClassifier actionClassifier = new ActionClassifier(matcher.getMappingsAsSet(),
-				actionGenerator.getActions());
+		ActionClassifier actionClassifier = new ActionClassifier(matcher.getMappingsAsSet(), actions);
 		// Bugfix: the Action classifier must be executed *BEFORE* the convertToSpoon
 		// because it writes meta-data on the trees
 		this.rootOperations = convertToSpoon(actionClassifier.getRootActions());
-		this.allOperations = convertToSpoon(actionGenerator.getActions());
+		this.allOperations = convertToSpoon(actions);
 
 		this._mappingsComp = mappingsComp;
 
@@ -83,6 +91,44 @@ public class DiffImpl implements Diff {
 				}
 			}
 		}
+	}
+
+	private List<Action> removeMovesAndUpdates(ActionGenerator actionGenerator) {
+		try {
+			TIntObjectMap<ITree> origSrcTrees = extracted(actionGenerator, "origSrcTrees");
+			TIntObjectMap<ITree> cpySrcTrees = extracted(actionGenerator, "cpySrcTrees");
+			List<Action> actions = extracted(actionGenerator, "actions");
+			MappingStore origMappings = extracted(actionGenerator, "origMappings");
+			List<Action> actionsCpy = new ArrayList<>(actions.size());
+			for (Action a : actions) {
+				if (a instanceof Update) {
+					Update u = (Update) a;
+					ITree src = cpySrcTrees.get(a.getNode().getId());
+					ITree dst = origMappings.getDst(src);
+					actionsCpy.add(new Insert(dst, dst.getParent(), dst.positionInParent()));
+					actionsCpy.add(new Delete(origSrcTrees.get(u.getNode().getId())));
+				} else if (a instanceof Move) {
+					Move m = (Move) a;
+					ITree src = cpySrcTrees.get(a.getNode().getId());
+					ITree dst = origMappings.getDst(src);
+					actionsCpy.add(new Insert(dst, dst.getParent(), m.getPosition()));
+					actionsCpy.add(new Delete(origSrcTrees.get(m.getNode().getId())));
+				} else {
+					actionsCpy.add(a);
+				}
+			}
+
+			return actionsCpy;
+		} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private <T> T extracted(ActionGenerator actionGenerator, String name)
+			throws NoSuchFieldException, IllegalAccessException {
+		Field field = actionGenerator.getClass().getDeclaredField(name);
+		field.setAccessible(true);
+		return (T) field.get(actionGenerator);
 	}
 
 	private List<Operation> convertToSpoon(List<Action> actions) {
@@ -199,12 +245,11 @@ public class DiffImpl implements Diff {
 		if (kind != OperationKind.Update) {
 			throw new IllegalArgumentException();
 		}
-		return getRootOperations().stream()
-				.anyMatch(operation -> operation instanceof UpdateOperation //
-						&& ((UpdateOperation) operation).getAction().getNode().getLabel().equals(nodeLabel)
-						&& ((UpdateOperation)operation).getAction().getValue().equals(newLabel)
+		return getRootOperations().stream().anyMatch(operation -> operation instanceof UpdateOperation //
+				&& ((UpdateOperation) operation).getAction().getNode().getLabel().equals(nodeLabel)
+				&& ((UpdateOperation) operation).getAction().getValue().equals(newLabel)
 
-				);
+		);
 	}
 
 	@Override
@@ -225,7 +270,8 @@ public class DiffImpl implements Diff {
 			if (nodeElement != null) {
 				nodeType += "(" + nodeElement.getClass().getSimpleName() + ")";
 			}
-			result += "OperationKind." + operation.getAction().getClass().getSimpleName() + ", \"" + nodeType + "\", \"" + node.getLabel()+ "\"";
+			result += "OperationKind." + operation.getAction().getClass().getSimpleName() + ", \"" + nodeType + "\", \""
+					+ node.getLabel() + "\"";
 
 			if (operation instanceof UpdateOperation) {
 				// adding the new value for update

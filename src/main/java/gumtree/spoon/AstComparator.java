@@ -75,6 +75,8 @@ public class AstComparator {
 		// see AbstractBottomUpMatcher#SIZE_THRESHOD in Gumtree
 		// System.setProperty("gumtree.match.bu.size","10");
 		// System.setProperty("gt.bum.szt", "1000");
+		// System.setProperty("gumtree.match.gt.ag.nomove", "true");
+		
 	}
 	/**
 	 * By default, comments are ignored

@@ -1,20 +1,29 @@
 package gumtree.spoon.diff.operations;
 
 import com.github.gumtreediff.actions.model.Update;
+import com.github.gumtreediff.tree.ITree;
+
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import spoon.reflect.declaration.CtElement;
 
 public class UpdateOperation extends Operation<Update> {
-	private final CtElement destElement;
-
 	public UpdateOperation(Update action) {
 		super(action);
-		destElement = (CtElement) action.getNode().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST);
 	}
 
 	@Override
 	public CtElement getDstNode() {
-		return destElement;
+		return (CtElement) getAction().getNode().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST);
+	}
+
+	@Override
+	public ITree getDst() {
+		return (ITree) getAction().getNode().getMetadata(SpoonGumTreeBuilder.GT_OBJECT_DEST);
+	}
+
+	@Override
+	public OperationKind getKind() {
+		return OperationKind.Update;
 	}
 
 }

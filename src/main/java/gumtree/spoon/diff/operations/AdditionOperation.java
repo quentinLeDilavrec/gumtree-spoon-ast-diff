@@ -6,29 +6,24 @@ import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import spoon.reflect.declaration.CtElement;
 
 abstract class AdditionOperation<T extends Addition> extends Operation<T> {
-	private final CtElement parent;
-	private final int position;
-
 	AdditionOperation(T action) {
 		super(action);
-		position = action.getPosition();
-		parent = (CtElement) action.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 	}
 
 	public int getPosition() {
-		return position;
+		return getAction().getPosition();
 	}
 
 	public CtElement getParent() {
-		return parent;
+		return (CtElement) getAction().getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = super.hashCode();
-		result = prime * result + ((parent == null) ? 0 : parent.hashCode());
-		result = prime * result + position;
+		result = prime * result + ((getParent() == null) ? 0 : getParent().hashCode());
+		result = prime * result + getPosition();
 		return result;
 	}
 
@@ -41,12 +36,12 @@ abstract class AdditionOperation<T extends Addition> extends Operation<T> {
 		if (getClass() != obj.getClass())
 			return false;
 		AdditionOperation other = (AdditionOperation) obj;
-		if (parent == null) {
-			if (other.parent != null)
+		if (getParent() == null) {
+			if (other.getParent() != null)
 				return false;
-		} else if (!parent.equals(other.parent))
+		} else if (!getParent().equals(other.getParent()))
 			return false;
-		if (position != other.position)
+		if (getPosition() != other.getPosition())
 			return false;
 		return true;
 	}
