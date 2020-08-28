@@ -451,34 +451,45 @@ public class MyTest {
             System.out.println(x);
         }
     }
+
     @Test
     public void testItWithConstraints3() {
         for (int x : Combination.pi(3)) {
             System.out.println(x);
         }
     }
+
     @Test
     public void testItWithConstraints4() {
         for (int x : Combination.pi(10)) {
             System.out.println(x);
         }
     }
+
     @Test
     public void testItWithConstraints5() {
         // Combination.Monotonic.print(Combination.Monotonic.aux(1,0,true));
         // Combination.Monotonic.print(Combination.Monotonic.aux(2,0,true));
         // Combination.Monotonic.print(Combination.Monotonic.aux(2,1,true));
         // Combination.Monotonic.print(Combination.Monotonic.aux(3,0,true));
-        Combination.Monotonic.print(Combination.Monotonic.aux(3,1,true));
-        Combination.Monotonic.print(Combination.Monotonic.aux(3,2,true));
-        Combination.Monotonic.print(Combination.Monotonic.aux(4,0,true));
-        Combination.Monotonic.print(Combination.Monotonic.aux(4,1,true));
-        Combination.Monotonic.print(Combination.Monotonic.aux(4,2,true));
-        Combination.Monotonic.print(Combination.Monotonic.aux(4,3,true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(3, 1, true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(3, 2, true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(4, 0, true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(4, 1, true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(4, 2, true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(4, 3, true));
     }
 
     @Test
     public void testItWithConstraints6() {
         Combination.Monotonic.print(Combination.Monotonic.useAux(5));
     }
+
+    @Test
+    public void testItWithConstraints7() {
+        int[] deps = new int[] { 0, 0, 0, 2, 2, 0, 5, 5, 6, 8, 9, 10, 10, 13 };
+        int[] leafs = new int[] { 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0 };
+        Combination.Monotonic.print(Combination.constrained(14, leafs, deps));
+    }
+
 }

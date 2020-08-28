@@ -155,9 +155,38 @@ public class Combination {
             return null;
         }
 
+        public int[] next(int n) {
+            if (i < n) {
+                int[] cp = i % 2 == 0 ? next(n, i) : next(n, i, true);
+                if (cp == null) {
+                    ++i;
+                    return next(n);
+                }
+                return cp;
+            } else {
+                return null;
+            }
+        }
+
+        public int[] next() {
+            if (lastN < nWanted - 1) {
+                while (lastN < nWanted - 1) {
+                    int[] tmp = next(lastN + 1);
+                    if (tmp == null) {
+                        ++lastN;
+                        i = 0;
+                    }
+                }
+                ++lastN;
+            } else if (lastN < nWanted) {
+                ++lastN;
+            }
+            return next(lastN);
+        }
+
         public static List<int[]> useAux(int n) {
             List<int[]> r = new ArrayList<>();
-                // TODO avoid redoing work as we inc i (need to keep track of 2 state by parity, maybe better)
+            // TODO avoid redoing work as we inc i (need to keep track of 2 state by parity, maybe better)
             for (int i = 0; i < n; i++) {
                 if (i % 2 == 0) {
                     r.addAll(aux(n, i, false));
@@ -238,35 +267,75 @@ public class Combination {
             }
             return r;
         }
-
-        public int[] next(int n) {
-            if (i < n) {
-                int[] cp = i % 2 == 0 ? next(n, i) : next(n, i, true);
-                if (cp == null) {
-                    ++i;
-                    return next(n);
-                }
-                return cp;
-            } else {
-                return null;
-            }
-        }
-
-        public int[] next() {
-            if (lastN < nWanted - 1) {
-                while (lastN < nWanted - 1) {
-                    int[] tmp = next(lastN + 1);
-                    if (tmp == null) {
-                        ++lastN;
-                        i = 0;
-                    }
-                }
-                ++lastN;
-            } else if (lastN < nWanted) {
-                ++lastN;
-            }
-            return next(lastN);
-        }
     }
 
+    public static List<int[]> constrained(int n, int[] leafs, int[] deps) {
+        List<int[]> r = new ArrayList<>();
+        int leafsCount = 0;
+        for (int i = 0; i < n; i++) {
+            leafsCount += leafs[i];
+        }
+        List<int[]> mono = Monotonic.useAux(leafsCount);
+        int[] prev = new int[n];
+        for (int[] nrx : mono) {
+            int[] x = new int[nrx.length];
+            for (int j = 0; j < nrx.length; j++) {
+                x[nrx.length - j - 1] = nrx[j];
+            }
+            int[] curr = new int[n];
+            curr = populateAndFillConstr(x, curr, leafs, deps);
+            for (int[] aux_r : constructByConstraints(n, prev, curr, deps)) {
+                r.add(aux_r);
+                prev = aux_r;
+            }
+            r.add(curr);
+            prev = curr;
+        }
+
+        return r;
+    }
+
+    private static List<int[]> constructByConstraints(int n, int[] prev, int[] curr, int[] deps) {
+        // TODO copy? curr = list(curr)
+        curr = Arrays.copyOfRange(curr, 0, curr.length);
+        int[] to_change = new int[n];
+        List<int[]> res = new ArrayList<>();
+        for (int i = n - 1; i >= 0; i--) {
+            curr = Arrays.copyOfRange(curr, 0, curr.length);
+            if (to_change[i] == 1) {
+                int[] tmp = Arrays.copyOfRange(prev, 0, prev.length);
+                tmp[i] = 1;
+                curr[i] = 1;
+                curr = fillConstr(curr, 0, deps);
+                res.add(0, fillConstr(tmp, 0, deps)); // TODO perfs?
+            }
+            if (curr[i] == 1 && prev[i] == 0 && prev[deps[i]] == 0) {
+                to_change[deps[i]] = 1;
+            } else if (curr[i] == 1 && prev[i] == 0 && prev[deps[i]] == 0 && to_change[deps[i]] == 1) {
+                to_change[deps[i]] = 0;
+            }
+        }
+        return res;
+    }
+
+    private static int[] fillConstr(int[] curr, int i, int[] deps) {
+        for (int k = curr.length - 1; k >= 0; k--) {
+            curr[deps[k]] = curr[k] | curr[deps[k]];
+        }
+        return curr;
+    }
+
+    private static int[] populateAndFillConstr(int[] x, int[] curr, int[] leafs, int[] deps) {
+        for (int i = curr.length - 1; i >= 0; i--) {
+            if(leafs[i]==1){
+                int j = -1;
+                for (int ii = 0; ii < i; ii++) {
+                    j += leafs[ii];
+                }
+                curr[i] = j>=0 ? x[j]:0;
+            }
+            curr[deps[i]] = curr[i] | curr[deps[i]];
+        }
+        return curr;
+    }
 }

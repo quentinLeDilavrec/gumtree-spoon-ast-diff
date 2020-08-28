@@ -46,7 +46,7 @@ n = 14
 deps =  [0, 0, 0, 2, 2, 0, 5, 5, 6, 8, 9, 10, 10,13][:n]
 leafs = [0 if i in deps else 1 for i in range(len(deps))]
 
-def auxaux(x,curr):
+def gaaa(x,curr,leafs,deps):
     for i in (list(range(len(curr))))[::-1]:
         if leafs[i]:
             j = sum(leafs[:i])-1
@@ -54,12 +54,12 @@ def auxaux(x,curr):
         curr[deps[i]] = curr[i] or curr[deps[i]]
     return curr
 
-def auxauxconstr(curr, i):
+def gaaaConstr(curr, i,deps):
     for i in (list(range(len(curr))))[::-1]:
         curr[deps[i]] = curr[i] or curr[deps[i]]
     return curr
 
-def aux(n, prev, curr):
+def faaa(n, prev, curr,deps):
     curr = list(curr)
     to_change = [0 for x in range(n)]
     res = []
@@ -70,8 +70,8 @@ def aux(n, prev, curr):
             tmp = list(prev)
             tmp[i] = 1
             curr[i] = 1
-            curr = auxauxconstr(curr,0)
-            res.append(auxauxconstr(tmp,0))
+            curr = gaaaConstr(curr,0,deps)
+            res.append(gaaaConstr(tmp,0,deps))
         if curr[i]==1 and prev[i]==0 and prev[deps[i]]==0:
             to_change[deps[i]] = 1
         elif curr[i]==1 and prev[i]==0 and prev[deps[i]]==0 and to_change[deps[i]]==1:
@@ -88,8 +88,8 @@ def constrained(n):
     for x in mono:
         x = x[::-1]
         curr = [0 for a in range(n)]
-        curr = auxaux(x,curr)
-        for aux_r in aux(n, prev, curr):
+        curr = gaaa(x,curr,leafs,deps)
+        for aux_r in faaa(n, prev, curr,deps):
             print(aux_r,sum([1 for i in range(n) if aux_r[i]!=prev[i]]), aux_r in already_found)
             yield (aux_r,sum([1 for i in range(n) if aux_r[i]!=prev[i]]), aux_r in already_found)
             already_found.append(aux_r)
@@ -158,3 +158,7 @@ print(rotate_right([1,2,3],1))
 print()
 print()
 printMat(monotonic(5))
+print()
+print(leafs)
+print(deps)
+print(len(deps))
