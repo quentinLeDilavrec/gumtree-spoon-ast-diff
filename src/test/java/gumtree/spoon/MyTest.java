@@ -12,6 +12,7 @@ import com.github.gumtreediff.tree.AbstractTree.FakeTree;
 
 import org.junit.Test;
 
+import gumtree.spoon.apply.Combination;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.operations.*;
 import gumtree.spoon.diff.support.SpoonSupport;
@@ -413,10 +414,10 @@ public class MyTest {
          * @return
          */
         public long next() {
-            while (++i < (0x1L<<ll.length)) { // done
+            while (++i < (0x1L << ll.length)) { // done
                 long k = 0x1L; // mask corresponding to kk
                 int kk = 0x0; // index in i
-                for (; k<(0x1L<<ll.length);) { // while k in range
+                for (; k < (0x1L << ll.length);) { // while k in range
                     if ((i & k) != 0) { // current bit is true ?
                         if ((i & (0x1L << ll[kk])) == 0x0L) { // needed bit is false ?
                             break;
@@ -425,7 +426,7 @@ public class MyTest {
                     k = (long) (k << 0x1L); // go from right to left
                     ++kk; // idem
                 }
-                if (k>=(0x1L<<ll.length)) {
+                if (k >= (0x1L << ll.length)) {
                     return i;
                 }
             }
@@ -435,10 +436,49 @@ public class MyTest {
 
     @Test
     public void testItWithConstraints1() {
-        ItWithConstraints it = new ItWithConstraints(new long[] { 0, 0, 2, 3 });
+        ItWithConstraints it = new ItWithConstraints(new long[] { 0, 0, 2, 0 });
         long i = 0;
         do {
-            System.err.println(String.format("%64s", Long.toBinaryString(i=it.next())).replace(" ", "0"));      
-        } while (i>0x0L);
+            long tmp = it.next();
+            System.err.println(String.format("%64s", Long.toBinaryString(i ^ tmp)).replace(" ", "0"));
+            i = tmp;
+        } while (i > 0x0L);
+    }
+
+    @Test
+    public void testItWithConstraints2() {
+        for (int x : Combination.rotateRight(new int[] { 1, 2, 3 }, 3)) {
+            System.out.println(x);
+        }
+    }
+    @Test
+    public void testItWithConstraints3() {
+        for (int x : Combination.pi(3)) {
+            System.out.println(x);
+        }
+    }
+    @Test
+    public void testItWithConstraints4() {
+        for (int x : Combination.pi(10)) {
+            System.out.println(x);
+        }
+    }
+    @Test
+    public void testItWithConstraints5() {
+        // Combination.Monotonic.print(Combination.Monotonic.aux(1,0,true));
+        // Combination.Monotonic.print(Combination.Monotonic.aux(2,0,true));
+        // Combination.Monotonic.print(Combination.Monotonic.aux(2,1,true));
+        // Combination.Monotonic.print(Combination.Monotonic.aux(3,0,true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(3,1,true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(3,2,true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(4,0,true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(4,1,true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(4,2,true));
+        Combination.Monotonic.print(Combination.Monotonic.aux(4,3,true));
+    }
+
+    @Test
+    public void testItWithConstraints6() {
+        Combination.Monotonic.print(Combination.Monotonic.useAux(5));
     }
 }
