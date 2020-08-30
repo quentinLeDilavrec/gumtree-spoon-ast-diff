@@ -2,7 +2,19 @@ package gumtree.spoon.apply;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.stream.Collectors;
+
+import com.github.gumtreediff.tree.ITree;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
+
+import gumtree.spoon.diff.operations.Operation;
 
 public class Combination {
 
@@ -210,16 +222,16 @@ public class Combination {
 
         public static List<int[]> aux(int n, int jLen, boolean reverse) {
             List<int[]> r = new ArrayList<>();
-            int[][][] diag = new int[TRY + n - 1][][];
+            int[][][] diag = new int[n - 1][][];
             int[][] aaa = reverse ? new int[][] { { 1 }, { 0 } } : new int[][] { { 0 }, { 1 } };
             int[][] prevL = new int[][] {};
-            int[] diagC = new int[TRY + n - 1];
+            int[] diagC = new int[n - 1];
             if (n > 1) {
                 diag[0] = new int[][] {};
             }
-            for (int j = TRY + 0; j <= TRY + jLen; j++) { // each j
+            for (int j = 0; j <= jLen; j++) { // each j
                 int prevC = 2;
-                for (int i = TRY + 0; i < TRY + n - j; i++) { // each n
+                for (int i = 0; i < n - j; i++) { // each n
                     int currC = (j == 0 || i == 0 ? 2 : diagC[i] + prevC);
                     int rintI = 0;
                     int[][] rint = new int[currC][i + j + 1];
@@ -232,7 +244,7 @@ public class Combination {
                         for (int k = 0; k < prevDiag.length; k++) { // each comb for given n and j-1
                             // new arr with prepended 1 and permutation of rest
                             rint[rintI][0] = 1;
-                            for (int kk = 0; kk < TRY + j + i; kk++) {// inside a given comb
+                            for (int kk = 0; kk < j + i; kk++) {// inside a given comb
                                 rint[rintI][kk + 1] = prevDiag[k][perm[kk]];
                             }
                             ++rintI;
@@ -240,7 +252,7 @@ public class Combination {
                     for (int k = 0; k < prevL.length; k++) { //
                         // new arr with prepended 0
                         rint[rintI][0] = 0;
-                        for (int kk = 0; kk < TRY + j + i; kk++) {// inside a given comb
+                        for (int kk = 0; kk < j + i; kk++) {// inside a given comb
                             rint[rintI][kk + 1] = prevL[k][kk];
                         }
                         ++rintI;
@@ -248,13 +260,13 @@ public class Combination {
                     if (reverse)
                         for (int k = 0; k < prevDiag.length; k++) { // each comb for given n and j-1
                             rint[rintI][0] = 1;
-                            for (int kk = 0; kk < TRY + j + i; kk++) {// inside a given comb
+                            for (int kk = 0; kk < j + i; kk++) {// inside a given comb
                                 rint[rintI][kk + 1] = prevDiag[k][perm[kk]];
                             }
                             ++rintI;
                         }
 
-                    if (i < TRY + n - j - 1) {
+                    if (i < n - j - 1) {
                         prevC = currC;
                         prevL = rint;
                         diag[i] = rint;
@@ -269,7 +281,10 @@ public class Combination {
         }
     }
 
+    static final boolean AddComputedDataToEvaluateConstrainedOut = false;
+
     public static List<int[]> constrained(int n, int[] leafs, int[] deps) {
+        Set<List<Integer>> dupli = new HashSet<>();
         List<int[]> r = new ArrayList<>();
         int leafsCount = 0;
         for (int i = 0; i < n; i++) {
@@ -285,17 +300,46 @@ public class Combination {
             int[] curr = new int[n];
             curr = populateAndFillConstr(x, curr, leafs, deps);
             for (int[] aux_r : constructByConstraints(n, prev, curr, deps)) {
-                r.add(aux_r);
+                if (AddComputedDataToEvaluateConstrainedOut) {
+                    int[] tmp = Arrays.copyOf(aux_r, aux_r.length + 4);
+                    tmp[tmp.length - 4] = 3;
+                    int diffs = 0;
+                    for (int i = 0; i < n; i++) {
+                        diffs += aux_r[i] == prev[i] ? 0 : 1;
+                    }
+                    tmp[tmp.length - 3] = diffs;
+                    tmp[tmp.length - 2] = dupli.contains(Arrays.stream(aux_r).boxed().collect(Collectors.toList())) ? 1
+                            : 0;
+                    dupli.add(Arrays.stream(aux_r).boxed().collect(Collectors.toList()));
+                    tmp[tmp.length - 1] = r.size();
+                    r.add(tmp);
+                } else {
+                    r.add(aux_r);
+                }
                 prev = aux_r;
             }
-            r.add(curr);
+            if (AddComputedDataToEvaluateConstrainedOut) {
+                int[] tmp = Arrays.copyOf(curr, curr.length + 4);
+                tmp[tmp.length - 4] = 2;
+                int diffs = 0;
+                for (int i = 0; i < n; i++) {
+                    diffs += curr[i] == prev[i] ? 0 : 1;
+                }
+                tmp[tmp.length - 3] = diffs;
+                tmp[tmp.length - 2] = dupli.contains(Arrays.stream(curr).boxed().collect(Collectors.toList())) ? 1 : 0;
+                dupli.add(Arrays.stream(curr).boxed().collect(Collectors.toList()));
+                tmp[tmp.length - 1] = r.size();
+                r.add(tmp);
+            } else {
+                r.add(curr);
+            }
             prev = curr;
         }
 
         return r;
     }
 
-    private static List<int[]> constructByConstraints(int n, int[] prev, int[] curr, int[] deps) {
+    public static List<int[]> constructByConstraints(int n, int[] prev, int[] curr, int[] deps) {
         // TODO copy? curr = list(curr)
         curr = Arrays.copyOfRange(curr, 0, curr.length);
         int[] to_change = new int[n];
@@ -318,24 +362,198 @@ public class Combination {
         return res;
     }
 
-    private static int[] fillConstr(int[] curr, int i, int[] deps) {
+    public static int[] fillConstr(int[] curr, int i, int[] deps) {
         for (int k = curr.length - 1; k >= 0; k--) {
             curr[deps[k]] = curr[k] | curr[deps[k]];
         }
         return curr;
     }
 
-    private static int[] populateAndFillConstr(int[] x, int[] curr, int[] leafs, int[] deps) {
+    public static int[] populateAndFillConstr(int[] x, int[] curr, int[] leafs, int[] deps) {
         for (int i = curr.length - 1; i >= 0; i--) {
-            if(leafs[i]==1){
+            if (leafs[i] == 1) {
                 int j = -1;
-                for (int ii = 0; ii < i; ii++) {
+                for (int ii = 0; ii <= i; ii++) {
                     j += leafs[ii];
                 }
-                curr[i] = j>=0 ? x[j]:0;
+                curr[i] = j >= 0 ? x[j] : 0;
             }
             curr[deps[i]] = curr[i] | curr[deps[i]];
         }
         return curr;
+    }
+
+    public static <T> List<ImmutableTriple<Integer, T, Integer>> flattenItreeToList(ITree node) {
+        List<ImmutableTriple<Integer, T, Integer>> r = new ArrayList<>();
+
+        flattenAux(r, node, null);
+        return r;
+    }
+
+    // CAN MATERIALIZE List with null elements for evolutions not applicable directly
+    private static final String CONSTRAINING_EVOLUTIONS = "CONSTRAINING_EVOLUTIONS";
+    private static final String NON_CONSTRAINING_EVOLUTIONS = "NON_CONSTRAINING_EVOLUTIONS";
+    private static final String RANKS = "RANKS";
+
+    static <T> void flattenAux(List<ImmutableTriple<Integer, T, Integer>> r, ITree node, Integer i) {
+        List<T> constrEvos = (List) node.getMetadata(CONSTRAINING_EVOLUTIONS);
+        List<Integer> ranks = (List) node.getMetadata(RANKS);
+        Integer[] sortedIndexByRank = ranks == null ? null : computeSortIndex(ranks);
+        List<T> nonConstrEvos = (List) node.getMetadata(NON_CONSTRAINING_EVOLUTIONS);
+        if (constrEvos != null && constrEvos.size() > 0) {
+            for (int jj = 0; jj < constrEvos.size(); jj++) {
+                int j = ranks == null ? 0 : sortedIndexByRank[jj];
+                T op = constrEvos.get(j);
+                int newi = r.size();
+                r.add(new ImmutableTriple<Integer, T, Integer>(i, op,
+                        ranks != null && j < ranks.size() ? ranks.get(j) : 0));
+                for (ITree child : node.getChildren()) {
+                    flattenAux(r, child, newi);
+                }
+                if (nonConstrEvos != null)
+                    for (T op2 : nonConstrEvos) {
+                        r.add(new ImmutableTriple<Integer, T, Integer>(newi, op2, 0));
+                    }
+            }
+        } else if (nonConstrEvos != null && nonConstrEvos.size() > 0) {
+            for (T op2 : nonConstrEvos) {
+                r.add(new ImmutableTriple<Integer, T, Integer>(i, op2, 0));
+            }
+            for (ITree child : node.getChildren()) {
+                flattenAux(r, child, i);
+            }
+        } else {
+            for (ITree child : node.getChildren()) {
+                flattenAux(r, child, i);
+            }
+        }
+    }
+
+    // HELPERS
+
+    private static Integer[] computeSortIndex(List<Integer> ranks) {
+        Integer[] result = new Integer[ranks.size()];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = i; // Autoboxing
+        }
+        Arrays.sort(result, new Comparator<Integer>() {
+
+            @Override
+            public int compare(Integer arg0, Integer arg1) {
+                return ranks.get(arg0).compareTo(ranks.get(arg1));
+            }
+
+        });
+        return result;
+    }
+
+    public static <T> int[] extractDeps(List<ImmutableTriple<Integer, T, Integer>> list) {
+        int[] result = new int[list.size()];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = list.get(i).left;
+        }
+        return result;
+    }
+
+    public static <T> int[] extractRanks(List<ImmutableTriple<Integer, T, Integer>> list) {
+        int[] result = new int[list.size()];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = list.get(i).right;
+        }
+        return result;
+    }
+
+    public static <T> List<T> extractOps(List<ImmutableTriple<Integer, T, Integer>> list) {
+        return list.stream().map(x -> x.middle).collect(Collectors.toList());
+    }
+
+    public static int[] extractLeafs(int[] deps) {
+        boolean[] isDeps = new boolean[deps.length];
+        int[] result = new int[deps.length];
+        for (int i = result.length; i >= 0; i--) {
+            if (!isDeps[i]) {
+                result[i] = 1;
+            }
+            if (deps[i] != i) {
+                isDeps[deps[i]] = true;
+            }
+        }
+        return result;
+    }
+
+    public static int[] extractDepth(int[] deps) {
+        int[] result = new int[deps.length];
+        for (int i = 0; i < result.length; i++) {
+            if (deps[i] == i) {
+                result[i] = 0;
+            } else {
+                result[i] = result[deps[i]] + 1;
+            }
+        }
+        return result;
+    }
+
+    public static int combSize(int[] deps) {
+        int total = 1;
+        int[] sizes = new int[deps.length];
+        for (int i = sizes.length; i >= 0; i--) {
+            sizes[i] += 1;
+            if (deps[i] != i) {
+                sizes[deps[i]] *= sizes[i];
+            } else {
+                total *= sizes[i];
+            }
+        }
+        return total;
+    }
+
+    public static int[] combSizes(int[] deps) {
+        int[] sizes = new int[deps.length];
+        for (int i = sizes.length; i >= 0; i--) {
+            sizes[i] += 1;
+            if (deps[i] != i) {
+                sizes[deps[i]] *= sizes[i];
+            }
+        }
+        return sizes;
+    }
+
+    public static int[] simplifyByRankWithFusionOfChildren(int[] deps, int[] depth, int[] sizes, int[] ranks,
+            int startAtRank) {
+        int[] result = new int[deps.length];
+        boolean[] fusioned = new boolean[deps.length];
+        for (int i = 0; i < result.length; i++) {
+            // if (sizes[i] > 30 && depth[i] > 3) {// fusion condition
+            if (ranks[i] >= startAtRank) {// fusion condition
+                fusioned[i] = true;
+                result[i] = i;
+            } else if (fusioned[deps[i]]) {
+                fusioned[i] = true;
+                result[i] = -1;
+            } else {
+                result[i] = i;
+            }
+        }
+        return result;
+    }
+
+    public static int[] simplifyByRankWithDemoting(int[] deps, int[] depth, int[] sizes, int[] ranks,
+            int startAtRank) {
+        int[] result = new int[deps.length];
+        boolean[] fusioned = new boolean[deps.length];
+        int newi = 0;
+        for (int i = 0; i < result.length; i++) {
+            // if (sizes[i] > 30 && depth[i] > 3) {// fusion condition
+            if (ranks[i] >= startAtRank) {// fusion condition
+                fusioned[i] = true;
+                result[i] = i;
+            } else if (fusioned[deps[i]]) {
+                fusioned[i] = true;
+                result[i] = -1;
+            } else {
+                result[i] = i;
+            }
+        }
+        return result;
     }
 }

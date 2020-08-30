@@ -42,7 +42,7 @@ def monotonic(n):
 def printMat(mat):
     print("\n".join(map(lambda x: " ".join(map(lambda y:str(y).rjust(2),x)), mat)))
 
-n = 14
+n = 4
 deps =  [0, 0, 0, 2, 2, 0, 5, 5, 6, 8, 9, 10, 10,13][:n]
 leafs = [0 if i in deps else 1 for i in range(len(deps))]
 
@@ -90,14 +90,16 @@ def constrained(n):
         curr = [0 for a in range(n)]
         curr = gaaa(x,curr,leafs,deps)
         for aux_r in faaa(n, prev, curr,deps):
-            print(aux_r,sum([1 for i in range(n) if aux_r[i]!=prev[i]]), aux_r in already_found)
-            yield (aux_r,sum([1 for i in range(n) if aux_r[i]!=prev[i]]), aux_r in already_found)
+            print(aux_r,sum([1 for i in range(n) if aux_r[i]!=prev[i]]), aux_r in already_found, ii)
+            yield (aux_r,sum([1 for i in range(n) if aux_r[i]!=prev[i]]), aux_r in already_found, ii)
             already_found.append(aux_r)
             prev = aux_r
-        print(curr,sum([1 for i in range(n) if curr[i]!=prev[i]]), curr in already_found)
-        yield (curr,sum([1 for i in range(n) if curr[i]!=prev[i]]), curr in already_found)
+            ii+=1
+        print(curr,sum([1 for i in range(n) if curr[i]!=prev[i]]), curr in already_found, ii)
+        yield (curr,sum([1 for i in range(n) if curr[i]!=prev[i]]), curr in already_found, ii)
         already_found.append(curr)
         prev = curr
+        ii+=1
         # jj = 0
         # snd = curr
         # for i in (list(range(n))):
@@ -162,3 +164,4 @@ print()
 print(leafs)
 print(deps)
 print(len(deps))
+print(gaaa([1,1],[0,0,0,0],[0,1,0,1],[0,0,0,2]))

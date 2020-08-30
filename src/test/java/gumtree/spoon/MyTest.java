@@ -482,14 +482,35 @@ public class MyTest {
 
     @Test
     public void testItWithConstraints6() {
-        Combination.Monotonic.print(Combination.Monotonic.useAux(5));
+        Combination.Monotonic.print(Combination.Monotonic.useAux(2));
     }
 
     @Test
     public void testItWithConstraints7() {
         int[] deps = new int[] { 0, 0, 0, 2, 2, 0, 5, 5, 6, 8, 9, 10, 10, 13 };
         int[] leafs = new int[] { 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0 };
-        Combination.Monotonic.print(Combination.constrained(14, leafs, deps));
+        List<int[]> constr =  Combination.constrained(deps.length, leafs, deps);
+        System.out.println(constr.size());
+        Combination.Monotonic.print(constr);
     }
+    @Test
+    public void testItWithConstraints8() {
+        int[] deps = new int[] { 0, 0, 0, 2};//, 2, 0, 5, 5, 6, 8, 9, 10, 10, 13 };
+        int[] leafs = new int[] { 0, 1, 0, 1};//, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0 };
+        int[] constr =  Combination.populateAndFillConstr(new int[]{1,1},new int[4],leafs, deps);
+        // should be 1 1 1 1
+        for (int x : constr) {
+            System.out.print(x);            
+            System.out.print(" ");            
+        }
+        System.out.println();
+    }
+
+    // [0, 0, 0, 0]  0 False  0
+    // [1, 0, 0, 0]  1 False  1
+    // [1, 0, 1, 0]  1 False  2
+    // [1, 0, 1, 1]  1 False  3
+    // [1, 1, 1, 1]  1 False  4
+    // [1, 1, 0, 0]  2 False  5
 
 }
