@@ -51,6 +51,11 @@ public class DiffImpl implements Diff {
 	 */
 	private final TreeContext context;
 
+	private ITree newSrc;
+	public ITree getNewSrc() {
+		return newSrc;
+	}
+
 	public DiffImpl(TreeContext context, ITree rootSpoonLeft, ITree rootSpoonRight) {
 		if (context == null) {
 			throw new IllegalArgumentException();
@@ -65,6 +70,12 @@ public class DiffImpl implements Diff {
 				matcher.getMappings());
 		actionGenerator.generate();
 		List<Action> actions;
+		try {
+			this.newSrc = extracted(actionGenerator, "newSrc");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 		String b = System.getProperty("gumtree.match.gt.ag.nomove");
 		if (b != null && b.equals("true")) {
 			actions = removeMovesAndUpdates(actionGenerator);
