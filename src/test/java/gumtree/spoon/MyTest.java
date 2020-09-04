@@ -639,7 +639,6 @@ public class MyTest {
                 
             }
         }
-        AbstractTree.FakeTree aaaaa = null;
         ITree qqq = mdiff.getMiddle();
         System.out.println(qqq);
         System.out.println("--------------");
