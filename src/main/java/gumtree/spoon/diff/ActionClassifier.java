@@ -50,16 +50,16 @@ public class ActionClassifier {
 				originalActionsDst.put(original, action);
 			} else if (action instanceof Update) {
 				ITree dest = mappings.getDst(original);
-				original.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST,
-						dest.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+				// original.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST,
+				// 		dest.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
 				original.setMetadata(SpoonGumTreeBuilder.GT_OBJECT_DEST, dest);
 				srcUpdTrees.add(original);
 				dstUpdTrees.add(dest);
 				originalActionsSrc.put(original, action);
 			} else if (action instanceof Move) {
 				ITree dest = mappings.getDst(original);
-				original.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST,
-						dest.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+				// original.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT_DEST,
+				// 		dest.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
 				original.setMetadata(SpoonGumTreeBuilder.GT_OBJECT_DEST, dest);
 				srcMvTrees.add(original);
 				dstMvTrees.add(dest);

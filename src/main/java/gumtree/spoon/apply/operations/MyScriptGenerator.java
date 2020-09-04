@@ -124,7 +124,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 w = new VersionedTree(x, this.version); // VersionedTree.deepCopy(x, this.version);//new VersionedTree(x, this.version);
                 // In order to use the real nodes from the second tree, we
                 // furnish x instead of w
-                Action ins = new Insert(x, copyToOrig.get(z), k);
+                Action ins = new Insert(w, z, k);
                 actions.add(ins);
                 copyToOrig.put(w, x);
                 cpyMappings.link(w, x);
@@ -135,8 +135,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 if (!x.equals(origDst)) { // TODO => x != origDst // Case of the root
                     AbstractVersionedTree v = w.getParent();
                     if (!w.getLabel().equals(x.getLabel())) {
-                        actions.add(new Update(copyToOrig.get(w), x.getLabel())); // TODO put removedVersion and added version ?
                         AbstractVersionedTree wbis = new VersionedTree(w, this.version);//VersionedTree.deepCopy(w, this.version);
+                        actions.add(new Update(wbis, x.getLabel())); // TODO put removedVersion and added version ?
                         cpyMappings.link(wbis, x);
                         added.add(wbis);
                         boolean qwed = deleted.add(w);
@@ -149,13 +149,14 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         v.insertChild(wbis, k);
                         wbis.setLabel(x.getLabel());
                         wbis.setParent(v);
+                        multiVersionMappingStore.link(w, wbis);
                     }
                     if (!z.equals(v)) {
                         int k = findPos(x);
-                        Action mv = new Move(copyToOrig.get(w), copyToOrig.get(z), k); // TODO put removedVersion and added version ?
-                        actions.add(mv);
                         // int oldk = w.positionInParent();
                         AbstractVersionedTree wbis = new VersionedTree(w, this.version);// VersionedTree.deepCopy(w, this.version);
+                        Action mv = new Move(w, copyToOrig.get(z), k); // TODO put removedVersion and added version ?
+                        actions.add(mv);
                         cpyMappings.link(wbis, x);
                         added.add(wbis);
                         boolean qwed = deleted.add(w);
@@ -165,6 +166,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         // cpyMappings.link(w, x);
                         z.insertChild(wbis, k);
                         wbis.setParent(z);
+                        multiVersionMappingStore.link(w, wbis);
                     }
                 }
             }
@@ -184,7 +186,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
         List<ITree> pOMiddle = TreeUtils.postOrder(middle);
         for (ITree w : pOMiddle)//middle.postOrder())
             if (!cpyMappings.hasSrc(w)) {
-                actions.add(new Delete(copyToOrig.get(w))); // TODO cannot find all nodes, related to hash ?
+                actions.add(new Delete(w)); // TODO cannot find all nodes, related to hash ?
                 ((AbstractVersionedTree) w).delete(version);
             }
     }

@@ -603,4 +603,47 @@ public class MyTest {
         System.out.println(qqq2.toTreeString());
     }
 
+    @Test
+    public void testApply2() {
+		System.setProperty("gumtree.match.gt.ag.nomove", "true");
+        // contract: toString should be able to print move of a toplevel class
+        VirtualFile r1 = new VirtualFile("class X { static void f() {} class Y { h () { X.f(); } } };", "X.java");
+        Factory left = extracted2(r1);
+        VirtualFile r2 = new VirtualFile("class AAA { void g() {} class Y { h () { X.f(); } } };", "AAA.java");
+        VirtualFile r1b = new VirtualFile("class X { static void f() {} };", "X.java");
+        Factory right = extracted2(r1b, r2);
+
+        final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
+        ITree srctree = scanner.getTree(left.getModel().getRootPackage());
+        MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
+        Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()));
+        System.out.println(scanner.getTree(left.getModel().getRootPackage().clone()).toShortString());
+        CtAbstractInvocation<?> invo = (CtAbstractInvocation<?>) right.getModel().getRootPackage().getType("AAA").getNestedType("Y").getMethod("h").getBody().getStatements().get(0);
+        System.out.println(invo.getExecutable().getDeclaration());
+        System.out.println(left.getModel().getRootPackage().clone().prettyprint().equals(left.getModel().getRootPackage().prettyprint()));
+        for (Operation<?> x : diff.getAllOperations()) {
+            System.out.println(x.getClass());
+            if (x instanceof InsertOperation) {
+                System.out.println("------");
+                System.out.println(((InsertOperation)x).getSrc());
+                System.out.println(((InsertOperation)x).getSrc().getClass());
+                System.out.println("++++++");
+                System.out.println(((InsertOperation)x).getDst());
+            } else if (x instanceof DeleteOperation) {
+                System.out.println("---====---");
+                System.out.println(((DeleteOperation)x).getSrc());
+                System.out.println(((DeleteOperation)x).getSrc().getClass());
+                System.out.println("+++====+++");
+                System.out.println(((DeleteOperation)x).getDst());
+            } else {
+                
+            }
+        }
+        AbstractTree.FakeTree aaaaa = null;
+        ITree qqq = mdiff.getMiddle();
+        System.out.println(qqq);
+        System.out.println("--------------");
+        System.out.println(qqq.toTreeString());
+    }
+
 }

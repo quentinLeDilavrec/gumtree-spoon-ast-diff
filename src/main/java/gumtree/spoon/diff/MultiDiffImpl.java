@@ -69,7 +69,7 @@ public class MultiDiffImpl implements Diff {
 	public MultiDiffImpl(ITree initialSpoon) {
 		this.lastSpoon = initialSpoon;
 		mappingsComp = new MultiVersionMappingStore();
-		middle = VersionedTree.deepCopy(initialSpoon);
+		middle = VersionedTree.deepCopySpoon(initialSpoon);
 		middle.setMetadata("lastVersion", 0);
 	}
 

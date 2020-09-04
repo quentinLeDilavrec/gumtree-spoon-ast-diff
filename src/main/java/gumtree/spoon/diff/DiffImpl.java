@@ -72,8 +72,8 @@ public class DiffImpl implements Diff {
 
 		EditScript actions = actionGenerator.computeActions(matcher);
 		List<Action> actionsList = actions.asList();
-
-		ActionClassifier actionClassifier = new ActionClassifier(matcher.getMappingsAsSet(), actionsList);
+		
+		ActionClassifier actionClassifier = new ActionClassifier(multiMappingsComp.asSet(), actionsList);
 		// Bugfix: the Action classifier must be executed *BEFORE* the convertToSpoon
 		// because it writes meta-data on the trees
 		this.rootOperations = wrapSpoon(actionClassifier.getRootActions());
