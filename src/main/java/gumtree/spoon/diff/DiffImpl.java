@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.github.gumtreediff.actions.ActionGenerator;
+import com.github.gumtreediff.actions.EditScript;
+import com.github.gumtreediff.actions.EditScriptGenerator;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
@@ -17,10 +19,14 @@ import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.matchers.CompositeMatchers;
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
+import com.github.gumtreediff.matchers.MultiVersionMappingStore;
+import com.github.gumtreediff.matchers.SingleVersionMappingStore;
+import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 
 import gnu.trove.map.TIntObjectMap;
+import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.operations.DeleteOperation;
 import gumtree.spoon.diff.operations.InsertOperation;
@@ -51,43 +57,27 @@ public class DiffImpl implements Diff {
 	 */
 	private final TreeContext context;
 
-	private ITree newSrc;
-	public ITree getNewSrc() {
-		return newSrc;
-	}
-
-	public DiffImpl(TreeContext context, ITree rootSpoonLeft, ITree rootSpoonRight) {
+	DiffImpl(AbstractVersionedTree middle, MultiVersionMappingStore multiMappingsComp, TreeContext context, ITree rootSpoonLeft, ITree rootSpoonRight) {
 		if (context == null) {
 			throw new IllegalArgumentException();
 		}
-		final MappingStore mappingsComp = new MappingStore();
+		final MappingStore mappingsComp = new SingleVersionMappingStore<ITree,ITree>(rootSpoonLeft, rootSpoonRight);
 		this.context = context;
 
 		final Matcher matcher = new CompositeMatchers.ClassicGumtree(rootSpoonLeft, rootSpoonRight, mappingsComp);
 		matcher.match();
 
-		final ActionGenerator actionGenerator = new ActionGenerator(rootSpoonLeft, rootSpoonRight,
-				matcher.getMappings());
-		actionGenerator.generate();
-		List<Action> actions;
-		try {
-			this.newSrc = extracted(actionGenerator, "newSrc");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		String b = System.getProperty("gumtree.match.gt.ag.nomove"); // b != null && b.equals("true")
+		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle,multiMappingsComp);
 
-		String b = System.getProperty("gumtree.match.gt.ag.nomove");
-		if (b != null && b.equals("true")) {
-			actions = removeMovesAndUpdates(actionGenerator);
-		} else {
-			actions = actionGenerator.getActions();
-		}
+		EditScript actions = actionGenerator.computeActions(matcher);
+		List<Action> actionsList = actions.asList();
 
-		ActionClassifier actionClassifier = new ActionClassifier(matcher.getMappingsAsSet(), actions);
+		ActionClassifier actionClassifier = new ActionClassifier(matcher.getMappingsAsSet(), actionsList);
 		// Bugfix: the Action classifier must be executed *BEFORE* the convertToSpoon
 		// because it writes meta-data on the trees
-		this.rootOperations = convertToSpoon(actionClassifier.getRootActions());
-		this.allOperations = convertToSpoon(actions);
+		this.rootOperations = wrapSpoon(actionClassifier.getRootActions());
+		this.allOperations = wrapSpoon(actionsList);
 
 		this._mappingsComp = mappingsComp;
 
@@ -104,45 +94,7 @@ public class DiffImpl implements Diff {
 		}
 	}
 
-	private List<Action> removeMovesAndUpdates(ActionGenerator actionGenerator) {
-		try {
-			TIntObjectMap<ITree> origSrcTrees = extracted(actionGenerator, "origSrcTrees");
-			TIntObjectMap<ITree> cpySrcTrees = extracted(actionGenerator, "cpySrcTrees");
-			List<Action> actions = extracted(actionGenerator, "actions");
-			MappingStore origMappings = extracted(actionGenerator, "origMappings");
-			List<Action> actionsCpy = new ArrayList<>(actions.size());
-			for (Action a : actions) {
-				if (a instanceof Update) {
-					Update u = (Update) a;
-					ITree src = cpySrcTrees.get(a.getNode().getId());
-					ITree dst = origMappings.getDst(src);
-					actionsCpy.add(new Insert(dst, dst.getParent(), dst.positionInParent()));
-					actionsCpy.add(new Delete(origSrcTrees.get(u.getNode().getId())));
-				} else if (a instanceof Move) {
-					Move m = (Move) a;
-					ITree src = cpySrcTrees.get(a.getNode().getId());
-					ITree dst = origMappings.getDst(src);
-					actionsCpy.add(new Insert(dst, dst.getParent(), m.getPosition()));
-					actionsCpy.add(new Delete(origSrcTrees.get(m.getNode().getId())));
-				} else {
-					actionsCpy.add(a);
-				}
-			}
-
-			return actionsCpy;
-		} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private <T> T extracted(ActionGenerator actionGenerator, String name)
-			throws NoSuchFieldException, IllegalAccessException {
-		Field field = actionGenerator.getClass().getDeclaredField(name);
-		field.setAccessible(true);
-		return (T) field.get(actionGenerator);
-	}
-
-	private List<Operation> convertToSpoon(List<Action> actions) {
+	private List<Operation> wrapSpoon(List<Action> actions) {
 		List<Operation> collect = actions.stream().map(action -> {
 			action.getNode().setMetadata("type", context.getTypeLabel(action.getNode()));
 			if (action instanceof Insert) {

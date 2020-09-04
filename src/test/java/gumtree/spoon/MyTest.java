@@ -7,21 +7,28 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.github.gumtreediff.actions.model.Addition;
+import com.github.gumtreediff.tree.AbstractTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.AbstractTree.FakeTree;
 
 import org.junit.Test;
 
 import gumtree.spoon.apply.Combination;
+import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
+import gumtree.spoon.diff.DiffImpl;
+import gumtree.spoon.diff.MultiDiffImpl;
 import gumtree.spoon.diff.operations.*;
 import gumtree.spoon.diff.support.SpoonSupport;
+import spoon.MavenLauncher;
 import spoon.SpoonModelBuilder;
 import spoon.compiler.SpoonResource;
 import spoon.compiler.SpoonResourceHelper;
+import spoon.reflect.code.CtAbstractInvocation;
 import spoon.reflect.declaration.*;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.factory.FactoryImpl;
+import spoon.reflect.visitor.CtInheritanceScanner;
 import spoon.support.DefaultCoreFactory;
 import spoon.support.StandardEnvironment;
 import spoon.support.compiler.VirtualFile;
@@ -192,6 +199,24 @@ public class MyTest {
     }
 
     @Test
+    public void test6_1() {
+        // contract: toString should be able to print move of a toplevel class
+        VirtualFile r1 = new VirtualFile("class X { int a; int b; int c; void g(){ a + b;} int f(int x){ return x;} }", "X.java");
+        CtPackage rp1 = extracted(r1);
+
+        VirtualFile r2 = new VirtualFile("class X { int a; int b; int c; void g(){ a + f(c+b);} int f(int x){ return x;} }", "X.java");
+        CtPackage rp2 = extracted(r2);
+
+        AstComparator diff = new AstComparator();
+
+        Diff editScript = diff.compare(rp1, rp2);
+        for (Operation<?> x : editScript.getAllOperations()) {
+            System.out.println(x.toString());
+        }
+        System.out.println();
+    }
+
+    @Test
     public void test7() {
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class X { void f() {} class Y {} };", "X.java");
@@ -227,6 +252,18 @@ public class MyTest {
         compiler.build();
         CtPackage rp = factory.getModel().getRootPackage();
         return rp;
+    }
+
+    private Factory extracted2(VirtualFile... resources) {
+        Factory factory = createFactory();
+        factory.getModel().setBuildModelIsFinished(false);
+        SpoonModelBuilder compiler = new JDTBasedSpoonCompiler(factory);
+        compiler.getFactory().getEnvironment().setLevel("OFF");
+        for (VirtualFile resource : resources) {
+            compiler.addInputSource(resource);
+        }
+        compiler.build();
+        return factory;
     }
 
     public class IndexedSwitch {
@@ -489,19 +526,20 @@ public class MyTest {
     public void testItWithConstraints7() {
         int[] deps = new int[] { 0, 0, 0, 2, 2, 0, 5, 5, 6, 8, 9, 10, 10, 13 };
         int[] leafs = new int[] { 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0 };
-        List<int[]> constr =  Combination.constrained(deps.length, leafs, deps);
+        List<int[]> constr = Combination.constrained(deps.length, leafs, deps);
         System.out.println(constr.size());
         Combination.Monotonic.print(constr);
     }
+
     @Test
     public void testItWithConstraints8() {
-        int[] deps = new int[] { 0, 0, 0, 2};//, 2, 0, 5, 5, 6, 8, 9, 10, 10, 13 };
-        int[] leafs = new int[] { 0, 1, 0, 1};//, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0 };
-        int[] constr =  Combination.populateAndFillConstr(new int[]{1,1},new int[4],leafs, deps);
+        int[] deps = new int[] { 0, 0, 0, 2 };//, 2, 0, 5, 5, 6, 8, 9, 10, 10, 13 };
+        int[] leafs = new int[] { 0, 1, 0, 1 };//, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0 };
+        int[] constr = Combination.populateAndFillConstr(new int[] { 1, 1 }, new int[4], leafs, deps);
         // should be 1 1 1 1
         for (int x : constr) {
-            System.out.print(x);            
-            System.out.print(" ");            
+            System.out.print(x);
+            System.out.print(" ");
         }
         System.out.println();
     }
@@ -512,5 +550,57 @@ public class MyTest {
     // [1, 0, 1, 1]  1 False  3
     // [1, 1, 1, 1]  1 False  4
     // [1, 1, 0, 0]  2 False  5
+
+    @Test
+    public void testApply1() {
+		System.setProperty("gumtree.match.gt.ag.nomove", "true");
+        // contract: toString should be able to print move of a toplevel class
+        VirtualFile r1 = new VirtualFile("class X { static void f() {} class Y { h () { X.f(); } } };", "X.java");
+        Factory left = extracted2(r1);
+        VirtualFile r2 = new VirtualFile("class AAA { void g() {} class Y { h () { X.f(); } } };", "AAA.java");
+        VirtualFile r1b = new VirtualFile("class X { static void f() {} };", "X.java");
+        Factory right = extracted2(r1b, r2);
+        VirtualFile r3 = new VirtualFile("class AAA { void g() {} };", "AAA.java");
+        VirtualFile r3bb = new VirtualFile("class BBB { class Y { h () { X.f(); } } };", "BBB.java");
+        VirtualFile r3b = new VirtualFile("class X { static void f() {} };", "X.java");
+        Factory right2 = extracted2(r3b, r3, r3bb);
+
+        final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
+        ITree srctree = scanner.getTree(left.getModel().getRootPackage());
+        MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
+        Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()));
+        System.out.println(scanner.getTree(left.getModel().getRootPackage().clone()).toShortString());
+        CtAbstractInvocation<?> invo = (CtAbstractInvocation<?>) right.getModel().getRootPackage().getType("AAA").getNestedType("Y").getMethod("h").getBody().getStatements().get(0);
+        System.out.println(invo.getExecutable().getDeclaration());
+        System.out.println(left.getModel().getRootPackage().clone().prettyprint().equals(left.getModel().getRootPackage().prettyprint()));
+        for (Operation<?> x : diff.getAllOperations()) {
+            System.out.println(x.getClass());
+            if (x instanceof InsertOperation) {
+                System.out.println("------");
+                System.out.println(((InsertOperation)x).getSrc());
+                System.out.println(((InsertOperation)x).getSrc().getClass());
+                System.out.println("++++++");
+                System.out.println(((InsertOperation)x).getDst());
+            } else if (x instanceof DeleteOperation) {
+                System.out.println("---====---");
+                System.out.println(((DeleteOperation)x).getSrc());
+                System.out.println(((DeleteOperation)x).getSrc().getClass());
+                System.out.println("+++====+++");
+                System.out.println(((DeleteOperation)x).getDst());
+            } else {
+                
+            }
+        }
+        AbstractTree.FakeTree aaaaa = null;
+        ITree qqq = mdiff.getMiddle();
+        System.out.println(qqq);
+        System.out.println("--------------");
+        System.out.println(qqq.toTreeString());
+        ITree afegwsegwse = scanner.getTree(right2.getModel().getRootPackage());
+        System.out.println(afegwsegwse.toTreeString());
+        Diff diff2 = mdiff.compute(scanner.getTreeContext(), afegwsegwse);
+        ITree qqq2 = mdiff.getMiddle();
+        System.out.println(qqq2.toTreeString());
+    }
 
 }

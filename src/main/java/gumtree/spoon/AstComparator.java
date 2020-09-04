@@ -20,6 +20,7 @@ import gumtree.spoon.builder.Json4SpoonGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
+import gumtree.spoon.diff.MultiDiffImpl;
 import gumtree.spoon.diff.operations.Operation;
 import spoon.SpoonModelBuilder;
 import spoon.compiler.SpoonResource;
@@ -132,7 +133,12 @@ public class AstComparator {
 	 */
 	public Diff compare(CtElement left, CtElement right) {
 		final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
-		return new DiffImpl(scanner.getTreeContext(), scanner.getTree(left), scanner.getTree(right));
+		MultiDiffImpl r = new MultiDiffImpl(scanner.getTree(left));
+		return r.compute(scanner.getTreeContext() , scanner.getTree(right));
+	}
+	
+	public Diff compare(CtElement... versions) {
+		return null; // TODO
 	}
 
 	public CtType getCtType(File file) throws Exception {

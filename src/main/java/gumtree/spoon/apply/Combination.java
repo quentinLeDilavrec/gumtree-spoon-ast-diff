@@ -7,9 +7,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.stream.Collectors;
 
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.TreeUtils;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
@@ -385,7 +387,6 @@ public class Combination {
 
     public static <T> List<ImmutableTriple<Integer, T, Integer>> flattenItreeToList(ITree node) {
         List<ImmutableTriple<Integer, T, Integer>> r = new ArrayList<>();
-
         flattenAux(r, node, null);
         return r;
     }
@@ -537,8 +538,7 @@ public class Combination {
         return result;
     }
 
-    public static int[] simplifyByRankWithDemoting(int[] deps, int[] depth, int[] sizes, int[] ranks,
-            int startAtRank) {
+    public static int[] simplifyByRankWithDemoting(int[] deps, int[] depth, int[] sizes, int[] ranks, int startAtRank) {
         int[] result = new int[deps.length];
         boolean[] fusioned = new boolean[deps.length];
         int newi = 0;
