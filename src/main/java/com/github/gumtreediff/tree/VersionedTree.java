@@ -17,6 +17,7 @@ import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.reference.CtExecutableReference;
+import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtScanner;
 import spoon.support.visitor.clone.CloneVisitor;
 import spoon.support.visitor.equals.CloneHelper;
@@ -126,9 +127,17 @@ public class VersionedTree extends AbstractVersionedTree {
 
     static class MyCloner extends CloneHelper {
         public <T extends CtElement> T clone(T element) {
+            ITree gtnode = null;
+            if (element != null) {
+                gtnode = (ITree) element.getMetadata(MIDDLE_GUMTREE_NODE);
+            }
             final CloneVisitor cloneVisitor = new CloneVisitor(this);
             cloneVisitor.scan(element);
-            return cloneVisitor.getClone();
+            T clone = cloneVisitor.getClone();
+            if (gtnode != null) {
+                gtnode.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, clone);
+            }
+            return clone;
         }
 
         /** Is called by {@link CloneVisitor} at the end of the cloning for each element. */
@@ -136,13 +145,6 @@ public class VersionedTree extends AbstractVersionedTree {
                 final spoon.reflect.declaration.CtElement topLevelClone) {
             // this scanner visit certain nodes to done some additional work after cloning
             new CtScanner() {
-                @Override
-                protected void enter(CtElement e) {
-                    ITree gtnode = (ITree) e.getMetadata(MIDDLE_GUMTREE_NODE);
-                    if (gtnode != null) {
-                        gtnode.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, e);
-                    }
-                }
 
                 @Override
                 public <T> void visitCtExecutableReference(CtExecutableReference<T> clone) {
@@ -184,7 +186,9 @@ public class VersionedTree extends AbstractVersionedTree {
     private static AbstractVersionedTree deepCopySpoonAux(ITree original) {
         VersionedTree result = new VersionedTree(original, 0);
         CtElement ele = (CtElement) original.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-        ele.putMetadata(MIDDLE_GUMTREE_NODE, result);
+        if (ele != null) {
+            ele.putMetadata(MIDDLE_GUMTREE_NODE, result);
+        }
         result.setMetadata(ORIGINAL_SPOON_OBJECT, ele);
         // copy.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, original.getMetadata(COPIED_SPOON_OBJECT));
         for (ITree child : original.getChildren()) {

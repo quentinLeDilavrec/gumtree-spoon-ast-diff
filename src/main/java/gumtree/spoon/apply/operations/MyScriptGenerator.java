@@ -99,6 +99,44 @@ public class MyScriptGenerator implements EditScriptGenerator {
         }
     }
 
+    class AMove extends Move {
+
+        private ITree right;
+
+        public AMove(ITree left, ITree right) {
+            super(left, right.getParent(), right.getParent().getChildPosition(right));
+            this.right = right;
+        }
+        public ITree getRight() {
+            return right;
+        }
+
+        public ITree getLeft() {
+            return getNode();
+        }
+
+    }
+
+    class AUpdate extends Update {
+
+        private ITree right;
+
+        public AUpdate(ITree left, ITree right) {
+            super(left,right.getLabel());
+            //left, right.getParent(), right.getParent().getChildPosition(right)
+            this.right = right;
+        }
+        
+        public ITree getRight() {
+            return right;
+        }
+
+        public ITree getLeft() {
+            return getNode();
+        }
+
+    }
+
     public EditScript generate() {
         AbstractVersionedTree srcFakeRoot = new AbstractVersionedTree.FakeTree(middle);
         ITree dstFakeRoot = new AbstractTree.FakeTree(origDst);
@@ -119,7 +157,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
             AbstractVersionedTree z = cpyMappings.getSrc(y);
 
             if (!cpyMappings.hasDst(x)) {
-                int k = findPos(x);
+                int k = y.getChildPosition(x);//findPos(x);
                 // Insertion case : insert new node.
                 w = new VersionedTree(x, this.version); // VersionedTree.deepCopy(x, this.version);//new VersionedTree(x, this.version);
                 // In order to use the real nodes from the second tree, we
@@ -130,49 +168,52 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 cpyMappings.link(w, x);
                 z.insertChild(w, k);
                 w.setParent(z);
-                addAction(action,w);
+                addInsertAction(action, w);
             } else {
                 w = cpyMappings.getSrc(x);
                 if (!x.equals(origDst)) { // TODO => x != origDst // Case of the root
                     AbstractVersionedTree v = w.getParent();
                     if (!w.getLabel().equals(x.getLabel())) {
                         AbstractVersionedTree wbis = new VersionedTree(w, this.version);//VersionedTree.deepCopy(w, this.version);
-                        Update action = new Update(wbis, x.getLabel());
-                        actions.add(action); // TODO put removedVersion and added version ?
                         cpyMappings.link(wbis, x);
                         added.add(wbis);
                         boolean qwed = deleted.add(w);
+                        int k = v.getChildPosition(w);
+                        //cpyMappings.unlink(w, x);
+                        //cpyMappings.link(wbis, x);
                         w.delete(this.version);
                         copyToOrig.put(w, x);
                         ITree gew = copyToOrig.put(wbis, x);
                         // copyToOrig.put(w, x);
                         // cpyMappings.link(w, x);
-                        int k = v.getChildPosition(w);
                         v.insertChild(wbis, k);
                         wbis.setLabel(x.getLabel());
                         wbis.setParent(v);
                         multiVersionMappingStore.link(w, wbis);
-                        addAction(action,w);
-                        addAction(action,wbis);
+                        AUpdate action = new AUpdate(w, wbis);
+                        actions.add(action); // TODO put removedVersion and added version ?
+                        addDeleteAction(action, w);
+                        addInsertAction(action, wbis);
                     }
                     if (!z.equals(v)) {
-                        int k = findPos(x);
+                        int k = y.getChildPosition(x);//findPos(x);
                         // int oldk = w.positionInParent();
                         AbstractVersionedTree wbis = new VersionedTree(w, this.version);// VersionedTree.deepCopy(w, this.version);
-                        Action action = new Move(w, z, k); // TODO put removedVersion and added version ?
-                        actions.add(action);
+                        wbis.setParent(z);
+                        z.insertChild(wbis, k);
                         cpyMappings.link(wbis, x);
                         added.add(wbis);
                         boolean qwed = deleted.add(w);
+                        //cpyMappings.unlink(x, w);
                         w.delete(this.version);
                         copyToOrig.put(w, x);
                         ITree gew = copyToOrig.put(wbis, x);
                         // cpyMappings.link(w, x);
-                        z.insertChild(wbis, k);
-                        wbis.setParent(z);
                         multiVersionMappingStore.link(w, wbis);
-                        addAction(action,w);
-                        addAction(action,wbis);
+                        AMove action = new AMove(w, wbis); // TODO put removedVersion and added version ?
+                        actions.add(action);
+                        addDeleteAction(action, w);
+                        addInsertAction(action, wbis);
                     }
                 }
             }
@@ -192,8 +233,10 @@ public class MyScriptGenerator implements EditScriptGenerator {
         List<ITree> pOMiddle = TreeUtils.postOrder(middle);
         for (ITree w : pOMiddle)//middle.postOrder())
             if (!cpyMappings.hasSrc(w)) {
-                actions.add(new Delete(w)); // TODO cannot find all nodes, related to hash ?
+                Delete action = new Delete(w);
+                actions.add(action); // TODO cannot find all nodes, related to hash ?
                 ((AbstractVersionedTree) w).delete(version);
+                addDeleteAction(action, w);
             }
     }
 
@@ -201,8 +244,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
         handleDeletion2Aux(middle);
     }
 
-    private void handleDeletion2Aux(ITree w) {
-        List<ITree> children = w.getChildren();
+    private void handleDeletion2Aux(AbstractVersionedTree w) {
+        List<AbstractVersionedTree> children = w.getChildren(this.version-1);
         for (int i = children.size() - 1; i >= 0; i--) {
             handleDeletion2Aux(children.get(i));
         }
@@ -213,18 +256,53 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 Delete action = new Delete(w);
                 actions.add(action); // TODO cannot find all nodes, related to hash ?
                 ((AbstractVersionedTree) w).delete(version);
-                addAction(action,w);
+                addDeleteAction(action, w);
             }
         }
     }
 
+    private static boolean isDoingDelete(Action action) {
+        if (action instanceof Delete) {
+            return true;
+        } else if (action instanceof Move) {
+            return true;
+        } else if (action instanceof Update) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private static boolean isDoingInsert(Action action) {
+        if (action instanceof Insert) {
+            return true;
+        } else if (action instanceof Move) {
+            return true;
+        } else if (action instanceof Update) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     private void addAction(Action action, ITree w) {
-        List<Action> tmp = (List)w.getMetadata("actions");
+        List<Action> tmp = (List) w.getMetadata("action");
         if (tmp == null) {
             tmp = new ArrayList<>();
-            w.setMetadata("actions", tmp);
+            w.setMetadata("action", tmp);
         }
         tmp.add(action);
+    }
+
+    public static String DELETE_ACTION = "DELETE_ACTION";
+    public static String INSERT_ACTION = "INSERT_ACTION";
+
+    private Action addDeleteAction(Action action, ITree w) {
+        return (Action) w.setMetadata(DELETE_ACTION, action);
+    }
+
+    private Action addInsertAction(Action action, ITree w) {
+        return (Action) w.setMetadata(INSERT_ACTION, action);
     }
 
     private void alignChildren(ITree w, ITree x) {

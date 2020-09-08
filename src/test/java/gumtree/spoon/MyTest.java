@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 import com.github.gumtreediff.actions.model.Addition;
 import com.github.gumtreediff.tree.AbstractTree;
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.TreeContext;
+import com.github.gumtreediff.tree.TreeUtils;
 import com.github.gumtreediff.tree.AbstractTree.FakeTree;
 
 import org.junit.Test;
@@ -553,7 +555,7 @@ public class MyTest {
 
     @Test
     public void testApply1() {
-		System.setProperty("gumtree.match.gt.ag.nomove", "true");
+		// System.setProperty("gumtree.match.gt.ag.nomove", "true");
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class X { static void f() {} class Y { h () { X.f(); } } };", "X.java");
         Factory left = extracted2(r1);
@@ -600,16 +602,16 @@ public class MyTest {
         System.out.println(afegwsegwse.toTreeString());
         Diff diff2 = mdiff.compute(scanner.getTreeContext(), afegwsegwse);
         ITree qqq2 = mdiff.getMiddle();
-        System.out.println(qqq2.toTreeString());
+        System.out.println(toPrettyString(scanner.getTreeContext(),qqq));
     }
 
     @Test
     public void testApply2() {
-		System.setProperty("gumtree.match.gt.ag.nomove", "true");
+		// System.setProperty("gumtree.match.gt.ag.nomove", "true");
         // contract: toString should be able to print move of a toplevel class
-        VirtualFile r1 = new VirtualFile("class X { static void f() {} class Y { h () { X.f(); } } };", "X.java");
+        VirtualFile r1 = new VirtualFile("class X { static void f() {} class Y { h () { if(true)X.f();else X.f(); } } };", "X.java");
         Factory left = extracted2(r1);
-        VirtualFile r2 = new VirtualFile("class AAA { void g() {} class Y { h () { X.f(); } } };", "AAA.java");
+        VirtualFile r2 = new VirtualFile("class AAA { void g() {} class Y { h () { if(true)X.f();else if (false) X.f(); } } };", "AAA.java");
         VirtualFile r1b = new VirtualFile("class X { static void f() {} };", "X.java");
         Factory right = extracted2(r1b, r2);
 
@@ -642,7 +644,71 @@ public class MyTest {
         ITree qqq = mdiff.getMiddle();
         System.out.println(qqq);
         System.out.println("--------------");
-        System.out.println(qqq.toTreeString());
+        System.out.println(toPrettyString(scanner.getTreeContext(),qqq));
+    }
+
+    @Test
+    public void testApply3() {
+        System.setProperty("nolabel","true");
+		// System.setProperty("gumtree.match.gt.ag.nomove", "true");
+        // contract: toString should be able to print move of a toplevel class
+        VirtualFile r1 = new VirtualFile("interface X { static Integer f(int i) {return null;} }", "X.java");
+        Factory left = extracted2(r1);
+        VirtualFile r2 = new VirtualFile("interface X<T> { public static <U> java.util.List<U> f(java.util.List<T> i, int j) {return new java.util.ArrayList();} };", "X.java");
+        Factory right = extracted2(r2);
+        VirtualFile r3 = new VirtualFile("interface X<T> { public static Long f(long i, int j) {return null;} };", "X.java");
+        Factory right2 = extracted2(r3);
+
+        final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
+        ITree srctree = scanner.getTree(left.getModel().getRootPackage());
+        MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
+        ITree dstTree = scanner.getTree(right.getModel().getRootPackage());
+        Diff diff = mdiff.compute(scanner.getTreeContext(), dstTree);
+        for (Operation<?> x : diff.getAllOperations()) {
+            System.out.println(x.getClass());
+            if (x instanceof InsertOperation) {
+                System.out.println("------");
+                System.out.println(((InsertOperation)x).getSrc());
+                System.out.println(((InsertOperation)x).getSrc().getClass());
+                System.out.println("++++++");
+                System.out.println(((InsertOperation)x).getDst());
+            } else if (x instanceof DeleteOperation) {
+                System.out.println("---====---");
+                System.out.println(((DeleteOperation)x).getSrc());
+                System.out.println(((DeleteOperation)x).getSrc().getClass());
+                System.out.println("+++====+++");
+                System.out.println(((DeleteOperation)x).getDst());
+            } else {
+                
+            }
+        }
+
+        ITree qqq = mdiff.getMiddle();
+        System.out.println(toPrettyString(scanner.getTreeContext(),dstTree));
+        System.out.println("--------------");
+        System.out.println(toPrettyString(scanner.getTreeContext(),qqq));
+
+        ITree dstTree2 = scanner.getTree(right2.getModel().getRootPackage());
+        Diff diff2 = mdiff.compute(scanner.getTreeContext(), dstTree2);
+
+        ITree qqq2 = mdiff.getMiddle();
+        System.out.println(toPrettyString(scanner.getTreeContext(),dstTree2));
+        System.out.println("--------------");
+        System.out.println(toPrettyString(scanner.getTreeContext(),qqq2));
+    }
+
+    public String toPrettyString(TreeContext ctx, ITree tree) {
+        StringBuilder b = new StringBuilder();
+        for (ITree t : TreeUtils.preOrder(tree))
+            b.append(indent(t) + t.toPrettyString(ctx) + "\n");
+        return b.toString();
+    }
+
+    private String indent(ITree t) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < t.getDepth(); i++)
+            b.append("\t");
+        return b.toString();
     }
 
 }

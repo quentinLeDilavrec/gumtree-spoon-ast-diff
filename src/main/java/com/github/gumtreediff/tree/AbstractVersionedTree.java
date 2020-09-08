@@ -41,7 +41,7 @@ public abstract class AbstractVersionedTree implements ITree {
 
         @Override
         public String toString() {
-            return ""+value;
+            return "" + value;
         }
     }
 
@@ -69,7 +69,7 @@ public abstract class AbstractVersionedTree implements ITree {
     public int getAddedVersion() {
         return addedVersion.value;
     }
-    
+
     public int getRemovedVersion() {
         return removedVersion.value;
     }
@@ -113,7 +113,7 @@ public abstract class AbstractVersionedTree implements ITree {
         for (AbstractVersionedTree curr : children) {
             if (curr.equals(child)) {
                 return i;
-            } else if (childVersion.compareTo(curr.addedVersion) < 0) {
+            } else if (childVersion.compareTo(curr.addedVersion) >= 0) {
                 ++i;
             }
         }
@@ -125,7 +125,7 @@ public abstract class AbstractVersionedTree implements ITree {
         for (AbstractVersionedTree curr : children) {
             if (curr.equals(child)) {
                 return i;
-            } else if (maxVersion.compareTo(curr.addedVersion) < 0) {
+            } else if (maxVersion.compareTo(curr.addedVersion) >= 0) {
                 ++i;
             }
         }
@@ -148,19 +148,31 @@ public abstract class AbstractVersionedTree implements ITree {
         return r;
     }
 
-    public List<ITree> getChildren(Version wantedVersion) {
-        List<ITree> r = new ArrayList<>();
+    public List<AbstractVersionedTree> getChildren(int wantedVersion) {
+        return getChildren(new Version(wantedVersion));
+    }
+
+    public List<AbstractVersionedTree> getChildren(Version wantedVersion) { // TODO ckeck Version.compareTo mostly for equality cases 
+        List<AbstractVersionedTree> r = new ArrayList<>();
         for (AbstractVersionedTree curr : children) {
             if (curr.removedVersion == null) {
-                if (wantedVersion.compareTo(curr.removedVersion) >= 0) {
+                if (wantedVersion.compareTo(curr.addedVersion) >= 0) {
                     r.add(curr);
                 }
-            } else if (wantedVersion.compareTo(curr.addedVersion) < 0
-                    && wantedVersion.compareTo(curr.removedVersion) >= 0) {
+            } else if (wantedVersion.compareTo(curr.addedVersion) >= 0
+                    && wantedVersion.compareTo(curr.removedVersion) < 0) {
                 r.add(curr);
             }
         }
         return r;
+    }
+
+    public ITree getChild(Version wantedVersion, int position) {
+        return getChildren(wantedVersion).get(position);
+    }
+
+    public ITree getChild(int wantedVersion, int position) {
+        return getChild(new Version(wantedVersion), position);
     }
 
     @Override
@@ -263,7 +275,8 @@ public abstract class AbstractVersionedTree implements ITree {
                 children.add(i, (AbstractVersionedTree) child);
                 break;
             } else if (children.get(i).addedVersion.compareTo(childAddedVersion) <= 0
-                    && (children.get(i).removedVersion == null || children.get(i).removedVersion.compareTo(childAddedVersion) > 0)) {
+                    && (children.get(i).removedVersion == null
+                            || children.get(i).removedVersion.compareTo(childAddedVersion) > 0)) {
                 j++;
             }
         }
@@ -405,14 +418,14 @@ public abstract class AbstractVersionedTree implements ITree {
 
     @Override
     public String toShortString() {
-        return String.format("%d%s%s", getType(), SEPARATE_SYMBOL, getLabel());
+        return String.format("%s%s%s", getType(), SEPARATE_SYMBOL, getLabel());
     }
 
     @Override
     public String toTreeString() {
         StringBuilder b = new StringBuilder();
         for (ITree t : TreeUtils.preOrder(this))
-            b.append(indent(t) +((AbstractVersionedTree)t).addedVersion + " " + t.toShortString() + "\n");
+            b.append(indent(t) + ((AbstractVersionedTree) t).addedVersion + " " + t.toShortString() + "\n");
         return b.toString();
     }
 

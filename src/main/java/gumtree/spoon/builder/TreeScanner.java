@@ -35,9 +35,9 @@ public class TreeScanner extends CtScanner {
 		String label = null;
 		String nodeTypeName = getNodeType(element);
 
-		if (nolabel)
+		if (nolabel) {
 			label = nodeTypeName;
-		else {
+		} else {
 			LabelFinder lf = new LabelFinder();
 			lf.scan(element);
 			label = lf.label;
@@ -45,7 +45,11 @@ public class TreeScanner extends CtScanner {
 		pushNodeToTree(createNode(nodeTypeName, element, label));
 
 		int depthBefore = nodes.size();
-
+		if (nolabel) {
+			LabelFinder lf = new LabelFinder();
+			lf.scan(element);
+			this.addSiblingNode(createNode("Label", lf.label));
+		}
 		new NodeCreator(this).scan(element);
 
 		if (nodes.size() != depthBefore) {
@@ -106,7 +110,7 @@ public class TreeScanner extends CtScanner {
 		}
 	}
 
-	private String getNodeType(CtElement element) {
+	public String getNodeType(CtElement element) {
 		String nodeTypeName = NOTYPE;
 		if (element != null) {
 			nodeTypeName = getTypeName(element.getClass().getSimpleName());
@@ -127,7 +131,13 @@ public class TreeScanner extends CtScanner {
 
 	private String getTypeName(String simpleName) {
 		// Removes the "Ct" at the beginning and the "Impl" at the end.
-		return simpleName.substring(2, simpleName.length() - 4);
+		if (simpleName.startsWith("Ct")) {
+			simpleName = simpleName.substring(2);
+		}
+		if (simpleName.endsWith("Impl")) {
+			simpleName = simpleName.substring(0, simpleName.length() - 4);
+		}
+		return simpleName;
 	}
 
 	public ITree createNode(String typeClass, String label) {
