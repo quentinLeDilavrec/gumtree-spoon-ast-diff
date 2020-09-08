@@ -73,6 +73,7 @@ public class VersionedTree extends AbstractVersionedTree {
         this.addedVersion = new Version(version);
         this.children = new LinkedList<>();
         this.metadata = new AssociationMap();
+        this.metadata.set("type", other.getMetadata("type"));
     }
 
     public VersionedTree(ITree other, int version, String... wantedMD) {

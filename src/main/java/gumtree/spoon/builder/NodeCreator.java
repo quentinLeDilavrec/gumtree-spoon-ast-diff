@@ -3,8 +3,10 @@ package gumtree.spoon.builder;
 import com.github.gumtreediff.tree.ITree;
 
 import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtModifiable;
+import spoon.reflect.declaration.CtTypedElement;
 import spoon.reflect.declaration.CtVariable;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtReference;
@@ -12,6 +14,7 @@ import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtInheritanceScanner;
 import spoon.support.reflect.CtExtendedModifier;
 
+import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -61,7 +64,7 @@ public class NodeCreator extends CtInheritanceScanner {
 		modifiers1.addAll(m.getExtendedModifiers());
 
 		for (CtExtendedModifier mod : modifiers1) {
-			ITree modifier = builder.createNode("Modifier", mod.getKind().toString());
+			ITree modifier = builder.createNode("MODIFIER", mod.getKind().toString());
 			// modifiers.addChild(modifier);
 			// We wrap the modifier (which is not a ctelement)
 			modifier.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new CtWrapper(mod, m));
@@ -81,7 +84,8 @@ public class NodeCreator extends CtInheritanceScanner {
 	public <T> void scanCtVariable(CtVariable<T> e) {
 		CtTypeReference<T> type = e.getType();
 		if (type != null) {
-			ITree variableType = builder.createNode("VARIABLE_TYPE", type.getQualifiedName());
+			ITree variableType = builder.createNode("VARIABLE_TYPE",
+					builder.getTypeName(type.getClass().getSimpleName()));
 			variableType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
 			type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, variableType);
 			genericTransfo(type, variableType);
@@ -94,7 +98,7 @@ public class NodeCreator extends CtInheritanceScanner {
 		// add the return type of the method
 		CtTypeReference<T> type = e.getType();
 		if (type != null) {
-			ITree returnType = builder.createNode("RETURN_TYPE", type.getQualifiedName());
+			ITree returnType = builder.createNode("RETURN_TYPE", builder.getTypeName(type.getClass().getSimpleName()));
 			returnType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
 			type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, returnType);
 			genericTransfo(type, returnType);
@@ -102,7 +106,7 @@ public class NodeCreator extends CtInheritanceScanner {
 		}
 
 		for (CtTypeReference<?> thrown : e.getThrownTypes()) {
-			ITree thrownType = builder.createNode("THROWS", thrown.getQualifiedName());
+			ITree thrownType = builder.createNode("THROWS", builder.getTypeName(thrown.getClass().getSimpleName()));
 			thrownType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, thrown);
 			type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, thrownType);
 			genericTransfo(thrown, thrownType);
@@ -113,8 +117,11 @@ public class NodeCreator extends CtInheritanceScanner {
 	}
 
 	private <T> void genericTransfo(CtTypeReference<T> parametrizedType, ITree parametrizedTypeTree) {
+		ITree label = builder.createNode("LABEL", parametrizedType.getQualifiedName());
+		parametrizedTypeTree.addChild(label);
 		for (CtTypeReference<?> typeParam : parametrizedType.getActualTypeArguments()) {
-			ITree tree = builder.createNode(builder.getNodeType(typeParam), typeParam.getQualifiedName());
+			ITree tree = builder.createNode(builder.getNodeType(typeParam),
+					builder.getTypeName(typeParam.getClass().getSimpleName()));
 			tree.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, typeParam);
 			typeParam.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, tree);
 			genericTransfo(typeParam, tree);
@@ -123,17 +130,41 @@ public class NodeCreator extends CtInheritanceScanner {
 	}
 
 	@Override
+	public <A extends Annotation> void visitCtAnnotation(CtAnnotation<A> e) {
+		// TODO Auto-generated method stub
+		super.visitCtAnnotation(e);
+	}
+
+	@Override
 	public void scanCtReference(CtReference reference) {
 		if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.SUPER_TYPE) {
-			ITree superType = builder.createNode("SUPER_TYPE", reference.toString());
+			ITree superType = builder.createNode("SUPER_CLASS",
+					builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
 			CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent());
 			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
 			reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
-			genericTransfo((CtTypeReference<?>)reference, superType);
+			genericTransfo((CtTypeReference<?>) reference, superType);
+			builder.addSiblingNode(superType);
+		} else if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.INTERFACE) {
+			ITree superType = builder.createNode("INTERFACE",
+					builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
+			CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent());
+			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
+			reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
+			genericTransfo((CtTypeReference<?>) reference, superType);
 			builder.addSiblingNode(superType);
 		} else {
 			super.scanCtReference(reference);
 		}
 	}
 
+	@Override
+	public <T> void scanCtTypedElement(CtTypedElement<T> typedElement) {
+		if (typedElement instanceof CtAnnotation) {
+			CtAnnotation<?> annot = (CtAnnotation<?>) typedElement;
+			
+		} else {
+			super.scanCtTypedElement(typedElement);
+		}
+	}
 }

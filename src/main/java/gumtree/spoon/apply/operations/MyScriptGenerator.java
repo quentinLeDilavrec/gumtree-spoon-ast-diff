@@ -16,6 +16,7 @@ import com.github.gumtreediff.tree.TreeUtils;
 import com.github.gumtreediff.tree.VersionedTree;
 
 import gnu.trove.map.TIntObjectMap;
+import gumtree.spoon.apply.AAction;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -99,7 +100,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
         }
     }
 
-    class AMove extends Move {
+    class AMove extends Move implements AAction {
 
         private ITree right;
 
@@ -117,7 +118,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
 
     }
 
-    class AUpdate extends Update {
+    class AUpdate extends Update implements AAction {
 
         private ITree right;
 
@@ -129,6 +130,41 @@ public class MyScriptGenerator implements EditScriptGenerator {
         
         public ITree getRight() {
             return right;
+        }
+
+        public ITree getLeft() {
+            return getNode();
+        }
+
+    }
+
+    class AInsert extends Insert implements AAction {
+
+        private ITree left;
+
+        public AInsert(ITree left, ITree right) {
+            super(right,right.getParent(), right.getParent().getChildPosition(right) );
+            this.left = left;
+        }
+        
+        public ITree getRight() {
+            return getNode();
+        }
+
+        public ITree getLeft() {
+            return left;
+        }
+
+    }
+
+    class ADelete extends Delete implements AAction {
+
+        public ADelete(ITree left) {
+            super(left);
+        }
+        
+        public ITree getRight() {
+            return null;
         }
 
         public ITree getLeft() {
@@ -162,12 +198,12 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 w = new VersionedTree(x, this.version); // VersionedTree.deepCopy(x, this.version);//new VersionedTree(x, this.version);
                 // In order to use the real nodes from the second tree, we
                 // furnish x instead of w
-                Action action = new Insert(w, z, k);
-                actions.add(action);
                 copyToOrig.put(w, x);
                 cpyMappings.link(w, x);
                 z.insertChild(w, k);
                 w.setParent(z);
+                Action action = new AInsert(x, w);//new Insert(w, z, k);
+                actions.add(action);
                 addInsertAction(action, w);
             } else {
                 w = cpyMappings.getSrc(x);
@@ -233,7 +269,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
         List<ITree> pOMiddle = TreeUtils.postOrder(middle);
         for (ITree w : pOMiddle)//middle.postOrder())
             if (!cpyMappings.hasSrc(w)) {
-                Delete action = new Delete(w);
+                Delete action = new ADelete(w);
                 actions.add(action); // TODO cannot find all nodes, related to hash ?
                 ((AbstractVersionedTree) w).delete(version);
                 addDeleteAction(action, w);
@@ -253,7 +289,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
             if (w instanceof AbstractVersionedTree && ((AbstractVersionedTree) w).getAddedVersion() == this.version) {
                 System.out.println(w);
             } else {
-                Delete action = new Delete(w);
+                Delete action = new ADelete(w);
                 actions.add(action); // TODO cannot find all nodes, related to hash ?
                 ((AbstractVersionedTree) w).delete(version);
                 addDeleteAction(action, w);

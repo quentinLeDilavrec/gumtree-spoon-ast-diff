@@ -152,7 +152,7 @@ public abstract class AbstractVersionedTree implements ITree {
         return getChildren(new Version(wantedVersion));
     }
 
-    public List<AbstractVersionedTree> getChildren(Version wantedVersion) { // TODO ckeck Version.compareTo mostly for equality cases 
+    public List<AbstractVersionedTree> getChildren(Version wantedVersion) {
         List<AbstractVersionedTree> r = new ArrayList<>();
         for (AbstractVersionedTree curr : children) {
             if (curr.removedVersion == null) {
@@ -167,11 +167,19 @@ public abstract class AbstractVersionedTree implements ITree {
         return r;
     }
 
-    public ITree getChild(Version wantedVersion, int position) {
+    public List<AbstractVersionedTree> getAllChildren() {
+        List<AbstractVersionedTree> r = new ArrayList<>();
+        for (AbstractVersionedTree curr : children) {
+            r.add(curr);
+        }
+        return r;
+    }
+
+    public AbstractVersionedTree getChild(Version wantedVersion, int position) {
         return getChildren(wantedVersion).get(position);
     }
 
-    public ITree getChild(int wantedVersion, int position) {
+    public AbstractVersionedTree getChild(int wantedVersion, int position) {
         return getChild(new Version(wantedVersion), position);
     }
 

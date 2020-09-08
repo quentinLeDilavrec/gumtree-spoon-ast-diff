@@ -96,7 +96,6 @@ public class DiffImpl implements Diff {
 
 	private List<Operation> wrapSpoon(List<Action> actions) {
 		List<Operation> collect = actions.stream().map(action -> {
-			action.getNode().setMetadata("type", context.getTypeLabel(action.getNode()));
 			if (action instanceof Insert) {
 				return new InsertOperation((Insert) action);
 			} else if (action instanceof Delete) {

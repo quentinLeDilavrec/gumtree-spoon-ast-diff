@@ -6,8 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Addition;
+import com.github.gumtreediff.actions.model.Delete;
+import com.github.gumtreediff.actions.model.Insert;
+import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.AbstractTree;
+import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.github.gumtreediff.tree.TreeUtils;
@@ -15,7 +20,9 @@ import com.github.gumtreediff.tree.AbstractTree.FakeTree;
 
 import org.junit.Test;
 
+import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.Combination;
+import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
@@ -30,11 +37,15 @@ import spoon.reflect.code.CtAbstractInvocation;
 import spoon.reflect.declaration.*;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.factory.FactoryImpl;
+import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.visitor.CtInheritanceScanner;
+import spoon.reflect.visitor.CtScanner;
 import spoon.support.DefaultCoreFactory;
 import spoon.support.StandardEnvironment;
 import spoon.support.compiler.VirtualFile;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
+import spoon.support.visitor.clone.CloneVisitor;
+import spoon.support.visitor.equals.CloneHelper;
 
 public class MyTest {
     @Test
@@ -203,10 +214,12 @@ public class MyTest {
     @Test
     public void test6_1() {
         // contract: toString should be able to print move of a toplevel class
-        VirtualFile r1 = new VirtualFile("class X { int a; int b; int c; void g(){ a + b;} int f(int x){ return x;} }", "X.java");
+        VirtualFile r1 = new VirtualFile("class X { int a; int b; int c; void g(){ a + b;} int f(int x){ return x;} }",
+                "X.java");
         CtPackage rp1 = extracted(r1);
 
-        VirtualFile r2 = new VirtualFile("class X { int a; int b; int c; void g(){ a + f(c+b);} int f(int x){ return x;} }", "X.java");
+        VirtualFile r2 = new VirtualFile(
+                "class X { int a; int b; int c; void g(){ a + f(c+b);} int f(int x){ return x;} }", "X.java");
         CtPackage rp2 = extracted(r2);
 
         AstComparator diff = new AstComparator();
@@ -555,7 +568,7 @@ public class MyTest {
 
     @Test
     public void testApply1() {
-		// System.setProperty("gumtree.match.gt.ag.nomove", "true");
+        // System.setProperty("gumtree.match.gt.ag.nomove", "true");
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class X { static void f() {} class Y { h () { X.f(); } } };", "X.java");
         Factory left = extracted2(r1);
@@ -572,25 +585,27 @@ public class MyTest {
         MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
         Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()));
         System.out.println(scanner.getTree(left.getModel().getRootPackage().clone()).toShortString());
-        CtAbstractInvocation<?> invo = (CtAbstractInvocation<?>) right.getModel().getRootPackage().getType("AAA").getNestedType("Y").getMethod("h").getBody().getStatements().get(0);
+        CtAbstractInvocation<?> invo = (CtAbstractInvocation<?>) right.getModel().getRootPackage().getType("AAA")
+                .getNestedType("Y").getMethod("h").getBody().getStatements().get(0);
         System.out.println(invo.getExecutable().getDeclaration());
-        System.out.println(left.getModel().getRootPackage().clone().prettyprint().equals(left.getModel().getRootPackage().prettyprint()));
+        System.out.println(left.getModel().getRootPackage().clone().prettyprint()
+                .equals(left.getModel().getRootPackage().prettyprint()));
         for (Operation<?> x : diff.getAllOperations()) {
             System.out.println(x.getClass());
             if (x instanceof InsertOperation) {
                 System.out.println("------");
-                System.out.println(((InsertOperation)x).getSrc());
-                System.out.println(((InsertOperation)x).getSrc().getClass());
+                System.out.println(((InsertOperation) x).getSrc());
+                System.out.println(((InsertOperation) x).getSrc().getClass());
                 System.out.println("++++++");
-                System.out.println(((InsertOperation)x).getDst());
+                System.out.println(((InsertOperation) x).getDst());
             } else if (x instanceof DeleteOperation) {
                 System.out.println("---====---");
-                System.out.println(((DeleteOperation)x).getSrc());
-                System.out.println(((DeleteOperation)x).getSrc().getClass());
+                System.out.println(((DeleteOperation) x).getSrc());
+                System.out.println(((DeleteOperation) x).getSrc().getClass());
                 System.out.println("+++====+++");
-                System.out.println(((DeleteOperation)x).getDst());
+                System.out.println(((DeleteOperation) x).getDst());
             } else {
-                
+
             }
         }
         AbstractTree.FakeTree aaaaa = null;
@@ -602,16 +617,18 @@ public class MyTest {
         System.out.println(afegwsegwse.toTreeString());
         Diff diff2 = mdiff.compute(scanner.getTreeContext(), afegwsegwse);
         ITree qqq2 = mdiff.getMiddle();
-        System.out.println(toPrettyString(scanner.getTreeContext(),qqq));
+        System.out.println(toPrettyTree(scanner.getTreeContext(), qqq));
     }
 
     @Test
     public void testApply2() {
-		// System.setProperty("gumtree.match.gt.ag.nomove", "true");
+        // System.setProperty("gumtree.match.gt.ag.nomove", "true");
         // contract: toString should be able to print move of a toplevel class
-        VirtualFile r1 = new VirtualFile("class X { static void f() {} class Y { h () { if(true)X.f();else X.f(); } } };", "X.java");
+        VirtualFile r1 = new VirtualFile(
+                "class X { static void f() {} class Y { h () { if(true)X.f();else X.f(); } } };", "X.java");
         Factory left = extracted2(r1);
-        VirtualFile r2 = new VirtualFile("class AAA { void g() {} class Y { h () { if(true)X.f();else if (false) X.f(); } } };", "AAA.java");
+        VirtualFile r2 = new VirtualFile(
+                "class AAA { void g() {} class Y { h () { if(true)X.f();else if (false) X.f(); } } };", "AAA.java");
         VirtualFile r1b = new VirtualFile("class X { static void f() {} };", "X.java");
         Factory right = extracted2(r1b, r2);
 
@@ -620,43 +637,43 @@ public class MyTest {
         MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
         Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()));
         System.out.println(scanner.getTree(left.getModel().getRootPackage().clone()).toShortString());
-        CtAbstractInvocation<?> invo = (CtAbstractInvocation<?>) right.getModel().getRootPackage().getType("AAA").getNestedType("Y").getMethod("h").getBody().getStatements().get(0);
-        System.out.println(invo.getExecutable().getDeclaration());
-        System.out.println(left.getModel().getRootPackage().clone().prettyprint().equals(left.getModel().getRootPackage().prettyprint()));
         for (Operation<?> x : diff.getAllOperations()) {
             System.out.println(x.getClass());
             if (x instanceof InsertOperation) {
                 System.out.println("------");
-                System.out.println(((InsertOperation)x).getSrc());
-                System.out.println(((InsertOperation)x).getSrc().getClass());
+                System.out.println(((InsertOperation) x).getSrc());
+                System.out.println(((InsertOperation) x).getSrc().getClass());
                 System.out.println("++++++");
-                System.out.println(((InsertOperation)x).getDst());
+                System.out.println(((InsertOperation) x).getDst());
             } else if (x instanceof DeleteOperation) {
                 System.out.println("---====---");
-                System.out.println(((DeleteOperation)x).getSrc());
-                System.out.println(((DeleteOperation)x).getSrc().getClass());
+                System.out.println(((DeleteOperation) x).getSrc());
+                System.out.println(((DeleteOperation) x).getSrc().getClass());
                 System.out.println("+++====+++");
-                System.out.println(((DeleteOperation)x).getDst());
+                System.out.println(((DeleteOperation) x).getDst());
             } else {
-                
+
             }
         }
         ITree qqq = mdiff.getMiddle();
         System.out.println(qqq);
         System.out.println("--------------");
-        System.out.println(toPrettyString(scanner.getTreeContext(),qqq));
+        System.out.println(toPrettyTree(scanner.getTreeContext(), qqq));
     }
 
     @Test
     public void testApply3() {
-        System.setProperty("nolabel","true");
-		// System.setProperty("gumtree.match.gt.ag.nomove", "true");
+        System.setProperty("nolabel", "true");
+        // System.setProperty("gumtree.match.gt.ag.nomove", "true");
         // contract: toString should be able to print move of a toplevel class
-        VirtualFile r1 = new VirtualFile("interface X { static Integer f(int i) {return null;} }", "X.java");
+        VirtualFile r1 = new VirtualFile("interface X { @Overrride @GeneratedValue(strategy = GenerationType.AUTO) Integer f(int i) {return null;} }", "X.java");
         Factory left = extracted2(r1);
-        VirtualFile r2 = new VirtualFile("interface X<T> { public static <U> java.util.List<U> f(java.util.List<T> i, int j) {return new java.util.ArrayList();} };", "X.java");
+        VirtualFile r2 = new VirtualFile(
+                "interface X<T> { @Overrride @GeneratedValue(strategy = GenerationType.AUTO) public <U> java.util.List<U> f(java.util.List<T> i, int j) {return new java.util.ArrayList();} };",
+                "X.java");
         Factory right = extracted2(r2);
-        VirtualFile r3 = new VirtualFile("interface X<T> { public static Long f(long i, int j) {return null;} };", "X.java");
+        VirtualFile r3 = new VirtualFile("interface X<T> { public static Long f(long i, int j) {return null;} };",
+                "X.java");
         Factory right2 = extracted2(r3);
 
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
@@ -664,51 +681,147 @@ public class MyTest {
         MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
         ITree dstTree = scanner.getTree(right.getModel().getRootPackage());
         Diff diff = mdiff.compute(scanner.getTreeContext(), dstTree);
-        for (Operation<?> x : diff.getAllOperations()) {
-            System.out.println(x.getClass());
-            if (x instanceof InsertOperation) {
-                System.out.println("------");
-                System.out.println(((InsertOperation)x).getSrc());
-                System.out.println(((InsertOperation)x).getSrc().getClass());
-                System.out.println("++++++");
-                System.out.println(((InsertOperation)x).getDst());
-            } else if (x instanceof DeleteOperation) {
-                System.out.println("---====---");
-                System.out.println(((DeleteOperation)x).getSrc());
-                System.out.println(((DeleteOperation)x).getSrc().getClass());
-                System.out.println("+++====+++");
-                System.out.println(((DeleteOperation)x).getDst());
-            } else {
-                
+        List<Operation> ops = diff.getAllOperations();
+        for (Operation<?> op : ops) {
+            Action action = op.getAction();
+            System.out.println(action.format(scanner.getTreeContext()));
+            if (action instanceof AAction) {
+                AAction aaction = (AAction) action;
+                ITree leftNode = aaction.getLeft();
+                System.out.println("\t" + toPrettyString(scanner.getTreeContext(), leftNode));
+                ITree rightNode = aaction.getRight();
+                System.out.println("\t" + toPrettyString(scanner.getTreeContext(), rightNode));
+                if (aaction instanceof Update) {
+                    System.out.println("\t" + leftNode.getMetadata("type") + "\t"
+                            + ((AbstractVersionedTree) leftNode).getAllChildren().size());
+                    System.out.println("\t" + rightNode.getMetadata("type") + "\t"
+                            + ((AbstractVersionedTree) rightNode).getAllChildren().size());
+                }
             }
         }
 
         ITree qqq = mdiff.getMiddle();
-        System.out.println(toPrettyString(scanner.getTreeContext(),dstTree));
+        System.out.println(toPrettyTree(scanner.getTreeContext(), dstTree));
         System.out.println("--------------");
-        System.out.println(toPrettyString(scanner.getTreeContext(),qqq));
+        System.out.println(toPrettyTree(scanner.getTreeContext(), qqq));
 
         ITree dstTree2 = scanner.getTree(right2.getModel().getRootPackage());
         Diff diff2 = mdiff.compute(scanner.getTreeContext(), dstTree2);
+        System.out.println("...............");
 
-        ITree qqq2 = mdiff.getMiddle();
-        System.out.println(toPrettyString(scanner.getTreeContext(),dstTree2));
-        System.out.println("--------------");
-        System.out.println(toPrettyString(scanner.getTreeContext(),qqq2));
+        for (Operation<?> op : diff2.getAllOperations()) {
+            Action action = op.getAction();
+            System.out.println(action.format(scanner.getTreeContext()));
+            if (action instanceof AAction) {
+                AAction aaction = (AAction) action;
+                ITree leftNode = aaction.getLeft();
+                System.out.println("\t" + toPrettyString(scanner.getTreeContext(), leftNode));
+                ITree rightNode = aaction.getRight();
+                System.out.println("\t" + toPrettyString(scanner.getTreeContext(), rightNode));
+                if (aaction instanceof Update) {
+                    System.out.println("\t" + leftNode.getMetadata("type") + "\t"
+                            + ((AbstractVersionedTree) leftNode).getAllChildren().size());
+                    System.out.println("\t" + rightNode.getMetadata("type") + "\t"
+                            + ((AbstractVersionedTree) rightNode).getAllChildren().size());
+                }
+            }
+        }
+        System.out.println("...............");
+
+        // ITree qqq2 = mdiff.getMiddle();
+        // System.out.println(toPrettyTree(scanner.getTreeContext(), dstTree2));
+        // System.out.println("--------------");
+        // System.out.println(toPrettyTree(scanner.getTreeContext(), qqq2));
+
+        System.out.println(qqq.toTreeString());
+        System.out.println(ops.get(0).getAction());
+        aux((AAction) ops.get(0).getAction());
+        System.out.println("oooooooooooooooooo");
+        System.out.println(ops.get(1).getAction());
+        aux((AAction) ops.get(1).getAction());
     }
 
-    public String toPrettyString(TreeContext ctx, ITree tree) {
+    private static void aux(AAction action) {
+        MyNRCloner cloneHelper = new MyNRCloner();
+        ITree leftNode = (ITree) action.getLeft();
+        AbstractVersionedTree rightNode = (AbstractVersionedTree) action.getRight();
+        if (action instanceof Insert) {
+            CtElement leftSpoon = (CtElement) leftNode.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            System.out.println(leftSpoon);
+            CtElement rightSpoon = (CtElement) rightNode.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            System.out.println(rightSpoon);
+            CtElement rightParentSpoon = (CtElement) rightNode.getParent()
+                    .getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            System.out.println(rightParentSpoon);
+            if (rightNode.getMetadata("type").equals("LABEL")) {
+                System.out.println("ignore label insert"); // DO not add it in the first place ?
+            } else {
+                System.out.println("do the insert");
+                List<AbstractVersionedTree> childrenAtInsTime = rightNode.getChildren(rightNode.getAddedVersion());
+                if (childrenAtInsTime.size() > 0 && childrenAtInsTime.get(0).getMetadata("type").equals("LABEL")) {
+                    System.out.println("has a label");
+                    System.out.println(childrenAtInsTime.size());
+                    System.out.println(leftSpoon.getClass());
+                    System.out.println(leftSpoon.clone());
+                    CtElement clone = cloneHelper.clone(leftSpoon);
+                    rightNode.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, clone);
+                    if (clone instanceof CtTypeParameter) {
+                        ((CtType) rightParentSpoon).addFormalCtTypeParameter((CtTypeParameter) clone);
+                        // clone.setParent(rightParentSpoon);                        
+                    }
+                    System.out.println(childrenAtInsTime.get(0).toShortString());
+                }
+                // for (AbstractVersionedTree firstC : rightNode.getChildren(rightNode.getAddedVersion())) {
+                //     System.out.println(firstC.toShortString());
+                // }
+            }
+
+        } else if (action instanceof Delete) {
+            CtElement leftSpoon = (CtElement) leftNode.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            System.out.println(leftSpoon);
+
+        }
+        System.out.println(action);
+    }
+
+    public static String toPrettyString(TreeContext ctx, ITree tree) {
+        if (tree == null)
+            return "null";
+        return tree.toPrettyString(ctx);
+    }
+
+    public static String toPrettyTree(TreeContext ctx, ITree tree) {
+        if (tree == null)
+            return "null";
         StringBuilder b = new StringBuilder();
         for (ITree t : TreeUtils.preOrder(tree))
             b.append(indent(t) + t.toPrettyString(ctx) + "\n");
         return b.toString();
     }
 
-    private String indent(ITree t) {
+    private static String indent(ITree t) {
         StringBuilder b = new StringBuilder();
         for (int i = 0; i < t.getDepth(); i++)
             b.append("\t");
         return b.toString();
+    }
+
+    static class MyNRCloner extends CloneHelper {
+        static class MyStopCloner extends CloneHelper {
+            @Override
+            protected Object clone() throws CloneNotSupportedException {
+                return null;
+            }
+        }
+
+        static MyStopCloner STOP = new MyStopCloner();
+
+        public <T extends CtElement> T clone(T element) {
+            final CloneVisitor cloneVisitor = new CloneVisitor(STOP);
+            cloneVisitor.scan(element);
+            T clone = cloneVisitor.getClone();
+            return clone;
+        }
     }
 
 }

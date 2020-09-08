@@ -48,7 +48,9 @@ public class TreeScanner extends CtScanner {
 		if (nolabel) {
 			LabelFinder lf = new LabelFinder();
 			lf.scan(element);
-			this.addSiblingNode(createNode("Label", lf.label));
+			if (lf.label.length()>0) {
+				this.addSiblingNode(createNode("LABEL", lf.label));
+			}
 		}
 		new NodeCreator(this).scan(element);
 
@@ -129,7 +131,7 @@ public class TreeScanner extends CtScanner {
 		return newNode;
 	}
 
-	private String getTypeName(String simpleName) {
+	String getTypeName(String simpleName) {
 		// Removes the "Ct" at the beginning and the "Impl" at the end.
 		if (simpleName.startsWith("Ct")) {
 			simpleName = simpleName.substring(2);
@@ -141,6 +143,8 @@ public class TreeScanner extends CtScanner {
 	}
 
 	public ITree createNode(String typeClass, String label) {
-		return treeContext.createTree(typeClass.hashCode(), label, typeClass);
+		ITree tree = treeContext.createTree(typeClass.hashCode(), label, typeClass);
+		tree.setMetadata("type", treeContext.getTypeLabel(tree));
+		return tree;
 	}
 }
