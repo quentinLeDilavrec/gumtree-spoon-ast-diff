@@ -130,12 +130,6 @@ public class NodeCreator extends CtInheritanceScanner {
 	}
 
 	@Override
-	public <A extends Annotation> void visitCtAnnotation(CtAnnotation<A> e) {
-		// TODO Auto-generated method stub
-		super.visitCtAnnotation(e);
-	}
-
-	@Override
 	public void scanCtReference(CtReference reference) {
 		if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.SUPER_TYPE) {
 			ITree superType = builder.createNode("SUPER_CLASS",
@@ -158,13 +152,13 @@ public class NodeCreator extends CtInheritanceScanner {
 		}
 	}
 
-	@Override
-	public <T> void scanCtTypedElement(CtTypedElement<T> typedElement) {
-		if (typedElement instanceof CtAnnotation) {
-			CtAnnotation<?> annot = (CtAnnotation<?>) typedElement;
+	// @Override
+	// public <T> void scanCtTypedElement(CtTypedElement<T> typedElement) {
+	// 	if (typedElement instanceof CtAnnotation) {
+	// 		CtAnnotation<?> annot = (CtAnnotation<?>) typedElement;
 			
-		} else {
-			super.scanCtTypedElement(typedElement);
-		}
-	}
+	// 	} else {
+	// 		super.scanCtTypedElement(typedElement);
+	// 	}
+	// }
 }

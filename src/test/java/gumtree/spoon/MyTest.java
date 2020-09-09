@@ -22,6 +22,7 @@ import org.junit.Test;
 
 import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.Combination;
+import gumtree.spoon.apply.operations.MyCloneHelper;
 import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
@@ -44,8 +45,6 @@ import spoon.support.DefaultCoreFactory;
 import spoon.support.StandardEnvironment;
 import spoon.support.compiler.VirtualFile;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
-import spoon.support.visitor.clone.CloneVisitor;
-import spoon.support.visitor.equals.CloneHelper;
 
 public class MyTest {
     @Test
@@ -666,13 +665,13 @@ public class MyTest {
         System.setProperty("nolabel", "true");
         // System.setProperty("gumtree.match.gt.ag.nomove", "true");
         // contract: toString should be able to print move of a toplevel class
-        VirtualFile r1 = new VirtualFile("interface X { @Overrride @GeneratedValue(strategy = GenerationType.AUTO) Integer f(int i) {return null;} }", "X.java");
+        VirtualFile r1 = new VirtualFile("interface X { @Override @GeneratedValue(strategies = GenerationType.AUTO, strategy = GenerationType.AUTO) Integer f(int i) {return null;} }", "X.java");
         Factory left = extracted2(r1);
         VirtualFile r2 = new VirtualFile(
-                "interface X<T> { @Overrride @GeneratedValue(strategy = GenerationType.AUTO) public <U> java.util.List<U> f(java.util.List<T> i, int j) {return new java.util.ArrayList();} };",
+                "interface X<T> { @Override @GeneratedValue(strategies = GenerationType.AUTO) public <U> java.util.List<U> f(java.util.List<T> i, int j) {return new java.util.ArrayList();} };",
                 "X.java");
         Factory right = extracted2(r2);
-        VirtualFile r3 = new VirtualFile("interface X<T> { public static Long f(long i, int j) {return null;} };",
+        VirtualFile r3 = new VirtualFile("interface X<T> extends A { public static Long f(long i, int j) {return null;} };",
                 "X.java");
         Factory right2 = extracted2(r3);
 
@@ -733,7 +732,7 @@ public class MyTest {
         // System.out.println("--------------");
         // System.out.println(toPrettyTree(scanner.getTreeContext(), qqq2));
 
-        System.out.println(qqq.toTreeString());
+        System.out.println(toPrettyTree(scanner.getTreeContext(), qqq));
         System.out.println(ops.get(0).getAction());
         aux((AAction) ops.get(0).getAction());
         System.out.println("oooooooooooooooooo");
@@ -742,7 +741,7 @@ public class MyTest {
     }
 
     private static void aux(AAction action) {
-        MyNRCloner cloneHelper = new MyNRCloner();
+        MyCloneHelper cloneHelper = new MyCloneHelper();
         ITree leftNode = (ITree) action.getLeft();
         AbstractVersionedTree rightNode = (AbstractVersionedTree) action.getRight();
         if (action instanceof Insert) {
@@ -804,24 +803,6 @@ public class MyTest {
         for (int i = 0; i < t.getDepth(); i++)
             b.append("\t");
         return b.toString();
-    }
-
-    static class MyNRCloner extends CloneHelper {
-        static class MyStopCloner extends CloneHelper {
-            @Override
-            protected Object clone() throws CloneNotSupportedException {
-                return null;
-            }
-        }
-
-        static MyStopCloner STOP = new MyStopCloner();
-
-        public <T extends CtElement> T clone(T element) {
-            final CloneVisitor cloneVisitor = new CloneVisitor(STOP);
-            cloneVisitor.scan(element);
-            T clone = cloneVisitor.getClone();
-            return clone;
-        }
     }
 
 }

@@ -82,7 +82,7 @@ public class TreeScanner extends CtScanner {
 			return true;
 		}
 
-		if (element instanceof CtReference && element.getRoleInParent() == CtRole.SUPER_TYPE) {
+		if (element instanceof CtReference && (element.getRoleInParent() == CtRole.SUPER_TYPE || element.getRoleInParent() == CtRole.INTERFACE)) {
 			return false;
 		}
 
