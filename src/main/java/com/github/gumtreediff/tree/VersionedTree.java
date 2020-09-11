@@ -13,9 +13,14 @@ import com.github.gumtreediff.tree.AssociationMap;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 
+import gumtree.spoon.CloneVisitorNewFactory;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
+import spoon.Launcher;
+import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtExecutableReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtScanner;
@@ -127,14 +132,19 @@ public class VersionedTree extends AbstractVersionedTree {
     public static final String MIDDLE_GUMTREE_NODE = "middle_gumtree_node";
 
     static class MyCloner extends CloneHelper {
+        private Launcher launcher;
+
         public <T extends CtElement> T clone(T element) {
             ITree gtnode = null;
             if (element != null) {
                 gtnode = (ITree) element.getMetadata(MIDDLE_GUMTREE_NODE);
             }
-            final CloneVisitor cloneVisitor = new CloneVisitor(this);
+            final CloneVisitorNewFactory cloneVisitor = new CloneVisitorNewFactory(this, launcher.getFactory());
             cloneVisitor.scan(element);
             T clone = cloneVisitor.getClone();
+            if(element instanceof CtRootPackage) {
+                clone=(T)((CtPackage)clone).getParent();
+            }
             if (gtnode != null) {
                 gtnode.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, clone);
             }
@@ -159,6 +169,10 @@ public class VersionedTree extends AbstractVersionedTree {
                 }
             }.scan(topLevelClone);
         }
+
+        public MyCloner(Factory pFactory) {
+            this.launcher = new Launcher();
+        }
     }
 
     public static AbstractVersionedTree deepCopySpoon(ITree initialSpooned) {
@@ -169,7 +183,7 @@ public class VersionedTree extends AbstractVersionedTree {
             ele = (CtElement) currentOrig.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
             if (ele != null) {
                 result = deepCopySpoonAux(currentOrig);
-                new MyCloner().clone(ele);
+                new MyCloner(ele.getFactory()).clone(ele);
             } else {
                 result = new VersionedTree(currentOrig, 0);
                 for (ITree child : currentOrig.getChildren()) {

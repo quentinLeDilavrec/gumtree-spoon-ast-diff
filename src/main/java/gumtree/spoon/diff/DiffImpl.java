@@ -56,6 +56,10 @@ public class DiffImpl implements Diff {
 	 * Context of the spoon diff.
 	 */
 	private final TreeContext context;
+	private List<Action> actionsList;
+	public List<Action> getActionsList() {
+		return actionsList;
+	}
 
 	DiffImpl(AbstractVersionedTree middle, MultiVersionMappingStore multiMappingsComp, TreeContext context, ITree rootSpoonLeft, ITree rootSpoonRight) {
 		if (context == null) {
@@ -71,7 +75,7 @@ public class DiffImpl implements Diff {
 		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle,multiMappingsComp);
 
 		EditScript actions = actionGenerator.computeActions(matcher);
-		List<Action> actionsList = actions.asList();
+		this.actionsList = actions.asList();
 		
 		ActionClassifier actionClassifier = new ActionClassifier(multiMappingsComp.asSet(), actionsList);
 		// Bugfix: the Action classifier must be executed *BEFORE* the convertToSpoon

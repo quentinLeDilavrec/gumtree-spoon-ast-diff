@@ -100,79 +100,6 @@ public class MyScriptGenerator implements EditScriptGenerator {
         }
     }
 
-    class AMove extends Move implements AAction {
-
-        private ITree right;
-
-        public AMove(ITree left, ITree right) {
-            super(left, right.getParent(), right.getParent().getChildPosition(right));
-            this.right = right;
-        }
-        public ITree getRight() {
-            return right;
-        }
-
-        public ITree getLeft() {
-            return getNode();
-        }
-
-    }
-
-    class AUpdate extends Update implements AAction {
-
-        private ITree right;
-
-        public AUpdate(ITree left, ITree right) {
-            super(left,right.getLabel());
-            //left, right.getParent(), right.getParent().getChildPosition(right)
-            this.right = right;
-        }
-        
-        public ITree getRight() {
-            return right;
-        }
-
-        public ITree getLeft() {
-            return getNode();
-        }
-
-    }
-
-    class AInsert extends Insert implements AAction {
-
-        private ITree left;
-
-        public AInsert(ITree left, ITree right) {
-            super(right,right.getParent(), right.getParent().getChildPosition(right) );
-            this.left = left;
-        }
-        
-        public ITree getRight() {
-            return getNode();
-        }
-
-        public ITree getLeft() {
-            return left;
-        }
-
-    }
-
-    class ADelete extends Delete implements AAction {
-
-        public ADelete(ITree left) {
-            super(left);
-        }
-        
-        public ITree getRight() {
-            return null;
-        }
-
-        public ITree getLeft() {
-            return getNode();
-        }
-
-    }
-
     public EditScript generate() {
         AbstractVersionedTree srcFakeRoot = new AbstractVersionedTree.FakeTree(middle);
         ITree dstFakeRoot = new AbstractTree.FakeTree(origDst);
@@ -202,7 +129,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 cpyMappings.link(w, x);
                 z.insertChild(w, k);
                 w.setParent(z);
-                Action action = new AInsert(x, w);//new Insert(w, z, k);
+                Action action = AAction.build(Insert.class, x, w);//new AInsert(x, w);//new Insert(w, z, k);
                 actions.add(action);
                 addInsertAction(action, w);
             } else {
@@ -226,7 +153,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         wbis.setLabel(x.getLabel());
                         wbis.setParent(v);
                         multiVersionMappingStore.link(w, wbis);
-                        AUpdate action = new AUpdate(w, wbis);
+                        Action action = AAction.build(Update.class, w, wbis);//new AUpdate(w, wbis);
                         actions.add(action); // TODO put removedVersion and added version ?
                         addDeleteAction(action, w);
                         addInsertAction(action, wbis);
@@ -246,7 +173,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         ITree gew = copyToOrig.put(wbis, x);
                         // cpyMappings.link(w, x);
                         multiVersionMappingStore.link(w, wbis);
-                        AMove action = new AMove(w, wbis); // TODO put removedVersion and added version ?
+                        Action action = AAction.build(Move.class, w, wbis);//new AMove(w, wbis); // TODO put removedVersion and added version ?
                         actions.add(action);
                         addDeleteAction(action, w);
                         addInsertAction(action, wbis);
@@ -269,7 +196,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
         List<ITree> pOMiddle = TreeUtils.postOrder(middle);
         for (ITree w : pOMiddle)//middle.postOrder())
             if (!cpyMappings.hasSrc(w)) {
-                Delete action = new ADelete(w);
+                Delete action = AAction.build(Delete.class, w, null);//new ADelete(w);
                 actions.add(action); // TODO cannot find all nodes, related to hash ?
                 ((AbstractVersionedTree) w).delete(version);
                 addDeleteAction(action, w);
@@ -281,7 +208,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
     }
 
     private void handleDeletion2Aux(AbstractVersionedTree w) {
-        List<AbstractVersionedTree> children = w.getChildren(this.version-1);
+        List<AbstractVersionedTree> children = w.getChildren(this.version - 1);
         for (int i = children.size() - 1; i >= 0; i--) {
             handleDeletion2Aux(children.get(i));
         }
@@ -289,7 +216,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
             if (w instanceof AbstractVersionedTree && ((AbstractVersionedTree) w).getAddedVersion() == this.version) {
                 System.out.println(w);
             } else {
-                Delete action = new ADelete(w);
+                Action action = AAction.build(Delete.class, w, null);//new ADelete(w);
                 actions.add(action); // TODO cannot find all nodes, related to hash ?
                 ((AbstractVersionedTree) w).delete(version);
                 addDeleteAction(action, w);

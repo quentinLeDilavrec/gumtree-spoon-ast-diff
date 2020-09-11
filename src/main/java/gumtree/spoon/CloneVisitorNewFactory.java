@@ -1,33 +1,39 @@
-package gumtree.spoon.apply.operations;
+package gumtree.spoon;
 
 import spoon.reflect.code.*;
 import spoon.reflect.declaration.*;
+import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.*;
 import spoon.reflect.visitor.CtInheritanceScanner;
 import spoon.reflect.visitor.CtScanner;
+import spoon.support.visitor.clone.CloneBuilder;
+import spoon.support.visitor.equals.CloneHelper;
 
 /**
  * should be similar to NodeCreator
  * mostly used for insertion ?
  */
-public class MyCloneVisitor extends CtScanner {
-	private final MyCloneHelper cloneHelper;
+public class CloneVisitorNewFactory extends CtScanner {
+	private final CloneHelper cloneHelper;
 
-	private final MyCloneBuilder builder = new MyCloneBuilder();
+	private final CloneBuilder builder = new CloneBuilder();
 
 	private CtElement other;
 
-	public MyCloneVisitor(MyCloneHelper cloneHelper) {
+	private Factory factory;
+
+	public CloneVisitorNewFactory(CloneHelper cloneHelper, Factory factory) {
 		this.cloneHelper = cloneHelper;
+		this.factory = factory;
 	}
 
 	public <T extends CtElement> T getClone() {
 		return ((T) (other));
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <A extends java.lang.annotation.Annotation> void visitCtAnnotation(final CtAnnotation<A> annotation) {
-		CtAnnotation<A> aCtAnnotation = annotation.getFactory().Core().createAnnotation();
+		CtAnnotation<A> aCtAnnotation = this.factory.Core().createAnnotation();
+		aCtAnnotation.setPosition(annotation.getPosition());
 		this.builder.copy(annotation, aCtAnnotation);
 		aCtAnnotation.setType(this.cloneHelper.clone(annotation.getType()));
 		aCtAnnotation.setComments(this.cloneHelper.clone(annotation.getComments()));
@@ -38,10 +44,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtAnnotation;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <A extends java.lang.annotation.Annotation> void visitCtAnnotationType(
 			final CtAnnotationType<A> annotationType) {
-		CtAnnotationType<A> aCtAnnotationType = annotationType.getFactory().Core().createAnnotationType();
+		CtAnnotationType<A> aCtAnnotationType = this.factory.Core().createAnnotationType();
+		aCtAnnotationType.setPosition(annotationType.getPosition());
 		this.builder.copy(annotationType, aCtAnnotationType);
 		aCtAnnotationType.setAnnotations(this.cloneHelper.clone(annotationType.getAnnotations()));
 		aCtAnnotationType.setTypeMembers(this.cloneHelper.clone(annotationType.getTypeMembers()));
@@ -50,9 +56,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtAnnotationType;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtAnonymousExecutable(final CtAnonymousExecutable anonymousExec) {
-		CtAnonymousExecutable aCtAnonymousExecutable = anonymousExec.getFactory().Core().createAnonymousExecutable();
+		CtAnonymousExecutable aCtAnonymousExecutable = this.factory.Core().createAnonymousExecutable();
+		aCtAnonymousExecutable.setPosition(anonymousExec.getPosition());
 		this.builder.copy(anonymousExec, aCtAnonymousExecutable);
 		aCtAnonymousExecutable.setAnnotations(this.cloneHelper.clone(anonymousExec.getAnnotations()));
 		aCtAnonymousExecutable.setBody(this.cloneHelper.clone(anonymousExec.getBody()));
@@ -61,10 +67,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtAnonymousExecutable;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtArrayRead(final CtArrayRead<T> arrayRead) {
-		CtArrayRead<T> aCtArrayRead = arrayRead.getFactory().Core().createArrayRead();
+		CtArrayRead<T> aCtArrayRead = this.factory.Core().createArrayRead();
+		aCtArrayRead.setPosition(arrayRead.getPosition());
 		this.builder.copy(arrayRead, aCtArrayRead);
 		aCtArrayRead.setAnnotations(this.cloneHelper.clone(arrayRead.getAnnotations()));
 		aCtArrayRead.setType(this.cloneHelper.clone(arrayRead.getType()));
@@ -76,10 +82,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtArrayRead;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtArrayWrite(final CtArrayWrite<T> arrayWrite) {
-		CtArrayWrite<T> aCtArrayWrite = arrayWrite.getFactory().Core().createArrayWrite();
+		CtArrayWrite<T> aCtArrayWrite = this.factory.Core().createArrayWrite();
+		aCtArrayWrite.setPosition(arrayWrite.getPosition());
 		this.builder.copy(arrayWrite, aCtArrayWrite);
 		aCtArrayWrite.setAnnotations(this.cloneHelper.clone(arrayWrite.getAnnotations()));
 		aCtArrayWrite.setType(this.cloneHelper.clone(arrayWrite.getType()));
@@ -91,9 +97,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtArrayWrite;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtArrayTypeReference(final CtArrayTypeReference<T> reference) {
-		CtArrayTypeReference<T> aCtArrayTypeReference = reference.getFactory().Core().createArrayTypeReference();
+		CtArrayTypeReference<T> aCtArrayTypeReference = this.factory.Core().createArrayTypeReference();
+		aCtArrayTypeReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtArrayTypeReference);
 		aCtArrayTypeReference.setPackage(this.cloneHelper.clone(reference.getPackage()));
 		aCtArrayTypeReference.setDeclaringType(this.cloneHelper.clone(reference.getDeclaringType()));
@@ -104,9 +110,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtArrayTypeReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtAssert(final CtAssert<T> asserted) {
-		CtAssert<T> aCtAssert = asserted.getFactory().Core().createAssert();
+		CtAssert<T> aCtAssert = this.factory.Core().createAssert();
+		aCtAssert.setPosition(asserted.getPosition());
 		this.builder.copy(asserted, aCtAssert);
 		aCtAssert.setAnnotations(this.cloneHelper.clone(asserted.getAnnotations()));
 		aCtAssert.setAssertExpression(this.cloneHelper.clone(asserted.getAssertExpression()));
@@ -116,9 +122,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtAssert;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T, A extends T> void visitCtAssignment(final CtAssignment<T, A> assignement) {
-		CtAssignment<T, A> aCtAssignment = assignement.getFactory().Core().createAssignment();
+		CtAssignment<T, A> aCtAssignment = this.factory.Core().createAssignment();
+		aCtAssignment.setPosition(assignement.getPosition());
 		this.builder.copy(assignement, aCtAssignment);
 		aCtAssignment.setAnnotations(this.cloneHelper.clone(assignement.getAnnotations()));
 		aCtAssignment.setType(this.cloneHelper.clone(assignement.getType()));
@@ -130,9 +136,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtAssignment;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtBinaryOperator(final CtBinaryOperator<T> operator) {
-		CtBinaryOperator<T> aCtBinaryOperator = operator.getFactory().Core().createBinaryOperator();
+		CtBinaryOperator<T> aCtBinaryOperator = this.factory.Core().createBinaryOperator();
+		aCtBinaryOperator.setPosition(operator.getPosition());
 		this.builder.copy(operator, aCtBinaryOperator);
 		aCtBinaryOperator.setAnnotations(this.cloneHelper.clone(operator.getAnnotations()));
 		aCtBinaryOperator.setType(this.cloneHelper.clone(operator.getType()));
@@ -144,9 +150,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtBinaryOperator;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <R> void visitCtBlock(final CtBlock<R> block) {
-		CtBlock<R> aCtBlock = block.getFactory().Core().createBlock();
+		CtBlock<R> aCtBlock = this.factory.Core().createBlock();
+		aCtBlock.setPosition(block.getPosition());
 		this.builder.copy(block, aCtBlock);
 		aCtBlock.setAnnotations(this.cloneHelper.clone(block.getAnnotations()));
 		aCtBlock.setStatements(this.cloneHelper.clone(block.getStatements()));
@@ -155,9 +161,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtBlock;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtBreak(final CtBreak breakStatement) {
-		CtBreak aCtBreak = breakStatement.getFactory().Core().createBreak();
+		CtBreak aCtBreak = this.factory.Core().createBreak();
+		aCtBreak.setPosition(breakStatement.getPosition());
 		this.builder.copy(breakStatement, aCtBreak);
 		aCtBreak.setAnnotations(this.cloneHelper.clone(breakStatement.getAnnotations()));
 		aCtBreak.setComments(this.cloneHelper.clone(breakStatement.getComments()));
@@ -165,9 +171,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtBreak;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <S> void visitCtCase(final CtCase<S> caseStatement) {
-		CtCase<S> aCtCase = caseStatement.getFactory().Core().createCase();
+		CtCase<S> aCtCase = this.factory.Core().createCase();
+		aCtCase.setPosition(caseStatement.getPosition());
 		this.builder.copy(caseStatement, aCtCase);
 		aCtCase.setAnnotations(this.cloneHelper.clone(caseStatement.getAnnotations()));
 		aCtCase.setCaseExpression(this.cloneHelper.clone(caseStatement.getCaseExpression()));
@@ -177,9 +183,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtCase;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtCatch(final CtCatch catchBlock) {
-		CtCatch aCtCatch = catchBlock.getFactory().Core().createCatch();
+		CtCatch aCtCatch = this.factory.Core().createCatch();
+		aCtCatch.setPosition(catchBlock.getPosition());
 		this.builder.copy(catchBlock, aCtCatch);
 		aCtCatch.setAnnotations(this.cloneHelper.clone(catchBlock.getAnnotations()));
 		aCtCatch.setParameter(this.cloneHelper.clone(catchBlock.getParameter()));
@@ -189,9 +195,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtCatch;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtClass(final CtClass<T> ctClass) {
-		CtClass<T> aCtClass = ctClass.getFactory().Core().createClass();
+		CtClass<T> aCtClass = this.factory.Core().createClass();
+		aCtClass.setPosition(ctClass.getPosition());
 		this.builder.copy(ctClass, aCtClass);
 		aCtClass.setAnnotations(this.cloneHelper.clone(ctClass.getAnnotations()));
 		aCtClass.setSuperclass(this.cloneHelper.clone(ctClass.getSuperclass()));
@@ -203,10 +209,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtClass;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtTypeParameter(CtTypeParameter typeParameter) {
-		CtTypeParameter aCtTypeParameter = typeParameter.getFactory().Core().createTypeParameter();
+		CtTypeParameter aCtTypeParameter = this.factory.Core().createTypeParameter();
+		aCtTypeParameter.setPosition(typeParameter.getPosition());
 		this.builder.copy(typeParameter, aCtTypeParameter);
 		aCtTypeParameter.setAnnotations(this.cloneHelper.clone(typeParameter.getAnnotations()));
 		aCtTypeParameter.setSuperclass(this.cloneHelper.clone(typeParameter.getSuperclass()));
@@ -215,9 +221,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtTypeParameter;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtConditional(final CtConditional<T> conditional) {
-		CtConditional<T> aCtConditional = conditional.getFactory().Core().createConditional();
+		CtConditional<T> aCtConditional = this.factory.Core().createConditional();
+		aCtConditional.setPosition(conditional.getPosition());
 		this.builder.copy(conditional, aCtConditional);
 		aCtConditional.setType(this.cloneHelper.clone(conditional.getType()));
 		aCtConditional.setAnnotations(this.cloneHelper.clone(conditional.getAnnotations()));
@@ -230,9 +236,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtConditional;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtConstructor(final CtConstructor<T> c) {
-		CtConstructor<T> aCtConstructor = c.getFactory().Core().createConstructor();
+		CtConstructor<T> aCtConstructor = this.factory.Core().createConstructor();
+		aCtConstructor.setPosition(c.getPosition());
 		this.builder.copy(c, aCtConstructor);
 		aCtConstructor.setAnnotations(this.cloneHelper.clone(c.getAnnotations()));
 		aCtConstructor.setParameters(this.cloneHelper.clone(c.getParameters()));
@@ -244,9 +250,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtConstructor;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtContinue(final CtContinue continueStatement) {
-		CtContinue aCtContinue = continueStatement.getFactory().Core().createContinue();
+		CtContinue aCtContinue = this.factory.Core().createContinue();
+		aCtContinue.setPosition(continueStatement.getPosition());
 		this.builder.copy(continueStatement, aCtContinue);
 		aCtContinue.setAnnotations(this.cloneHelper.clone(continueStatement.getAnnotations()));
 		aCtContinue.setComments(this.cloneHelper.clone(continueStatement.getComments()));
@@ -254,9 +260,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtContinue;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtDo(final CtDo doLoop) {
-		CtDo aCtDo = doLoop.getFactory().Core().createDo();
+		CtDo aCtDo = this.factory.Core().createDo();
+		aCtDo.setPosition(doLoop.getPosition());
 		this.builder.copy(doLoop, aCtDo);
 		aCtDo.setAnnotations(this.cloneHelper.clone(doLoop.getAnnotations()));
 		aCtDo.setLoopingExpression(this.cloneHelper.clone(doLoop.getLoopingExpression()));
@@ -266,9 +272,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtDo;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T extends java.lang.Enum<?>> void visitCtEnum(final CtEnum<T> ctEnum) {
-		CtEnum<T> aCtEnum = ctEnum.getFactory().Core().createEnum();
+		CtEnum<T> aCtEnum = this.factory.Core().createEnum();
+		aCtEnum.setPosition(ctEnum.getPosition());
 		this.builder.copy(ctEnum, aCtEnum);
 		aCtEnum.setAnnotations(this.cloneHelper.clone(ctEnum.getAnnotations()));
 		aCtEnum.setSuperInterfaces(this.cloneHelper.clone(ctEnum.getSuperInterfaces()));
@@ -279,9 +285,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtEnum;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtExecutableReference(final CtExecutableReference<T> reference) {
-		CtExecutableReference<T> aCtExecutableReference = reference.getFactory().Core().createExecutableReference();
+		CtExecutableReference<T> aCtExecutableReference = this.factory.Core().createExecutableReference();
+		aCtExecutableReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtExecutableReference);
 		aCtExecutableReference.setDeclaringType(this.cloneHelper.clone(reference.getDeclaringType()));
 		aCtExecutableReference.setType(this.cloneHelper.clone(reference.getType()));
@@ -293,9 +299,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtExecutableReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtField(final CtField<T> f) {
-		CtField<T> aCtField = f.getFactory().Core().createField();
+		CtField<T> aCtField = this.factory.Core().createField();
+		aCtField.setPosition(f.getPosition());
 		this.builder.copy(f, aCtField);
 		aCtField.setAnnotations(this.cloneHelper.clone(f.getAnnotations()));
 		aCtField.setType(this.cloneHelper.clone(f.getType()));
@@ -305,10 +311,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtField;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtEnumValue(final CtEnumValue<T> enumValue) {
-		CtEnumValue<T> aCtEnumValue = enumValue.getFactory().Core().createEnumValue();
+		CtEnumValue<T> aCtEnumValue = this.factory.Core().createEnumValue();
+		aCtEnumValue.setPosition(enumValue.getPosition());
 		this.builder.copy(enumValue, aCtEnumValue);
 		aCtEnumValue.setAnnotations(this.cloneHelper.clone(enumValue.getAnnotations()));
 		aCtEnumValue.setType(this.cloneHelper.clone(enumValue.getType()));
@@ -318,10 +324,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtEnumValue;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtThisAccess(final CtThisAccess<T> thisAccess) {
-		CtThisAccess<T> aCtThisAccess = thisAccess.getFactory().Core().createThisAccess();
+		CtThisAccess<T> aCtThisAccess = this.factory.Core().createThisAccess();
+		aCtThisAccess.setPosition(thisAccess.getPosition());
 		this.builder.copy(thisAccess, aCtThisAccess);
 		aCtThisAccess.setComments(this.cloneHelper.clone(thisAccess.getComments()));
 		aCtThisAccess.setAnnotations(this.cloneHelper.clone(thisAccess.getAnnotations()));
@@ -332,10 +338,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtThisAccess;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtAnnotationFieldAccess(final CtAnnotationFieldAccess<T> annotationFieldAccess) {
-		CtAnnotationFieldAccess<T> aCtAnnotationFieldAccess = annotationFieldAccess.getFactory().Core()
-				.createAnnotationFieldAccess();
+		CtAnnotationFieldAccess<T> aCtAnnotationFieldAccess = this.factory.Core().createAnnotationFieldAccess();
+		aCtAnnotationFieldAccess.setPosition(annotationFieldAccess.getPosition());
 		this.builder.copy(annotationFieldAccess, aCtAnnotationFieldAccess);
 		aCtAnnotationFieldAccess.setComments(this.cloneHelper.clone(annotationFieldAccess.getComments()));
 		aCtAnnotationFieldAccess.setAnnotations(this.cloneHelper.clone(annotationFieldAccess.getAnnotations()));
@@ -346,9 +351,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtAnnotationFieldAccess;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtFieldReference(final CtFieldReference<T> reference) {
-		CtFieldReference<T> aCtFieldReference = reference.getFactory().Core().createFieldReference();
+		CtFieldReference<T> aCtFieldReference = this.factory.Core().createFieldReference();
+		aCtFieldReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtFieldReference);
 		aCtFieldReference.setDeclaringType(this.cloneHelper.clone(reference.getDeclaringType()));
 		aCtFieldReference.setType(this.cloneHelper.clone(reference.getType()));
@@ -357,9 +362,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtFieldReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtFor(final CtFor forLoop) {
-		CtFor aCtFor = forLoop.getFactory().Core().createFor();
+		CtFor aCtFor = this.factory.Core().createFor();
+		aCtFor.setPosition(forLoop.getPosition());
 		this.builder.copy(forLoop, aCtFor);
 		aCtFor.setAnnotations(this.cloneHelper.clone(forLoop.getAnnotations()));
 		aCtFor.setForInit(this.cloneHelper.clone(forLoop.getForInit()));
@@ -371,9 +376,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtFor;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtForEach(final CtForEach foreach) {
-		CtForEach aCtForEach = foreach.getFactory().Core().createForEach();
+		CtForEach aCtForEach = this.factory.Core().createForEach();
+		aCtForEach.setPosition(foreach.getPosition());
 		this.builder.copy(foreach, aCtForEach);
 		aCtForEach.setAnnotations(this.cloneHelper.clone(foreach.getAnnotations()));
 		aCtForEach.setVariable(this.cloneHelper.clone(foreach.getVariable()));
@@ -384,9 +389,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtForEach;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtIf(final CtIf ifElement) {
-		CtIf aCtIf = ifElement.getFactory().Core().createIf();
+		CtIf aCtIf = this.factory.Core().createIf();
+		aCtIf.setPosition(ifElement.getPosition());
 		this.builder.copy(ifElement, aCtIf);
 		aCtIf.setAnnotations(this.cloneHelper.clone(ifElement.getAnnotations()));
 		aCtIf.setCondition(this.cloneHelper.clone(ifElement.getCondition()));
@@ -397,9 +402,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtIf;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtInterface(final CtInterface<T> intrface) {
-		CtInterface<T> aCtInterface = intrface.getFactory().Core().createInterface();
+		CtInterface<T> aCtInterface = this.factory.Core().createInterface();
+		aCtInterface.setPosition(intrface.getPosition());
 		this.builder.copy(intrface, aCtInterface);
 		aCtInterface.setAnnotations(this.cloneHelper.clone(intrface.getAnnotations()));
 		aCtInterface.setSuperInterfaces(this.cloneHelper.clone(intrface.getSuperInterfaces()));
@@ -410,9 +415,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtInterface;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtInvocation(final CtInvocation<T> invocation) {
-		CtInvocation<T> aCtInvocation = invocation.getFactory().Core().createInvocation();
+		CtInvocation<T> aCtInvocation = this.factory.Core().createInvocation();
+		aCtInvocation.setPosition(invocation.getPosition());
 		this.builder.copy(invocation, aCtInvocation);
 		aCtInvocation.setAnnotations(this.cloneHelper.clone(invocation.getAnnotations()));
 		aCtInvocation.setTypeCasts(this.cloneHelper.clone(invocation.getTypeCasts()));
@@ -424,9 +429,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtInvocation;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtLiteral(final CtLiteral<T> literal) {
-		CtLiteral<T> aCtLiteral = literal.getFactory().Core().createLiteral();
+		CtLiteral<T> aCtLiteral = this.factory.Core().createLiteral();
+		aCtLiteral.setPosition(literal.getPosition());
 		this.builder.copy(literal, aCtLiteral);
 		aCtLiteral.setAnnotations(this.cloneHelper.clone(literal.getAnnotations()));
 		aCtLiteral.setType(this.cloneHelper.clone(literal.getType()));
@@ -436,9 +441,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtLiteral;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtLocalVariable(final CtLocalVariable<T> localVariable) {
-		CtLocalVariable<T> aCtLocalVariable = localVariable.getFactory().Core().createLocalVariable();
+		CtLocalVariable<T> aCtLocalVariable = this.factory.Core().createLocalVariable();
+		aCtLocalVariable.setPosition(localVariable.getPosition());
 		this.builder.copy(localVariable, aCtLocalVariable);
 		aCtLocalVariable.setAnnotations(this.cloneHelper.clone(localVariable.getAnnotations()));
 		aCtLocalVariable.setType(this.cloneHelper.clone(localVariable.getType()));
@@ -448,10 +453,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtLocalVariable;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtLocalVariableReference(final CtLocalVariableReference<T> reference) {
-		CtLocalVariableReference<T> aCtLocalVariableReference = reference.getFactory().Core()
-				.createLocalVariableReference();
+		CtLocalVariableReference<T> aCtLocalVariableReference = this.factory.Core().createLocalVariableReference();
+		aCtLocalVariableReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtLocalVariableReference);
 		aCtLocalVariableReference.setType(this.cloneHelper.clone(reference.getType()));
 		aCtLocalVariableReference.setAnnotations(this.cloneHelper.clone(reference.getAnnotations()));
@@ -459,9 +463,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtLocalVariableReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtCatchVariable(final CtCatchVariable<T> catchVariable) {
-		CtCatchVariable<T> aCtCatchVariable = catchVariable.getFactory().Core().createCatchVariable();
+		CtCatchVariable<T> aCtCatchVariable = this.factory.Core().createCatchVariable();
+		aCtCatchVariable.setPosition(catchVariable.getPosition());
 		this.builder.copy(catchVariable, aCtCatchVariable);
 		aCtCatchVariable.setComments(this.cloneHelper.clone(catchVariable.getComments()));
 		aCtCatchVariable.setAnnotations(this.cloneHelper.clone(catchVariable.getAnnotations()));
@@ -470,10 +474,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtCatchVariable;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtCatchVariableReference(final CtCatchVariableReference<T> reference) {
-		CtCatchVariableReference<T> aCtCatchVariableReference = reference.getFactory().Core()
-				.createCatchVariableReference();
+		CtCatchVariableReference<T> aCtCatchVariableReference = this.factory.Core().createCatchVariableReference();
+		aCtCatchVariableReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtCatchVariableReference);
 		aCtCatchVariableReference.setType(this.cloneHelper.clone(reference.getType()));
 		aCtCatchVariableReference.setAnnotations(this.cloneHelper.clone(reference.getAnnotations()));
@@ -481,9 +484,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtCatchVariableReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtMethod(final CtMethod<T> m) {
-		CtMethod<T> aCtMethod = m.getFactory().Core().createMethod();
+		CtMethod<T> aCtMethod = this.factory.Core().createMethod();
+		aCtMethod.setPosition(m.getPosition());
 		this.builder.copy(m, aCtMethod);
 		aCtMethod.setAnnotations(this.cloneHelper.clone(m.getAnnotations()));
 		aCtMethod.setFormalCtTypeParameters(this.cloneHelper.clone(m.getFormalCtTypeParameters()));
@@ -496,10 +499,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtMethod;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtAnnotationMethod(CtAnnotationMethod<T> annotationMethod) {
-		CtAnnotationMethod<T> aCtAnnotationMethod = annotationMethod.getFactory().Core().createAnnotationMethod();
+		CtAnnotationMethod<T> aCtAnnotationMethod = this.factory.Core().createAnnotationMethod();
+		aCtAnnotationMethod.setPosition(annotationMethod.getPosition());
 		this.builder.copy(annotationMethod, aCtAnnotationMethod);
 		aCtAnnotationMethod.setAnnotations(this.cloneHelper.clone(annotationMethod.getAnnotations()));
 		aCtAnnotationMethod.setType(this.cloneHelper.clone(annotationMethod.getType()));
@@ -509,9 +512,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtAnnotationMethod;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtNewArray(final CtNewArray<T> newArray) {
-		CtNewArray<T> aCtNewArray = newArray.getFactory().Core().createNewArray();
+		CtNewArray<T> aCtNewArray = this.factory.Core().createNewArray();
+		aCtNewArray.setPosition(newArray.getPosition());
 		this.builder.copy(newArray, aCtNewArray);
 		aCtNewArray.setAnnotations(this.cloneHelper.clone(newArray.getAnnotations()));
 		aCtNewArray.setType(this.cloneHelper.clone(newArray.getType()));
@@ -523,10 +526,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtNewArray;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtConstructorCall(final CtConstructorCall<T> ctConstructorCall) {
-		CtConstructorCall<T> aCtConstructorCall = ctConstructorCall.getFactory().Core().createConstructorCall();
+		CtConstructorCall<T> aCtConstructorCall = this.factory.Core().createConstructorCall();
+		aCtConstructorCall.setPosition(ctConstructorCall.getPosition());
 		this.builder.copy(ctConstructorCall, aCtConstructorCall);
 		aCtConstructorCall.setAnnotations(this.cloneHelper.clone(ctConstructorCall.getAnnotations()));
 		aCtConstructorCall.setTypeCasts(this.cloneHelper.clone(ctConstructorCall.getTypeCasts()));
@@ -538,9 +541,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtConstructorCall;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtNewClass(final CtNewClass<T> newClass) {
-		CtNewClass<T> aCtNewClass = newClass.getFactory().Core().createNewClass();
+		CtNewClass<T> aCtNewClass = this.factory.Core().createNewClass();
+		aCtNewClass.setPosition(newClass.getPosition());
 		this.builder.copy(newClass, aCtNewClass);
 		aCtNewClass.setAnnotations(this.cloneHelper.clone(newClass.getAnnotations()));
 		aCtNewClass.setTypeCasts(this.cloneHelper.clone(newClass.getTypeCasts()));
@@ -553,10 +556,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtNewClass;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtLambda(final CtLambda<T> lambda) {
-		CtLambda<T> aCtLambda = lambda.getFactory().Core().createLambda();
+		CtLambda<T> aCtLambda = this.factory.Core().createLambda();
+		aCtLambda.setPosition(lambda.getPosition());
 		this.builder.copy(lambda, aCtLambda);
 		aCtLambda.setAnnotations(this.cloneHelper.clone(lambda.getAnnotations()));
 		aCtLambda.setType(this.cloneHelper.clone(lambda.getType()));
@@ -569,12 +572,11 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtLambda;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T, E extends CtExpression<?>> void visitCtExecutableReferenceExpression(
 			final CtExecutableReferenceExpression<T, E> expression) {
-		CtExecutableReferenceExpression<T, E> aCtExecutableReferenceExpression = expression.getFactory().Core()
-				.createExecutableReferenceExpression();
+		CtExecutableReferenceExpression<T, E> aCtExecutableReferenceExpression = this.factory.Core().createExecutableReferenceExpression();
+		aCtExecutableReferenceExpression.setPosition(expression.getPosition());
 		this.builder.copy(expression, aCtExecutableReferenceExpression);
 		aCtExecutableReferenceExpression.setComments(this.cloneHelper.clone(expression.getComments()));
 		aCtExecutableReferenceExpression.setAnnotations(this.cloneHelper.clone(expression.getAnnotations()));
@@ -586,9 +588,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtExecutableReferenceExpression;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T, A extends T> void visitCtOperatorAssignment(final CtOperatorAssignment<T, A> assignment) {
-		CtOperatorAssignment<T, A> aCtOperatorAssignment = assignment.getFactory().Core().createOperatorAssignment();
+		CtOperatorAssignment<T, A> aCtOperatorAssignment = this.factory.Core().createOperatorAssignment();
+		aCtOperatorAssignment.setPosition(assignment.getPosition());
 		this.builder.copy(assignment, aCtOperatorAssignment);
 		aCtOperatorAssignment.setAnnotations(this.cloneHelper.clone(assignment.getAnnotations()));
 		aCtOperatorAssignment.setType(this.cloneHelper.clone(assignment.getType()));
@@ -600,9 +602,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtOperatorAssignment;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtPackage(final CtPackage ctPackage) {
-		CtPackage aCtPackage = ctPackage.getFactory().Core().createPackage();
+		CtPackage aCtPackage = this.factory.Core().createPackage();
+		aCtPackage.setPosition(ctPackage.getPosition());
 		this.builder.copy(ctPackage, aCtPackage);
 		aCtPackage.setAnnotations(this.cloneHelper.clone(ctPackage.getAnnotations()));
 		aCtPackage.setPackages(this.cloneHelper.clone(ctPackage.getPackages()));
@@ -612,18 +614,18 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtPackage;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtPackageReference(final CtPackageReference reference) {
-		CtPackageReference aCtPackageReference = reference.getFactory().Core().createPackageReference();
+		CtPackageReference aCtPackageReference = this.factory.Core().createPackageReference();
+		aCtPackageReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtPackageReference);
 		aCtPackageReference.setAnnotations(this.cloneHelper.clone(reference.getAnnotations()));
 		this.cloneHelper.tailor(reference, aCtPackageReference);
 		this.other = aCtPackageReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtParameter(final CtParameter<T> parameter) {
-		CtParameter<T> aCtParameter = parameter.getFactory().Core().createParameter();
+		CtParameter<T> aCtParameter = this.factory.Core().createParameter();
+		aCtParameter.setPosition(parameter.getPosition());
 		this.builder.copy(parameter, aCtParameter);
 		aCtParameter.setAnnotations(this.cloneHelper.clone(parameter.getAnnotations()));
 		aCtParameter.setType(this.cloneHelper.clone(parameter.getType()));
@@ -632,9 +634,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtParameter;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtParameterReference(final CtParameterReference<T> reference) {
-		CtParameterReference<T> aCtParameterReference = reference.getFactory().Core().createParameterReference();
+		CtParameterReference<T> aCtParameterReference = this.factory.Core().createParameterReference();
+		aCtParameterReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtParameterReference);
 		aCtParameterReference.setType(this.cloneHelper.clone(reference.getType()));
 		aCtParameterReference.setAnnotations(this.cloneHelper.clone(reference.getAnnotations()));
@@ -642,9 +644,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtParameterReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <R> void visitCtReturn(final CtReturn<R> returnStatement) {
-		CtReturn<R> aCtReturn = returnStatement.getFactory().Core().createReturn();
+		CtReturn<R> aCtReturn = this.factory.Core().createReturn();
+		aCtReturn.setPosition(returnStatement.getPosition());
 		this.builder.copy(returnStatement, aCtReturn);
 		aCtReturn.setAnnotations(this.cloneHelper.clone(returnStatement.getAnnotations()));
 		aCtReturn.setReturnedExpression(this.cloneHelper.clone(returnStatement.getReturnedExpression()));
@@ -653,9 +655,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtReturn;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <R> void visitCtStatementList(final CtStatementList statements) {
-		CtStatementList aCtStatementList = statements.getFactory().Core().createStatementList();
+		CtStatementList aCtStatementList = this.factory.Core().createStatementList();
+		aCtStatementList.setPosition(statements.getPosition());
 		this.builder.copy(statements, aCtStatementList);
 		aCtStatementList.setAnnotations(this.cloneHelper.clone(statements.getAnnotations()));
 		aCtStatementList.setStatements(this.cloneHelper.clone(statements.getStatements()));
@@ -664,9 +666,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtStatementList;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <S> void visitCtSwitch(final CtSwitch<S> switchStatement) {
-		CtSwitch<S> aCtSwitch = switchStatement.getFactory().Core().createSwitch();
+		CtSwitch<S> aCtSwitch = this.factory.Core().createSwitch();
+		aCtSwitch.setPosition(switchStatement.getPosition());
 		this.builder.copy(switchStatement, aCtSwitch);
 		aCtSwitch.setAnnotations(this.cloneHelper.clone(switchStatement.getAnnotations()));
 		aCtSwitch.setSelector(this.cloneHelper.clone(switchStatement.getSelector()));
@@ -676,9 +678,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtSwitch;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtSynchronized(final CtSynchronized synchro) {
-		CtSynchronized aCtSynchronized = synchro.getFactory().Core().createSynchronized();
+		CtSynchronized aCtSynchronized = this.factory.Core().createSynchronized();
+		aCtSynchronized.setPosition(synchro.getPosition());
 		this.builder.copy(synchro, aCtSynchronized);
 		aCtSynchronized.setAnnotations(this.cloneHelper.clone(synchro.getAnnotations()));
 		aCtSynchronized.setExpression(this.cloneHelper.clone(synchro.getExpression()));
@@ -688,9 +690,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtSynchronized;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtThrow(final CtThrow throwStatement) {
-		CtThrow aCtThrow = throwStatement.getFactory().Core().createThrow();
+		CtThrow aCtThrow = this.factory.Core().createThrow();
+		aCtThrow.setPosition(throwStatement.getPosition());
 		this.builder.copy(throwStatement, aCtThrow);
 		aCtThrow.setAnnotations(this.cloneHelper.clone(throwStatement.getAnnotations()));
 		aCtThrow.setThrownExpression(this.cloneHelper.clone(throwStatement.getThrownExpression()));
@@ -699,9 +701,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtThrow;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtTry(final CtTry tryBlock) {
-		CtTry aCtTry = tryBlock.getFactory().Core().createTry();
+		CtTry aCtTry = this.factory.Core().createTry();
+		aCtTry.setPosition(tryBlock.getPosition());
 		this.builder.copy(tryBlock, aCtTry);
 		aCtTry.setAnnotations(this.cloneHelper.clone(tryBlock.getAnnotations()));
 		aCtTry.setBody(this.cloneHelper.clone(tryBlock.getBody()));
@@ -712,10 +714,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtTry;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtTryWithResource(final CtTryWithResource tryWithResource) {
-		CtTryWithResource aCtTryWithResource = tryWithResource.getFactory().Core().createTryWithResource();
+		CtTryWithResource aCtTryWithResource = this.factory.Core().createTryWithResource();
+		aCtTryWithResource.setPosition(tryWithResource.getPosition());
 		this.builder.copy(tryWithResource, aCtTryWithResource);
 		aCtTryWithResource.setAnnotations(this.cloneHelper.clone(tryWithResource.getAnnotations()));
 		aCtTryWithResource.setResources(this.cloneHelper.clone(tryWithResource.getResources()));
@@ -727,9 +729,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtTryWithResource;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtTypeParameterReference(final CtTypeParameterReference ref) {
-		CtTypeParameterReference aCtTypeParameterReference = ref.getFactory().Core().createTypeParameterReference();
+		CtTypeParameterReference aCtTypeParameterReference = this.factory.Core().createTypeParameterReference();
+		aCtTypeParameterReference.setPosition(ref.getPosition());
 		this.builder.copy(ref, aCtTypeParameterReference);
 		aCtTypeParameterReference.setPackage(this.cloneHelper.clone(ref.getPackage()));
 		aCtTypeParameterReference.setDeclaringType(this.cloneHelper.clone(ref.getDeclaringType()));
@@ -738,10 +740,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtTypeParameterReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtWildcardReference(CtWildcardReference wildcardReference) {
-		CtWildcardReference aCtWildcardReference = wildcardReference.getFactory().Core().createWildcardReference();
+		CtWildcardReference aCtWildcardReference = this.factory.Core().createWildcardReference();
+		aCtWildcardReference.setPosition(wildcardReference.getPosition());
 		this.builder.copy(wildcardReference, aCtWildcardReference);
 		aCtWildcardReference.setPackage(this.cloneHelper.clone(wildcardReference.getPackage()));
 		aCtWildcardReference.setDeclaringType(this.cloneHelper.clone(wildcardReference.getDeclaringType()));
@@ -751,11 +753,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtWildcardReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtIntersectionTypeReference(final CtIntersectionTypeReference<T> reference) {
-		CtIntersectionTypeReference<T> aCtIntersectionTypeReference = reference.getFactory().Core()
-				.createIntersectionTypeReference();
+		CtIntersectionTypeReference<T> aCtIntersectionTypeReference = this.factory.Core().createIntersectionTypeReference();
+		aCtIntersectionTypeReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtIntersectionTypeReference);
 		aCtIntersectionTypeReference.setPackage(this.cloneHelper.clone(reference.getPackage()));
 		aCtIntersectionTypeReference.setDeclaringType(this.cloneHelper.clone(reference.getDeclaringType()));
@@ -766,9 +767,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtIntersectionTypeReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtTypeReference(final CtTypeReference<T> reference) {
-		CtTypeReference<T> aCtTypeReference = reference.getFactory().Core().createTypeReference();
+		CtTypeReference<T> aCtTypeReference = this.factory.Core().createTypeReference();
+		aCtTypeReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtTypeReference);
 		aCtTypeReference.setPackage(this.cloneHelper.clone(reference.getPackage()));
 		aCtTypeReference.setDeclaringType(this.cloneHelper.clone(reference.getDeclaringType()));
@@ -779,10 +780,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtTypeReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtTypeAccess(final CtTypeAccess<T> typeAccess) {
-		CtTypeAccess<T> aCtTypeAccess = typeAccess.getFactory().Core().createTypeAccess();
+		CtTypeAccess<T> aCtTypeAccess = this.factory.Core().createTypeAccess();
+		aCtTypeAccess.setPosition(typeAccess.getPosition());
 		this.builder.copy(typeAccess, aCtTypeAccess);
 		aCtTypeAccess.setAnnotations(this.cloneHelper.clone(typeAccess.getAnnotations()));
 		aCtTypeAccess.setTypeCasts(this.cloneHelper.clone(typeAccess.getTypeCasts()));
@@ -792,9 +793,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtTypeAccess;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtUnaryOperator(final CtUnaryOperator<T> operator) {
-		CtUnaryOperator<T> aCtUnaryOperator = operator.getFactory().Core().createUnaryOperator();
+		CtUnaryOperator<T> aCtUnaryOperator = this.factory.Core().createUnaryOperator();
+		aCtUnaryOperator.setPosition(operator.getPosition());
 		this.builder.copy(operator, aCtUnaryOperator);
 		aCtUnaryOperator.setAnnotations(this.cloneHelper.clone(operator.getAnnotations()));
 		aCtUnaryOperator.setType(this.cloneHelper.clone(operator.getType()));
@@ -805,10 +806,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtUnaryOperator;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtVariableRead(final CtVariableRead<T> variableRead) {
-		CtVariableRead<T> aCtVariableRead = variableRead.getFactory().Core().createVariableRead();
+		CtVariableRead<T> aCtVariableRead = this.factory.Core().createVariableRead();
+		aCtVariableRead.setPosition(variableRead.getPosition());
 		this.builder.copy(variableRead, aCtVariableRead);
 		aCtVariableRead.setAnnotations(this.cloneHelper.clone(variableRead.getAnnotations()));
 		aCtVariableRead.setTypeCasts(this.cloneHelper.clone(variableRead.getTypeCasts()));
@@ -818,10 +819,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtVariableRead;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtVariableWrite(final CtVariableWrite<T> variableWrite) {
-		CtVariableWrite<T> aCtVariableWrite = variableWrite.getFactory().Core().createVariableWrite();
+		CtVariableWrite<T> aCtVariableWrite = this.factory.Core().createVariableWrite();
+		aCtVariableWrite.setPosition(variableWrite.getPosition());
 		this.builder.copy(variableWrite, aCtVariableWrite);
 		aCtVariableWrite.setAnnotations(this.cloneHelper.clone(variableWrite.getAnnotations()));
 		aCtVariableWrite.setTypeCasts(this.cloneHelper.clone(variableWrite.getTypeCasts()));
@@ -831,9 +832,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtVariableWrite;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtWhile(final CtWhile whileLoop) {
-		CtWhile aCtWhile = whileLoop.getFactory().Core().createWhile();
+		CtWhile aCtWhile = this.factory.Core().createWhile();
+		aCtWhile.setPosition(whileLoop.getPosition());
 		this.builder.copy(whileLoop, aCtWhile);
 		aCtWhile.setAnnotations(this.cloneHelper.clone(whileLoop.getAnnotations()));
 		aCtWhile.setLoopingExpression(this.cloneHelper.clone(whileLoop.getLoopingExpression()));
@@ -843,10 +844,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtWhile;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtCodeSnippetExpression(final CtCodeSnippetExpression<T> expression) {
-		CtCodeSnippetExpression<T> aCtCodeSnippetExpression = expression.getFactory().Core()
-				.createCodeSnippetExpression();
+		CtCodeSnippetExpression<T> aCtCodeSnippetExpression = this.factory.Core().createCodeSnippetExpression();
+		aCtCodeSnippetExpression.setPosition(expression.getPosition());
 		this.builder.copy(expression, aCtCodeSnippetExpression);
 		aCtCodeSnippetExpression.setType(this.cloneHelper.clone(expression.getType()));
 		aCtCodeSnippetExpression.setComments(this.cloneHelper.clone(expression.getComments()));
@@ -856,9 +856,9 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtCodeSnippetExpression;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public void visitCtCodeSnippetStatement(final CtCodeSnippetStatement statement) {
-		CtCodeSnippetStatement aCtCodeSnippetStatement = statement.getFactory().Core().createCodeSnippetStatement();
+		CtCodeSnippetStatement aCtCodeSnippetStatement = this.factory.Core().createCodeSnippetStatement();
+		aCtCodeSnippetStatement.setPosition(statement.getPosition());
 		this.builder.copy(statement, aCtCodeSnippetStatement);
 		aCtCodeSnippetStatement.setComments(this.cloneHelper.clone(statement.getComments()));
 		aCtCodeSnippetStatement.setAnnotations(this.cloneHelper.clone(statement.getAnnotations()));
@@ -866,20 +866,19 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtCodeSnippetStatement;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	public <T> void visitCtUnboundVariableReference(final CtUnboundVariableReference<T> reference) {
-		CtUnboundVariableReference<T> aCtUnboundVariableReference = reference.getFactory().Core()
-				.createUnboundVariableReference();
+		CtUnboundVariableReference<T> aCtUnboundVariableReference = this.factory.Core().createUnboundVariableReference();
+		aCtUnboundVariableReference.setPosition(reference.getPosition());
 		this.builder.copy(reference, aCtUnboundVariableReference);
 		aCtUnboundVariableReference.setType(this.cloneHelper.clone(reference.getType()));
 		this.cloneHelper.tailor(reference, aCtUnboundVariableReference);
 		this.other = aCtUnboundVariableReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtFieldRead(final CtFieldRead<T> fieldRead) {
-		CtFieldRead<T> aCtFieldRead = fieldRead.getFactory().Core().createFieldRead();
+		CtFieldRead<T> aCtFieldRead = this.factory.Core().createFieldRead();
+		aCtFieldRead.setPosition(fieldRead.getPosition());
 		this.builder.copy(fieldRead, aCtFieldRead);
 		aCtFieldRead.setAnnotations(this.cloneHelper.clone(fieldRead.getAnnotations()));
 		aCtFieldRead.setTypeCasts(this.cloneHelper.clone(fieldRead.getTypeCasts()));
@@ -890,10 +889,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtFieldRead;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtFieldWrite(final CtFieldWrite<T> fieldWrite) {
-		CtFieldWrite<T> aCtFieldWrite = fieldWrite.getFactory().Core().createFieldWrite();
+		CtFieldWrite<T> aCtFieldWrite = this.factory.Core().createFieldWrite();
+		aCtFieldWrite.setPosition(fieldWrite.getPosition());
 		this.builder.copy(fieldWrite, aCtFieldWrite);
 		aCtFieldWrite.setAnnotations(this.cloneHelper.clone(fieldWrite.getAnnotations()));
 		aCtFieldWrite.setTypeCasts(this.cloneHelper.clone(fieldWrite.getTypeCasts()));
@@ -904,10 +903,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtFieldWrite;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public <T> void visitCtSuperAccess(final CtSuperAccess<T> f) {
-		CtSuperAccess<T> aCtSuperAccess = f.getFactory().Core().createSuperAccess();
+		CtSuperAccess<T> aCtSuperAccess = this.factory.Core().createSuperAccess();
+		aCtSuperAccess.setPosition(f.getPosition());
 		this.builder.copy(f, aCtSuperAccess);
 		aCtSuperAccess.setComments(this.cloneHelper.clone(f.getComments()));
 		aCtSuperAccess.setAnnotations(this.cloneHelper.clone(f.getAnnotations()));
@@ -918,10 +917,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtSuperAccess;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtComment(final CtComment comment) {
-		CtComment aCtComment = comment.getFactory().Core().createComment();
+		CtComment aCtComment = this.factory.Core().createComment();
+		aCtComment.setPosition(comment.getPosition());
 		this.builder.copy(comment, aCtComment);
 		aCtComment.setComments(this.cloneHelper.clone(comment.getComments()));
 		aCtComment.setAnnotations(this.cloneHelper.clone(comment.getAnnotations()));
@@ -929,10 +928,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtComment;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtJavaDoc(final CtJavaDoc javaDoc) {
-		CtJavaDoc aCtJavaDoc = javaDoc.getFactory().Core().createJavaDoc();
+		CtJavaDoc aCtJavaDoc = this.factory.Core().createJavaDoc();
+		aCtJavaDoc.setPosition(javaDoc.getPosition());
 		this.builder.copy(javaDoc, aCtJavaDoc);
 		aCtJavaDoc.setComments(this.cloneHelper.clone(javaDoc.getComments()));
 		aCtJavaDoc.setAnnotations(this.cloneHelper.clone(javaDoc.getAnnotations()));
@@ -941,10 +940,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtJavaDoc;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtJavaDocTag(final CtJavaDocTag docTag) {
-		CtJavaDocTag aCtJavaDocTag = docTag.getFactory().Core().createJavaDocTag();
+		CtJavaDocTag aCtJavaDocTag = this.factory.Core().createJavaDocTag();
+		aCtJavaDocTag.setPosition(docTag.getPosition());
 		this.builder.copy(docTag, aCtJavaDocTag);
 		aCtJavaDocTag.setComments(this.cloneHelper.clone(docTag.getComments()));
 		aCtJavaDocTag.setAnnotations(this.cloneHelper.clone(docTag.getAnnotations()));
@@ -952,10 +951,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtJavaDocTag;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtImport(final CtImport ctImport) {
-		CtImport aCtImport = ctImport.getFactory().Core().createImport();
+		CtImport aCtImport = this.factory.Core().createImport();
+		aCtImport.setPosition(ctImport.getPosition());
 		this.builder.copy(ctImport, aCtImport);
 		aCtImport.setReference(this.cloneHelper.clone(ctImport.getReference()));
 		aCtImport.setAnnotations(this.cloneHelper.clone(ctImport.getAnnotations()));
@@ -964,10 +963,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtImport;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtModule(CtModule module) {
-		CtModule aCtModule = module.getFactory().Core().createModule();
+		CtModule aCtModule = this.factory.Core().createModule();
+		aCtModule.setPosition(module.getPosition());
 		this.builder.copy(module, aCtModule);
 		aCtModule.setComments(this.cloneHelper.clone(module.getComments()));
 		aCtModule.setAnnotations(this.cloneHelper.clone(module.getAnnotations()));
@@ -977,20 +976,20 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtModule;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtModuleReference(CtModuleReference moduleReference) {
-		CtModuleReference aCtModuleReference = moduleReference.getFactory().Core().createModuleReference();
+		CtModuleReference aCtModuleReference = this.factory.Core().createModuleReference();
+		aCtModuleReference.setPosition(moduleReference.getPosition());
 		this.builder.copy(moduleReference, aCtModuleReference);
 		aCtModuleReference.setAnnotations(this.cloneHelper.clone(moduleReference.getAnnotations()));
 		this.cloneHelper.tailor(moduleReference, aCtModuleReference);
 		this.other = aCtModuleReference;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtPackageExport(CtPackageExport moduleExport) {
-		CtPackageExport aCtPackageExport = moduleExport.getFactory().Core().createPackageExport();
+		CtPackageExport aCtPackageExport = this.factory.Core().createPackageExport();
+		aCtPackageExport.setPosition(moduleExport.getPosition());
 		this.builder.copy(moduleExport, aCtPackageExport);
 		aCtPackageExport.setComments(this.cloneHelper.clone(moduleExport.getComments()));
 		aCtPackageExport.setPackageReference(this.cloneHelper.clone(moduleExport.getPackageReference()));
@@ -1000,10 +999,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtPackageExport;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtModuleRequirement(CtModuleRequirement moduleRequirement) {
-		CtModuleRequirement aCtModuleRequirement = moduleRequirement.getFactory().Core().createModuleRequirement();
+		CtModuleRequirement aCtModuleRequirement = this.factory.Core().createModuleRequirement();
+		aCtModuleRequirement.setPosition(moduleRequirement.getPosition());
 		this.builder.copy(moduleRequirement, aCtModuleRequirement);
 		aCtModuleRequirement.setComments(this.cloneHelper.clone(moduleRequirement.getComments()));
 		aCtModuleRequirement.setModuleReference(this.cloneHelper.clone(moduleRequirement.getModuleReference()));
@@ -1012,10 +1011,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtModuleRequirement;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtProvidedService(CtProvidedService moduleProvidedService) {
-		CtProvidedService aCtProvidedService = moduleProvidedService.getFactory().Core().createProvidedService();
+		CtProvidedService aCtProvidedService = this.factory.Core().createProvidedService();
+		aCtProvidedService.setPosition(moduleProvidedService.getPosition());
 		this.builder.copy(moduleProvidedService, aCtProvidedService);
 		aCtProvidedService.setComments(this.cloneHelper.clone(moduleProvidedService.getComments()));
 		aCtProvidedService.setServiceType(this.cloneHelper.clone(moduleProvidedService.getServiceType()));
@@ -1026,10 +1025,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtProvidedService;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtUsedService(CtUsedService usedService) {
-		CtUsedService aCtUsedService = usedService.getFactory().Core().createUsedService();
+		CtUsedService aCtUsedService = this.factory.Core().createUsedService();
+		aCtUsedService.setPosition(usedService.getPosition());
 		this.builder.copy(usedService, aCtUsedService);
 		aCtUsedService.setComments(this.cloneHelper.clone(usedService.getComments()));
 		aCtUsedService.setServiceType(this.cloneHelper.clone(usedService.getServiceType()));
@@ -1038,10 +1037,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtUsedService;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtCompilationUnit(CtCompilationUnit compilationUnit) {
-		CtCompilationUnit aCtCompilationUnit = compilationUnit.getFactory().Core().createCompilationUnit();
+		CtCompilationUnit aCtCompilationUnit = this.factory.Core().createCompilationUnit();
+		aCtCompilationUnit.setPosition(compilationUnit.getPosition());
 		this.builder.copy(compilationUnit, aCtCompilationUnit);
 		aCtCompilationUnit.setComments(this.cloneHelper.clone(compilationUnit.getComments()));
 		aCtCompilationUnit.setAnnotations(this.cloneHelper.clone(compilationUnit.getAnnotations()));
@@ -1055,10 +1054,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtCompilationUnit;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtPackageDeclaration(CtPackageDeclaration packageDeclaration) {
-		CtPackageDeclaration aCtPackageDeclaration = packageDeclaration.getFactory().Core().createPackageDeclaration();
+		CtPackageDeclaration aCtPackageDeclaration = this.factory.Core().createPackageDeclaration();
+		aCtPackageDeclaration.setPosition(packageDeclaration.getPosition());
 		this.builder.copy(packageDeclaration, aCtPackageDeclaration);
 		aCtPackageDeclaration.setComments(this.cloneHelper.clone(packageDeclaration.getComments()));
 		aCtPackageDeclaration.setAnnotations(this.cloneHelper.clone(packageDeclaration.getAnnotations()));
@@ -1067,11 +1066,10 @@ public class MyCloneVisitor extends CtScanner {
 		this.other = aCtPackageDeclaration;
 	}
 
-	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtTypeMemberWildcardImportReference(CtTypeMemberWildcardImportReference wildcardReference) {
-		CtTypeMemberWildcardImportReference aCtTypeMemberWildcardImportReference = wildcardReference.getFactory().Core()
-				.createTypeMemberWildcardImportReference();
+		CtTypeMemberWildcardImportReference aCtTypeMemberWildcardImportReference = this.factory.Core().createTypeMemberWildcardImportReference();
+		aCtTypeMemberWildcardImportReference.setPosition(wildcardReference.getPosition());
 		this.builder.copy(wildcardReference, aCtTypeMemberWildcardImportReference);
 		aCtTypeMemberWildcardImportReference
 				.setTypeReference(this.cloneHelper.clone(wildcardReference.getTypeReference()));

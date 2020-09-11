@@ -39,7 +39,7 @@ public class TreeMiddleScanner extends CtScanner {
 		if (nolabel)
 			label = nodeTypeName;
 		else {
-			ApplyUpdate lf = new ApplyUpdate();
+			LabelSetter lf = new LabelSetter("");
 			lf.scan(element);
 			label = lf.label;
 		}
