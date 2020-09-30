@@ -6,6 +6,8 @@ import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.declaration.CtModifiable;
+import spoon.reflect.declaration.CtPackage;
+import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypedElement;
 import spoon.reflect.declaration.CtVariable;
 import spoon.reflect.path.CtRole;
@@ -43,7 +45,8 @@ public class NodeCreator extends CtInheritanceScanner {
 		// ITree modifiers = builder.createNode(type, "Modifiers");
 
 		// // We create a virtual node
-		// modifiers.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new CtVirtualElement(type, m, m.getExtendedModifiers()));
+		// modifiers.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new
+		// CtVirtualElement(type, m, m.getExtendedModifiers()));
 
 		// // ensuring an order (instead of hashset)
 		// // otherwise some flaky tests in CI
@@ -117,17 +120,31 @@ public class NodeCreator extends CtInheritanceScanner {
 	}
 
 	private <T> void genericTransfo(CtTypeReference<T> parametrizedType, ITree parametrizedTypeTree) {
-		ITree label = builder.createNode("LABEL", parametrizedType.getQualifiedName());
+		ITree label = builder.createNode("LABEL", parametrizedType.getQualifiedName().replace("$", ".")); 
+		// TODO simple or qual ? should build qual myself for implicit ones
+		// computeExpliciteQualName(parametrizedTypeTree,parametrizedType);
 		parametrizedTypeTree.addChild(label);
 		for (CtTypeReference<?> typeParam : parametrizedType.getActualTypeArguments()) {
-			ITree tree = builder.createNode(builder.getNodeType(typeParam),
-					builder.getTypeName(typeParam.getClass().getSimpleName()));
-			tree.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, typeParam);
-			typeParam.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, tree);
-			genericTransfo(typeParam, tree);
-			parametrizedTypeTree.addChild(tree);
+			if (!typeParam.isImplicit()) {
+				ITree tree = builder.createNode(builder.getNodeType(typeParam),
+						builder.getTypeName(typeParam.getClass().getSimpleName()));
+				tree.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, typeParam);
+				typeParam.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, tree);
+				genericTransfo(typeParam, tree);
+				parametrizedTypeTree.addChild(tree);
+			}
 		}
 	}
+
+	// private static <T> void computeExpliciteQualName(ITree parametrizedTypeTree, CtTypeReference<T> type) {
+	// 	// if (type.getDeclaringType() != null) {
+	// 	// 	computeExpliciteQualName(type.getDeclaringType()) + CtType.INNERTTYPE_SEPARATOR + type.getSimpleName();
+	// 	// } else if (type.getPackage() != null && !type.getPackage().isUnnamedPackage()) {
+	// 	// 	type.getPackage().getSimpleName() + CtPackage.PACKAGE_SEPARATOR + type.getSimpleName();
+	// 	// } else {
+	// 	// 	type.getSimpleName();
+	// 	// }
+	// }
 
 	@Override
 	public void scanCtReference(CtReference reference) {
@@ -154,11 +171,11 @@ public class NodeCreator extends CtInheritanceScanner {
 
 	// @Override
 	// public <T> void scanCtTypedElement(CtTypedElement<T> typedElement) {
-	// 	if (typedElement instanceof CtAnnotation) {
-	// 		CtAnnotation<?> annot = (CtAnnotation<?>) typedElement;
-			
-	// 	} else {
-	// 		super.scanCtTypedElement(typedElement);
-	// 	}
+	// if (typedElement instanceof CtAnnotation) {
+	// CtAnnotation<?> annot = (CtAnnotation<?>) typedElement;
+
+	// } else {
+	// super.scanCtTypedElement(typedElement);
+	// }
 	// }
 }

@@ -27,7 +27,7 @@ import spoon.support.StandardEnvironment;
 import spoon.support.compiler.VirtualFile;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
-public class Utils {
+public class MyUtils {
 
 	public static Factory createFactory() {
 		Factory factory = new FactoryImpl(new DefaultCoreFactory(), new StandardEnvironment());
@@ -37,7 +37,7 @@ public class Utils {
 	}
 
 	static CtPackage makePkg(VirtualFile... resources) {
-		Factory factory = Utils.createFactory();
+		Factory factory = MyUtils.createFactory();
 		factory.getModel().setBuildModelIsFinished(false);
 		SpoonModelBuilder compiler = new JDTBasedSpoonCompiler(factory);
 		compiler.getFactory().getEnvironment().setLevel("OFF");
@@ -50,7 +50,7 @@ public class Utils {
 	}
 
 	static Factory makeFactory(VirtualFile... resources) {
-		Factory factory = Utils.createFactory();
+		Factory factory = MyUtils.createFactory();
 		factory.getModel().setBuildModelIsFinished(false);
 		SpoonModelBuilder compiler = new JDTBasedSpoonCompiler(factory);
 		compiler.getFactory().getEnvironment().setLevel("OFF");
@@ -72,7 +72,7 @@ public class Utils {
 			return "null";
 		StringBuilder b = new StringBuilder();
 		for (ITree t : TreeUtils.preOrder(tree))
-			b.append(Utils.indent(t) + t.toPrettyString(ctx) + "\n");
+			b.append(MyUtils.indent(t) + t.toPrettyString(ctx) + "\n");
 		return b.toString();
 	}
 
@@ -270,6 +270,82 @@ public class Utils {
 				return BinaryOperatorKind.INSTANCEOF;
 			default:
 				throw new RuntimeException("Unsupported operator " + o);
+		}
+	}
+
+	/**
+	 * @return java source code representation of a pre or post unary operator.
+	 */
+	public static String getOperatorText(UnaryOperatorKind o) {
+		switch (o) {
+			case POS:
+				return "+";
+			case NEG:
+				return "-";
+			case NOT:
+				return "!";
+			case COMPL:
+				return "~";
+			case PREINC:
+				return "++";
+			case PREDEC:
+				return "--";
+			case POSTINC:
+				return "++";
+			case POSTDEC:
+				return "--";
+			default:
+				throw new RuntimeException("Unsupported operator " + o.name());
+		}
+	}
+
+	/**
+	 * @return java source code representation of a binary operator.
+	 */
+	public static String getOperatorText(BinaryOperatorKind o) {
+		switch (o) {
+			case OR:
+				return "||";
+			case AND:
+				return "&&";
+			case BITOR:
+				return "|";
+			case BITXOR:
+				return "^";
+			case BITAND:
+				return "&";
+			case EQ:
+				return "==";
+			case NE:
+				return "!=";
+			case LT:
+				return "<";
+			case GT:
+				return ">";
+			case LE:
+				return "<=";
+			case GE:
+				return ">=";
+			case SL:
+				return "<<";
+			case SR:
+				return ">>";
+			case USR:
+				return ">>>";
+			case PLUS:
+				return "+";
+			case MINUS:
+				return "-";
+			case MUL:
+				return "*";
+			case DIV:
+				return "/";
+			case MOD:
+				return "%";
+			case INSTANCEOF:
+				return "instanceof";
+			default:
+				throw new RuntimeException("Unsupported operator " + o.name());
 		}
 	}
 }

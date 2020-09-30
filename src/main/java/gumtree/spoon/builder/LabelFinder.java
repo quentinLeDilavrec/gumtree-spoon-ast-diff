@@ -2,6 +2,7 @@ package gumtree.spoon.builder;
 
 import java.lang.annotation.Annotation;
 
+import gumtree.spoon.MyUtils;
 import spoon.reflect.code.CtAssert;
 import spoon.reflect.code.CtAssignment;
 import spoon.reflect.code.CtBinaryOperator;
@@ -62,7 +63,12 @@ class LabelFinder extends CtInheritanceScanner {
 
 	@Override
 	public <T> void visitCtLiteral(CtLiteral<T> literal) {
-		label = literal.toString();
+		T val = literal.getValue();
+		if (val instanceof String) {
+			label = "\""+((String)val)+"\"";
+		} else {
+			label = literal.toString();
+		}
 	}
 
 	@Override
@@ -102,7 +108,11 @@ class LabelFinder extends CtInheritanceScanner {
 
 	@Override
 	public <T, A extends T> void visitCtOperatorAssignment(CtOperatorAssignment<T, A> e) {
-		label = e.getLabel();
+		// label = e.getLabel();
+		// if (label == null) {
+		// 	label = MyUtils.getOperatorText(e.getKind()) + "=";
+		// }
+		label = e.getKind().name();
 	}
 
 	@Override
@@ -140,6 +150,7 @@ class LabelFinder extends CtInheritanceScanner {
 	public <T> void visitCtTypeAccess(CtTypeAccess<T> typeAccess) {
 		if (typeAccess.getAccessedType() != null) {
 			label = typeAccess.getAccessedType().getQualifiedName();
+			label = typeAccess.getAccessedType().getSimpleName();
 		}
 	}
 

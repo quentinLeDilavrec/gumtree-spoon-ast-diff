@@ -1,0 +1,10 @@
+gumtree.spoon.spoongen.CtElementGenerator
+gumtree.spoon.spoongen.CtLiteralGenerator
+gumtree.spoon.spoongen.CtExpressionGenerator
+gumtree.spoon.spoongen.CtUnaryOperatorGenerator
+gumtree.spoon.spoongen.CtInterfaceGenerator
+gumtree.spoon.spoongen.CtClassGenerator
+gumtree.spoon.spoongen.CtPackageGenerator
+gumtree.spoon.spoongen.CtSuperClassedGenerator
+gumtree.spoon.spoongen.CtMethodGenerator
+gumtree.spoon.spoongen.CtInvocationGenerator

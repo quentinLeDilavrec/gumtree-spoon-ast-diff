@@ -1,5 +1,6 @@
 package gumtree.spoon;
 
+import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.code.*;
 import spoon.reflect.declaration.*;
 import spoon.reflect.factory.Factory;
@@ -603,7 +604,9 @@ public class CloneVisitorNewFactory extends CtScanner {
 	}
 
 	public void visitCtPackage(final CtPackage ctPackage) {
-		CtPackage aCtPackage = this.factory.Core().createPackage();
+		CtPackage aCtPackage = ctPackage instanceof CtRootPackage ? 
+			this.factory.getModel().getRootPackage():
+			this.factory.Core().createPackage();
 		aCtPackage.setPosition(ctPackage.getPosition());
 		this.builder.copy(ctPackage, aCtPackage);
 		aCtPackage.setAnnotations(this.cloneHelper.clone(ctPackage.getAnnotations()));

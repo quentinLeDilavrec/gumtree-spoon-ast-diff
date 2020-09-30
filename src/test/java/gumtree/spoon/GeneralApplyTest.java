@@ -96,10 +96,10 @@ public class GeneralApplyTest {
     public void test3() {
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class X { void f(){} };", "X.java");
-        CtPackage rp1 = Utils.makePkg(r1);
+        CtPackage rp1 = MyUtils.makePkg(r1);
 
         VirtualFile r2 = new VirtualFile("class Y { class X { void f(){} } };", "Y.java");
-        CtPackage rp2 = Utils.makePkg(r2);
+        CtPackage rp2 = MyUtils.makePkg(r2);
 
         AstComparator diff = new AstComparator();
 
@@ -115,10 +115,10 @@ public class GeneralApplyTest {
     public void test4() {
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class AAA { class Y { class Z { void f(){} } } };", "AAA.java");
-        CtPackage rp1 = Utils.makePkg(r1, new VirtualFile("class BBB {};", "BBB.java"));
+        CtPackage rp1 = MyUtils.makePkg(r1, new VirtualFile("class BBB {};", "BBB.java"));
 
         VirtualFile r2 = new VirtualFile("class BBB { class X { class Z { void f(){} } } };", "BBB.java");
-        CtPackage rp2 = Utils.makePkg(r2, new VirtualFile("class AAA {};", "AAA.java"));
+        CtPackage rp2 = MyUtils.makePkg(r2, new VirtualFile("class AAA {};", "AAA.java"));
 
         AstComparator diff = new AstComparator();
 
@@ -156,10 +156,10 @@ public class GeneralApplyTest {
     public void test5() {
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class X { class Y {} class Z { void f(){} } void g(){} };", "X.java");
-        CtPackage rp1 = Utils.makePkg(r1);
+        CtPackage rp1 = MyUtils.makePkg(r1);
 
         VirtualFile r2 = new VirtualFile("class X { class Y { class Z { void f(){} } } void g(){} };", "X.java");
-        CtPackage rp2 = Utils.makePkg(r2);
+        CtPackage rp2 = MyUtils.makePkg(r2);
 
         AstComparator diff = new AstComparator();
 
@@ -175,10 +175,10 @@ public class GeneralApplyTest {
     public void test6() {
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class X { class Y {} class Z { void f(){} } void g(){} };", "X.java");
-        CtPackage rp1 = Utils.makePkg(r1);
+        CtPackage rp1 = MyUtils.makePkg(r1);
 
         VirtualFile r2 = new VirtualFile("class X { class Y { class Z { void g(){} } }  };", "X.java");
-        CtPackage rp2 = Utils.makePkg(r2);
+        CtPackage rp2 = MyUtils.makePkg(r2);
 
         AstComparator diff = new AstComparator();
 
@@ -195,11 +195,11 @@ public class GeneralApplyTest {
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class X { int a; int b; int c; void g(){ a + b;} int f(int x){ return x;} }",
                 "X.java");
-        CtPackage rp1 = Utils.makePkg(r1);
+        CtPackage rp1 = MyUtils.makePkg(r1);
 
         VirtualFile r2 = new VirtualFile(
                 "class X { int a; int b; int c; void g(){ a + f(c+b);} int f(int x){ return x;} }", "X.java");
-        CtPackage rp2 = Utils.makePkg(r2);
+        CtPackage rp2 = MyUtils.makePkg(r2);
 
         AstComparator diff = new AstComparator();
 
@@ -214,9 +214,9 @@ public class GeneralApplyTest {
     public void test7() {
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class X { void f() {} class Y {} };", "X.java");
-        CtPackage rp1 = Utils.makePkg(r1);
+        CtPackage rp1 = MyUtils.makePkg(r1);
         VirtualFile r2 = new VirtualFile("class AAA { void g() {} };", "AAA.java");
-        CtPackage rp2 = Utils.makePkg(r2);
+        CtPackage rp2 = MyUtils.makePkg(r2);
 
         rp1.getType("X").addTypeMemberAt(3, rp2.getType("AAA"));
         rp1.getType("X").addTypeMemberAt(3, rp2.getType("AAA"));
@@ -240,14 +240,14 @@ public class GeneralApplyTest {
         // System.setProperty("gumtree.match.gt.ag.nomove", "true");
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile("class X { static void f() {} class Y { h () { X.f(); } } };", "X.java");
-        Factory left = Utils.makeFactory(r1);
+        Factory left = MyUtils.makeFactory(r1);
         VirtualFile r2 = new VirtualFile("class AAA { void g() {} class Y { h () { X.f(); } } };", "AAA.java");
         VirtualFile r1b = new VirtualFile("class X { static void f() {} };", "X.java");
-        Factory right = Utils.makeFactory(r1b, r2);
+        Factory right = MyUtils.makeFactory(r1b, r2);
         VirtualFile r3 = new VirtualFile("class AAA { void g() {} };", "AAA.java");
         VirtualFile r3bb = new VirtualFile("class BBB { class Y { h () { X.f(); } } };", "BBB.java");
         VirtualFile r3b = new VirtualFile("class X { static void f() {} };", "X.java");
-        Factory right2 = Utils.makeFactory(r3b, r3, r3bb);
+        Factory right2 = MyUtils.makeFactory(r3b, r3, r3bb);
 
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srctree = scanner.getTree(left.getModel().getRootPackage());
@@ -286,7 +286,7 @@ public class GeneralApplyTest {
         System.out.println(afegwsegwse.toTreeString());
         Diff diff2 = mdiff.compute(scanner.getTreeContext(), afegwsegwse);
         ITree qqq2 = mdiff.getMiddle();
-        System.out.println(Utils.toPrettyTree(scanner.getTreeContext(), qqq));
+        System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), qqq));
     }
 
     @Test
@@ -295,11 +295,11 @@ public class GeneralApplyTest {
         // contract: toString should be able to print move of a toplevel class
         VirtualFile r1 = new VirtualFile(
                 "class X { static void f() {} class Y { h () { if(true)X.f();else X.f(); } } };", "X.java");
-        Factory left = Utils.makeFactory(r1);
+        Factory left = MyUtils.makeFactory(r1);
         VirtualFile r2 = new VirtualFile(
                 "class AAA { void g() {} class Y { h () { if(true)X.f();else if (false) X.f(); } } };", "AAA.java");
         VirtualFile r1b = new VirtualFile("class X { static void f() {} };", "X.java");
-        Factory right = Utils.makeFactory(r1b, r2);
+        Factory right = MyUtils.makeFactory(r1b, r2);
 
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srctree = scanner.getTree(left.getModel().getRootPackage());
@@ -327,7 +327,7 @@ public class GeneralApplyTest {
         ITree qqq = mdiff.getMiddle();
         System.out.println(qqq);
         System.out.println("--------------");
-        System.out.println(Utils.toPrettyTree(scanner.getTreeContext(), qqq));
+        System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), qqq));
     }
 
     @Test
@@ -338,15 +338,15 @@ public class GeneralApplyTest {
         VirtualFile r1 = new VirtualFile(
                 "package aaa; interface X { @Override @GeneratedValue(strategies = GenerationType.AUTO, strategy = GenerationType.AUTO) Integer f(int i) {return null;} }",
                 "aaa.X.java");
-        Factory left = Utils.makeFactory(r1);
+        Factory left = MyUtils.makeFactory(r1);
         VirtualFile r2 = new VirtualFile(
                 "package aaa; interface X<T> { @Override @GeneratedValue(strategies = GenerationType.AUTO) public <U> java.util.List<U> f(java.util.List<T> i, int j) {return new java.util.ArrayList();} };",
                 "aaa.X.java");
-        Factory right = Utils.makeFactory(r2);
+        Factory right = MyUtils.makeFactory(r2);
         VirtualFile r3 = new VirtualFile(
                 "package aaa; interface X<T> extends A { public static Long f(long i, int j) {return null;} };",
                 "aaa.X.java");
-        Factory right2 = Utils.makeFactory(r3);
+        Factory right2 = MyUtils.makeFactory(r3);
 
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srctree = scanner.getTree(left.getModel().getRootPackage());
@@ -360,9 +360,9 @@ public class GeneralApplyTest {
             if (action instanceof AAction) {
                 AAction aaction = (AAction) action;
                 ITree leftNode = aaction.getSource();
-                System.out.println("\t" + Utils.toPrettyString(scanner.getTreeContext(), leftNode));
+                System.out.println("\t" + MyUtils.toPrettyString(scanner.getTreeContext(), leftNode));
                 ITree rightNode = aaction.getTarget();
-                System.out.println("\t" + Utils.toPrettyString(scanner.getTreeContext(), rightNode));
+                System.out.println("\t" + MyUtils.toPrettyString(scanner.getTreeContext(), rightNode));
                 if (aaction instanceof Update) {
                     System.out.println("\t" + leftNode.getMetadata("type") + "\t"
                             + ((AbstractVersionedTree) leftNode).getAllChildren().size());
@@ -373,10 +373,10 @@ public class GeneralApplyTest {
         }
 
         ITree qqq = mdiff.getMiddle();
-        System.out.println(Utils.toPrettyTree(scanner.getTreeContext(), dstTree));
+        System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
         System.out.println("--------------");
         System.out.println(qqq.toTreeString());
-        System.out.println(Utils.toPrettyTree(scanner.getTreeContext(), qqq));
+        System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), qqq));
 
         ITree dstTree2 = scanner.getTree(right2.getModel().getRootPackage());
         Diff diff2 = mdiff.compute(scanner.getTreeContext(), dstTree2);
@@ -388,9 +388,9 @@ public class GeneralApplyTest {
             if (action instanceof AAction) {
                 AAction aaction = (AAction) action;
                 ITree leftNode = aaction.getSource();
-                System.out.println("\t" + Utils.toPrettyString(scanner.getTreeContext(), leftNode));
+                System.out.println("\t" + MyUtils.toPrettyString(scanner.getTreeContext(), leftNode));
                 ITree rightNode = aaction.getTarget();
-                System.out.println("\t" + Utils.toPrettyString(scanner.getTreeContext(), rightNode));
+                System.out.println("\t" + MyUtils.toPrettyString(scanner.getTreeContext(), rightNode));
                 if (aaction instanceof Update) {
                     System.out.println("\t" + leftNode.getMetadata("type") + "\t"
                             + ((AbstractVersionedTree) leftNode).getAllChildren().size());
@@ -406,12 +406,12 @@ public class GeneralApplyTest {
         // System.out.println("--------------");
         // System.out.println(toPrettyTree(scanner.getTreeContext(), qqq2));
 
-        System.out.println(Utils.toPrettyTree(scanner.getTreeContext(), qqq));
+        System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), qqq));
         System.out.println(ops.get(0).getAction());
-        Utils.applyAAction((AAction) ops.get(0).getAction());
+        MyUtils.applyAAction((AAction) ops.get(0).getAction());
         System.out.println("oooooooooooooooooo");
         System.out.println(ops.get(1).getAction());
-        Utils.applyAAction((AAction) ops.get(1).getAction());
+        MyUtils.applyAAction((AAction) ops.get(1).getAction());
     }
 
 }

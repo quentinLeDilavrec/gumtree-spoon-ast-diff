@@ -7,6 +7,7 @@ import com.github.gumtreediff.tree.TreeContext;
 
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtCase;
+import spoon.reflect.code.CtOperatorAssignment;
 import spoon.reflect.code.CtStatementList;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.path.CtRole;
@@ -48,7 +49,7 @@ public class TreeScanner extends CtScanner {
 		if (nolabel) {
 			LabelFinder lf = new LabelFinder();
 			lf.scan(element);
-			if (lf.label.length()>0) {
+			if (lf.label != null && lf.label.length()>0) {
 				this.addSiblingNode(createNode("LABEL", lf.label));
 			}
 		}
@@ -86,7 +87,17 @@ public class TreeScanner extends CtScanner {
 			return false;
 		}
 
-		return element.isImplicit() || element instanceof CtReference;
+		if (element instanceof CtReference) {
+			return true;
+		}
+
+		while (element!=null) { // TODO look at parser 'cause an implicite this should not contain a non implicit target 
+			if(element.isImplicit()) return true;
+			if(!element.isParentInitialized()) break;
+			element = element.getParent();
+		}
+
+		return false;
 	}
 
 	@Override
