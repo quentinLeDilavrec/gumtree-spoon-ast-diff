@@ -2,7 +2,7 @@ package gumtree.spoon.builder;
 
 import java.lang.annotation.Annotation;
 
-import gumtree.spoon.MyUtils;
+import gumtree.spoon.apply.MyUtils;
 import spoon.reflect.code.CtAssert;
 import spoon.reflect.code.CtAssignment;
 import spoon.reflect.code.CtBinaryOperator;

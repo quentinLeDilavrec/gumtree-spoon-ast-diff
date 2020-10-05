@@ -15,6 +15,7 @@ import com.github.gumtreediff.tree.ITree;
 import org.junit.Test;
 
 import gumtree.spoon.apply.AAction;
+import gumtree.spoon.apply.MyUtils;
 import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;

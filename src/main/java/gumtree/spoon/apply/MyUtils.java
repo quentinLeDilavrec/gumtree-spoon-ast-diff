@@ -1,4 +1,4 @@
-package gumtree.spoon;
+package gumtree.spoon.apply;
 
 import java.util.List;
 
@@ -10,7 +10,6 @@ import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.github.gumtreediff.tree.TreeUtils;
 
-import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.operations.MyCloneHelper;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import spoon.SpoonModelBuilder;
@@ -36,7 +35,7 @@ public class MyUtils {
 		return factory;
 	}
 
-	static CtPackage makePkg(VirtualFile... resources) {
+	public static CtPackage makePkg(VirtualFile... resources) {
 		Factory factory = MyUtils.createFactory();
 		factory.getModel().setBuildModelIsFinished(false);
 		SpoonModelBuilder compiler = new JDTBasedSpoonCompiler(factory);
@@ -49,7 +48,7 @@ public class MyUtils {
 		return rp;
 	}
 
-	static Factory makeFactory(VirtualFile... resources) {
+	public static Factory makeFactory(VirtualFile... resources) {
 		Factory factory = MyUtils.createFactory();
 		factory.getModel().setBuildModelIsFinished(false);
 		SpoonModelBuilder compiler = new JDTBasedSpoonCompiler(factory);
@@ -83,7 +82,7 @@ public class MyUtils {
 		return b.toString();
 	}
 
-	static void applyAAction(AAction action) {
+	public static void applyAAction(AAction action) {
 		MyCloneHelper cloneHelper = new MyCloneHelper();
 		ITree leftNode = (ITree) action.getSource();
 		AbstractVersionedTree rightNode = (AbstractVersionedTree) action.getTarget();
@@ -152,7 +151,7 @@ public class MyUtils {
 			case "POSTDEC":
 				return UnaryOperatorKind.POSTDEC;
 			default:
-				throw new RuntimeException("Unsupported operator " + o);
+				throw new UnsupportedOperationException(o);
 		}
 	}
 
@@ -199,7 +198,7 @@ public class MyUtils {
 			case "INSTANCEOF":
 				return BinaryOperatorKind.INSTANCEOF;
 			default:
-				throw new RuntimeException("Unsupported operator " + o);
+				throw new UnsupportedOperationException(o);
 		}
 	}
 
@@ -222,7 +221,7 @@ public class MyUtils {
 			case "--":
 				return UnaryOperatorKind.POSTDEC;
 			default:
-				throw new RuntimeException("Unsupported operator " + o);
+				throw new UnsupportedOperationException(o);
 		}
 	}
 
@@ -269,7 +268,7 @@ public class MyUtils {
 			case "instanceof":
 				return BinaryOperatorKind.INSTANCEOF;
 			default:
-				throw new RuntimeException("Unsupported operator " + o);
+				throw new UnsupportedOperationException(o);
 		}
 	}
 
@@ -295,7 +294,7 @@ public class MyUtils {
 			case POSTDEC:
 				return "--";
 			default:
-				throw new RuntimeException("Unsupported operator " + o.name());
+				throw new UnsupportedOperationException(o.name());
 		}
 	}
 
@@ -345,7 +344,7 @@ public class MyUtils {
 			case INSTANCEOF:
 				return "instanceof";
 			default:
-				throw new RuntimeException("Unsupported operator " + o.name());
+				throw new UnsupportedOperationException(o.name());
 		}
 	}
 }
