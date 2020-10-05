@@ -3,6 +3,7 @@ package gumtree.spoon.spoongen;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import com.pholser.junit.quickcheck.generator.GenerationStatus;
 import com.pholser.junit.quickcheck.generator.java.lang.StringGenerator;
@@ -13,6 +14,7 @@ import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtInterface;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.visitor.JavaIdentifiers;
 
@@ -43,6 +45,8 @@ public class CtInterfaceGenerator extends SpoonGenerator<CtInterface> {
         }
         return generate(factory, random, status, parent);
     }
+    
+    static final Set<ModifierKind> vmods = Set.of(ModifierKind.PUBLIC, ModifierKind.PRIVATE);
 
     public CtInterface generate(Factory factory, SourceOfRandomness random, GenerationStatus status, CtElement parent) {
         String generatedName = CtClassGenerator.generateTypeSimpleName(random);
@@ -54,6 +58,7 @@ public class CtInterfaceGenerator extends SpoonGenerator<CtInterface> {
         } else {
             throw new RuntimeException();
         }
+        interf.setModifiers(Set.of(random.choose(vmods)));
         for (int i = 0; i < random.nextInt(5); i++) {
             CtType tmp = null;
             switch (random.nextInt(6)) {

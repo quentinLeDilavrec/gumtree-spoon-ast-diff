@@ -1,6 +1,9 @@
 package gumtree.spoon.spoongen;
 
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.pholser.junit.quickcheck.generator.GenerationStatus;
 import com.pholser.junit.quickcheck.random.SourceOfRandomness;
@@ -9,6 +12,7 @@ import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.declaration.ModifierKind;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.visitor.JavaIdentifiers;
 import spoon.support.reflect.reference.CtReferenceImpl;
@@ -41,19 +45,38 @@ public class CtClassGenerator extends SpoonGenerator<CtClass> {
         return generate(factory, random, status, parent);
     }
 
+    public ModifierKind oneOf(SourceOfRandomness random, ModifierKind... mods) {
+        return random.choose(mods);
+    }
+
     public CtClass generate(Factory factory, SourceOfRandomness random, GenerationStatus status, CtElement parent) {
         String generatedName = generateTypeSimpleName(random);
         CtClass clazz;
+        Set<ModifierKind> mods = new HashSet<>();
         if (parent instanceof CtPackage) {
             clazz = factory.createClass((CtPackage) parent, generatedName);
+            if (random.nextBoolean()) {
+                mods.add(ModifierKind.PUBLIC);
+            }
         } else if (parent instanceof CtType) {
             // TODO create Class should allow CtType or at least CtInterface
             clazz = factory.createClass();
             clazz.setSimpleName(generatedName);
             ((CtType) parent).addNestedType(clazz);
+            CtType parentparent = parent.getParent(CtType.class);
+            if ((parentparent == null) || (((CtType) parent).isStatic() && random.nextBoolean())) {
+                mods.add(ModifierKind.STATIC);
+            }
+            if (random.nextBoolean()) {
+                mods.add(oneOf(random, ModifierKind.ABSTRACT, ModifierKind.FINAL));
+            }
+            if (random.nextBoolean()) {
+                mods.add(oneOf(random, ModifierKind.PUBLIC, ModifierKind.PRIVATE));
+            }
         } else {
             throw new RuntimeException();
         }
+        clazz.setModifiers(mods);
         for (int i = 0; i < random.nextInt(5); i++) {
             CtType tmp = null;
             switch (random.nextInt(9)) {

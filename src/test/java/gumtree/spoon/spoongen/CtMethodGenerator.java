@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.pholser.junit.quickcheck.generator.GenerationStatus;
 import com.pholser.junit.quickcheck.random.SourceOfRandomness;
@@ -36,9 +37,14 @@ public class CtMethodGenerator extends SpoonGenerator<CtMethod> {
         return generate(factory, random, status, random.choose(factory.Type().getAll()));
     }
 
+    static final Set<ModifierKind> vmods = Set.of(ModifierKind.PUBLIC,ModifierKind.PRIVATE,ModifierKind.PROTECTED);
+    static final Set<ModifierKind> omods = Set.of(ModifierKind.ABSTRACT,ModifierKind.FINAL,ModifierKind.STATIC,ModifierKind.TRANSIENT,ModifierKind.SYNCHRONIZED);
+
     public CtMethod generate(Factory factory, SourceOfRandomness random, GenerationStatus status, CtType parent) {
-        Set<ModifierKind> mods = Arrays.asList(ModifierKind.values()).stream().filter(x -> random.nextBoolean())
-                .collect(Collectors.toSet());
+        Set<ModifierKind> mods = omods.stream().filter(x -> random.nextBoolean()).collect(Collectors.toSet());
+        if (random.nextBoolean()) {
+            mods.add(random.choose(vmods));
+        }
         String generatedName = generateIdentifier(random);
         List<CtType<?>> allTypes = new ArrayList<>(factory.Type().getAll(true));
         allTypes = allTypes.stream().filter(x -> parent.getReference().canAccess(x)).collect(Collectors.toList());
@@ -82,8 +88,13 @@ public class CtMethodGenerator extends SpoonGenerator<CtMethod> {
             mods.remove(ModifierKind.ABSTRACT);
             // mods.remove(ModifierKind.STATIC);
         }
+        if (parent instanceof CtInterface) {
+            mods.remove(ModifierKind.PRIVATE);
+            mods.remove(ModifierKind.PROTECTED);
+        }
         if (parent instanceof CtInterface && !isDefault) {
-                mods.remove(ModifierKind.FINAL);
+            mods.remove(ModifierKind.FINAL);
+            mods.remove(ModifierKind.STRICTFP);
         }
         if (mods.contains(ModifierKind.ABSTRACT) && mods.contains(ModifierKind.FINAL)) {
             if (random.nextInt(100) < 50) {
@@ -93,7 +104,7 @@ public class CtMethodGenerator extends SpoonGenerator<CtMethod> {
             }
         }
         if (mods.contains(ModifierKind.ABSTRACT) && mods.contains(ModifierKind.STATIC)) {
-            if (random.nextInt(100) < 50 && !(parent instanceof CtInterface)){
+            if (random.nextInt(100) < 50 && !(parent instanceof CtInterface)) {
                 mods.remove(ModifierKind.ABSTRACT);
             } else {
                 mods.remove(ModifierKind.STATIC);
@@ -103,8 +114,9 @@ public class CtMethodGenerator extends SpoonGenerator<CtMethod> {
         meth = factory.createMethod(parent, mods, retT, generatedName, Collections.emptyList(), Collections.emptySet());
         if (isDefault) {
             ((CtMethodImpl) meth).setDefaultMethod(true);
-        } 
-        if (!meth.isAbstract() && (parent instanceof CtClass || meth.isStatic() || meth.isFinal() || meth.isDefaultMethod())) {
+        }
+        if (!meth.isAbstract()
+                && (parent instanceof CtClass || meth.isStatic() || meth.isFinal() || meth.isDefaultMethod())) {
             CtBlock<Object> block = factory.createBlock();
             // if (random.nextBoolean())
             //     block.addStatement(gen().make(CtInvocationGenerator.class, gen().type(Integer.class)).generate(factory,

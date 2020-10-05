@@ -3,6 +3,7 @@ package gumtree.spoon.spoongen;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,9 +33,24 @@ public class CtFieldGenerator extends SpoonGenerator<CtField> {
         return generate(factory, random, status, random.choose(factory.Type().getAll()));
     }
 
+    static final Set<ModifierKind> vmods = Set.of(ModifierKind.PUBLIC, ModifierKind.PRIVATE, ModifierKind.PROTECTED);
+    static final Set<ModifierKind> omods = Set.of(ModifierKind.FINAL, ModifierKind.STATIC, ModifierKind.TRANSIENT,
+            ModifierKind.VOLATILE);
+
     public CtField generate(Factory factory, SourceOfRandomness random, GenerationStatus status, CtType parent) {
-        Set<ModifierKind> mods = Arrays.asList(ModifierKind.values()).stream().filter(x -> random.nextBoolean())
-                .collect(Collectors.toSet());
+        Set<ModifierKind> mods = new HashSet<>();
+        if (random.nextBoolean()) {
+            mods.add(random.choose(vmods));
+        }
+        for (ModifierKind mod : omods) {
+            if (random.nextBoolean()) {
+                mods.add(mod);
+
+            }
+        }
+        if (!parent.isStatic()) {
+            mods.remove(ModifierKind.STATIC);
+        }
         String generatedName = CtMethodGenerator.generateIdentifier(random);
         List<CtType<?>> allTypes = new ArrayList<>(factory.Type().getAll(true));
         allTypes = allTypes.stream().filter(x -> parent.getReference().canAccess(x)).collect(Collectors.toList());
@@ -63,13 +79,18 @@ public class CtFieldGenerator extends SpoonGenerator<CtField> {
         allTypes.add(factory.Type().STRING.getTypeDeclaration());
         CtType<?> typ = random.choose(allTypes);
         CtTypeReference<?> typR = factory.Type().createReference(typ);
+        if (parent instanceof CtInterface) {
+            mods.remove(ModifierKind.PRIVATE);
+            mods.remove(ModifierKind.PROTECTED);
+        }
         CtField field;
         int r = random.nextInt(100);
         if (r < 50) {
             try {
                 Class paramClass = ((CtTypeReferenceImpl) typR).getActualClass();
                 field = factory.createField(parent, mods, typR, generatedName,
-                        ((SpoonGen<CtExpression>)gen().type(CtExpression.class, paramClass)).generate(factory,random, status));
+                        ((SpoonGen<CtExpression>) gen().type(CtExpression.class, paramClass)).generate(factory, random,
+                                status));
             } catch (Exception e) {
                 field = factory.createField(parent, mods, typR, generatedName);
             }

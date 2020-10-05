@@ -71,6 +71,7 @@ import spoon.reflect.code.CtUnaryOperator;
 import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.code.CtVariableRead;
 import spoon.reflect.code.CtVariableWrite;
+import spoon.reflect.code.LiteralBase;
 import spoon.reflect.declaration.*;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.factory.FactoryImpl;
@@ -83,6 +84,7 @@ import spoon.reflect.reference.CtVariableReference;
 import spoon.reflect.visitor.CtInheritanceScanner;
 import spoon.reflect.visitor.CtScanner;
 import spoon.reflect.visitor.PrettyPrinter;
+import spoon.reflect.visitor.filter.PotentialVariableDeclarationFunction;
 import spoon.support.DefaultCoreFactory;
 import spoon.support.StandardEnvironment;
 import spoon.support.compiler.VirtualFile;
@@ -325,6 +327,18 @@ public class SimpleApplyTest {
     }
 
     @Test
+    public void testSimpleApplyInsertInterfaceUnicode() {
+        String contents = "interface X { char value = '\\uf127'; }";
+        insertTestHelper(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertInterfaceUnicode2() {
+        String contents = "interface X { char value = '\uf127'; }";
+        insertTestHelper(contents);
+    }
+
+    @Test
     public void testSimpleApplyInsertInterfaceFieldStringNum() {
         String contents = "interface X { String value = \"54246\"; }";
         insertTestHelper(contents);
@@ -517,13 +531,46 @@ public class SimpleApplyTest {
     }
 
     @Test
+    public void testSimpleApplyInsertClassClass() {
+        String contents = "class X { class Y extends X {} }";
+        insertTestHelper(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertClassClassExt() {
+        String contents = "class X extends X.Y { class Y {} }";
+        insertTestHelper(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertClassClassExt2() {
+        String contents = "package x.a; class X { class Y extends x.b.X.Y {} }";
+        String contents1 = "package x.b; class X { class Y extends x.a.X {} }";
+        Factory right = MyUtils.makeFactory(
+            new VirtualFile(contents, "x/a/X.java"),
+        new VirtualFile(contents1, "x/b/X.java"));
+        auxInsTestHelper(right.getModel().getRootPackage());
+    }
+
+    @Test
+    public void testSimpleApplyInsertClassClassExt3() {
+        String contents = "package x.a; class X { class Y {} }";
+        String contents1 = "package x.b; class X extends X.Y { class Y {} }";
+        Factory right = MyUtils.makeFactory(
+            new VirtualFile(contents, "x/a/X.java"),
+        new VirtualFile(contents1, "x/b/X.java"));
+        auxInsTestHelper(right.getModel().getRootPackage());
+    }
+
+    @Test
     public void testSimpleApplyInsertClassInterface5() {
-        String contents = "interface A {public abstract synchronized strictfp volatile transient final void f();}";
+        String contents = "interface A {public abstract synchronized strictfp transient final void f();}";
         insertTestHelper(contents);
     }
 
     public static void applyAInsert(Factory factory, TreeContext ctx, AAction<Insert> action) {
         ITree source = action.getSource();
+        factory.createLocalVariableReference().getDeclaration();
         AbstractVersionedTree target = action.getTarget();
         AbstractVersionedTree parentTarget = target.getParent();
         System.out.println("=======");
@@ -548,15 +595,15 @@ public class SimpleApplyTest {
                     ((CtUnaryOperator<?>) parent).setKind(MyUtils.getUnaryOperatorByName(target.getLabel()));
                 } else if (parent instanceof CtLiteral) {
                     if (target.getLabel().startsWith("\"")) {
-                        ((CtLiteral<Object>) parent).setValue(
+                        ((CtLiteral<String>) parent).setValue(
                                 target.getLabel().substring(1, target.getLabel().length() - 1).replace("\\\\", "\\"));
                     } else if (target.getLabel().startsWith("'")) {
                         ((CtLiteral<Character>) parent)
                                 .setValue(target.getLabel().substring(1, target.getLabel().length() - 1).charAt(0));
                     } else if (target.getLabel().equals("true")) {
-                        ((CtLiteral<Object>) parent).setValue(true);
+                        ((CtLiteral<Boolean>) parent).setValue(true);
                     } else if (target.getLabel().equals("false")) {
-                        ((CtLiteral<Object>) parent).setValue(false);
+                        ((CtLiteral<Boolean>) parent).setValue(false);
                     } else if (target.getLabel().equals("null")) {
                         ((CtLiteral<Object>) parent).setValue(null);
                     } else if (target.getLabel().endsWith("F")) {
@@ -576,10 +623,19 @@ public class SimpleApplyTest {
                         }
                     }
                 } else if (parent instanceof CtFieldAccess) {
-                    CtVariableReference ref = factory.createFieldReference();
-                    ref.setSimpleName(target.getLabel());
-                    ((CtFieldAccess<?>) parent).setVariable(ref);
-                    ((CtFieldAccess<?>) parent).getTarget();
+                    CtField var = factory.Query().createQuery(parent)
+                            .map(new PotentialVariableDeclarationFunction(target.getLabel())).first();
+                    // CtVariableReference ref = factory.createFieldReference();
+                    // ref.setSimpleName(target.getLabel());
+                    if (var == null) {
+                        CtFieldAccess sps = (CtFieldAccess)source.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+                        CtFieldReference field = factory.Field().createReference(sps.getVariable().getType().getQualifiedName()+" "+sps.getVariable().getQualifiedName());
+                        ((CtFieldAccess<?>) parent).setVariable(field);
+                        ((CtFieldAccess<?>) parent).setTarget(factory.createTypeAccess(field.getDeclaringType(),false));
+                    } else {
+                        ((CtFieldAccess<?>) parent).setVariable(var.getReference());
+                        ((CtFieldAccess<?>) parent).setTarget(factory.createTypeAccess(var.getReference().getDeclaringType(),false));
+                    }
                 } else if (parent instanceof CtVariableAccess) {
                     CtVariableReference ref = factory.createLocalVariableReference();
                     ref.setSimpleName(target.getLabel());
@@ -683,7 +739,7 @@ public class SimpleApplyTest {
                 CtMethod<Object> method = factory.createMethod();
                 CtElement sp = (CtElement) source.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
                 method.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-                method.setDefaultMethod(((CtMethod)sp).isDefaultMethod());
+                method.setDefaultMethod(((CtMethod) sp).isDefaultMethod());
                 target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, method);
                 CtType<?> parent = (CtType<?>) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
                 parent.addMethod(method);
@@ -715,6 +771,9 @@ public class SimpleApplyTest {
                 if (parent instanceof CtMethod && ((CtMethod) parent).isStatic()
                         && ((CtMethod) parent).getBody() == null)
                     ((CtMethod) parent).setBody(factory.createBlock());
+                if (parent instanceof CtMethod && ((CtMethod) parent).isAbstract()
+                        && ((CtMethod) parent).getBody() != null)
+                    ((CtMethod) parent).setBody(null);
                 break;
             }
             case "Field": {
@@ -830,11 +889,13 @@ public class SimpleApplyTest {
             }
             case "FieldWrite": {
                 System.out.println("isFieldWrite");
+                CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+                // CtVariable<?> var = factory.Query().createQuery(parent)
+                //         .map(new PotentialVariableDeclarationFunction("simpleName")).first();
                 CtFieldWrite created = factory.createFieldWrite();
                 CtElement sp = (CtElement) source.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
                 created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
                 target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
-                CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
                 if (parent instanceof CtUnaryOperator) {
                     ((CtUnaryOperator<?>) parent).setOperand(created);
                 } else if (parent instanceof CtAssignment) {

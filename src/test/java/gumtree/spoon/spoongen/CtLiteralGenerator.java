@@ -46,14 +46,13 @@ public class CtLiteralGenerator extends ComponentizedSpoonGenerator<CtLiteral> {
         // Class contentType = r
         // .choose(Arrays.asList(String.class, Boolean.class, Integer.class,
         // Float.class, Double.class, null));
-        CtLiteral lit = new CtLiteralImpl<>();// getFactory().createLiteral(content);
+        // CtLiteral lit = new CtLiteralImpl<>();// getFactory().createLiteral(content);
         // lit.setValue(contentType == null ? null : gen().type(contentType).generate(r,
         // s));
         // // lit.setParent(getFactory().getModel().getRootPackage());
         Generator<?> generator = componentGenerators().get(0);
         Object value = generator.generate(random, status);
-        lit.setValue(value);
-        return lit;
+        return factory.createLiteral(value);
     }
 
     @Override
