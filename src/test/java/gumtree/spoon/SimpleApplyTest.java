@@ -83,6 +83,17 @@ public class SimpleApplyTest {
     }
 
     @Test
+    public void testSimpleApplyInsertNewLineChar() {
+        String contents = "interface X { char value = '\n'; }";
+        ApplyTestHelper.onInsert(contents);
+    }
+    @Test
+    public void testSimpleApplyInsertNewLineChar2() {
+        String contents = "interface X { char value = '\\n'; }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
     public void testSimpleApplyInsertInterfaceUnicode2() {
         String contents = "interface X { char value = '\uf127'; }";
         ApplyTestHelper.onInsert(contents);
@@ -106,6 +117,12 @@ public class SimpleApplyTest {
         ApplyTestHelper.onInsert(contents);
     }
 
+    @Test
+    public void testSimpleApplyInsertStringQuote() {
+        String contents = "interface X { String value = \"Can't skid into hex\"; }";
+        ApplyTestHelper.onInsert(contents);
+    }
+    
     @Test
     public void testSimpleApplyInsertInterfaceFieldBooleanTrue() {
         String contents = "interface X { boolean value = true; }";
@@ -167,14 +184,13 @@ public class SimpleApplyTest {
     }
 
     @Test
-    public void testSimpleApplyInsertInterfaceFieldsNeg() {
-        String contents = "interface X { int value = 1; int value2 = -value; }";
+    public void testSimpleApplyInsertFieldsNeg() {
+        String contents = "class X { int value = 1; int value2 = -value; }";
         ApplyTestHelper.onInsert(contents);
     }
-
     @Test
     public void testSimpleApplyInsertInterfaceFieldsNegFull() {
-        String contents = "interface X { int value = 1; int value2 = -X.value; }";
+        String contents = "interface X { static int value = 1; int value2 = -X.value; }";
         ApplyTestHelper.onInsert(contents);
     }
 
@@ -187,6 +203,47 @@ public class SimpleApplyTest {
     @Test
     public void testSimpleApplyInsertInterfaceMethEmptRet() {
         String contents = "interface X { static void f(){ return;} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+    @Test
+    public void testSimpleApplyInsertRec() {
+        String contents = "interface X { static void f(){ f();} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertCallUknown() {
+        String contents = "public class X { static void f(){ Y.f();} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertCallUknown2() {
+        String contents = "public class X { static void f(){ int i = Y.f();} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertCallUknown3() {
+        String contents = "public class X { static void f(){ int i = 0; i = Y.f();} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertCallUknown4() {
+        String contents = "package a.b; public class X { static void f(){ boolean b = true; b|=Y.f(0,Y.FIELD).get()!=3;} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertCallUknown5() {
+        String contents = "package a.b; public class X { void f(){ Y.g(Y.FIELD).get();} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertCallUknown6() {
+        String contents = "package a.b; public class X { static void f(){ Y.i.toString(Y.y).toString();} }";
         ApplyTestHelper.onInsert(contents);
     }
 
@@ -209,10 +266,104 @@ public class SimpleApplyTest {
     }
 
     @Test
+    public void testSimpleApplyInsertFor() {
+        String contents = "class X { static {for(;;){}} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertFor2() {
+        String contents = "class X { static {for(;;);} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertFor3() {
+        String contents = "class X {static {int j=0; for(int i;;j--){}} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertFor4() {
+        String contents = "class X {static {int i=4; for(;i<3;){i=2;}} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertIf1() {
+        String contents = "class X {static {int i=4; if(i<3)i=7;} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertAssignCall() {
+        String contents = "class X {static int f(){return 1;} static {int i=X.f();} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertAssignCall2() {
+        String contents = "class X {static int i; static int f(){return 1;} static {i=X.f();} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertAssignCall3() {
+        String contents = "class X { "
+                + "private ServerSocket serverSocket;"
+                + "public X(java.lang.String password, int port) {"
+                // + "this.password = (password.length() > 0) ? password : null;" 
+                + "try {"
+                + "    serverSocket = new java.net.ServerSocket(port);" 
+                + "} catch (java.io.IOException ex) {" 
+                + "}"
+                // + "motd = createMotd();" 
+                // + "game.getOptions().initialize();" 
+                + "}}";
+        ApplyTestHelper.onInsert(contents);
+    }
+    @Test
+    public void testSimpleApplyInsertCall() {
+        String contents = "class X { "
+                + "private Game game = new Game();"
+                + "public X(java.lang.String password, int port) {"
+                // + "this.password = (password.length() > 0) ? password : null;" 
+                + "changePhase(Game.PHASE_LOUNGE);"
+                + "}" 
+                + "private void changePhase(int 0){}" 
+                + "}";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertCast() {
+        String contents = "class X { "
+                + "private Hashtable commandsHash = new Hashtable();"
+                + "public ServerCommand getCommand(String name) {"
+                + "return (ServerCommand)commandsHash.get(name);"
+                + "}"
+                + "}";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
     public void testSimpleApplyInsertClassFieldsStaticConstrInc() {
         String contents = "public class X { static int value = 0; static {value += 1;} }";
         ApplyTestHelper.onInsert(contents);
     }
+
+    @Test
+    public void testSimpleApplyInsertNewArray() {
+        String contents = "public class X { static int[] value = new int[10];}";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertNewArray2() {
+        String contents = "class X { void f() {int[] value = new int[10];} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
 
     @Test
     public void testSimpleApplyInsertClassMethodRet1() {
@@ -257,6 +408,12 @@ public class SimpleApplyTest {
     }
 
     @Test
+    public void testSimpleApplyInsertClassMethodField() {
+        String contents = "class X { int i = 0; void f() { i = 3;} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+    
+    @Test
     public void testSimpleApplyInsertClassDoubleMethod() {
         String contents = "class X { int add(int i) { return i + i; } }";
         ApplyTestHelper.onInsert(contents);
@@ -289,6 +446,30 @@ public class SimpleApplyTest {
     @Test
     public void testSimpleApplyInsertClassClassExt() {
         String contents = "class X extends X.Y { class Y {} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertClassConstr() {
+        String contents = "class X { X(){}; }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertClassInst() {
+        String contents = "class X { X inst = new X(); }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertClassCond() {
+        String contents = "class X { int i = 1 > 2 ? 3 : 4 ; }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertClassImplemInterface() {
+        String contents = "class X implements Runnable { }";
         ApplyTestHelper.onInsert(contents);
     }
 

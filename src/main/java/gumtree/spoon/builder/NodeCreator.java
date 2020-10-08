@@ -11,6 +11,7 @@ import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypedElement;
 import spoon.reflect.declaration.CtVariable;
 import spoon.reflect.path.CtRole;
+import spoon.reflect.reference.CtArrayTypeReference;
 import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtInheritanceScanner;
@@ -119,8 +120,10 @@ public class NodeCreator extends CtInheritanceScanner {
 		super.visitCtMethod(e);
 	}
 
+
+
 	private <T> void genericTransfo(CtTypeReference<T> parametrizedType, ITree parametrizedTypeTree) {
-		ITree label = builder.createNode("LABEL", parametrizedType.getQualifiedName().replace("$", ".")); 
+		ITree label = builder.createNode("LABEL", extracted(parametrizedType));//.replace("$", ".")); 
 		// TODO simple or qual ? should build qual myself for implicit ones
 		// computeExpliciteQualName(parametrizedTypeTree,parametrizedType);
 		parametrizedTypeTree.addChild(label);
@@ -133,6 +136,14 @@ public class NodeCreator extends CtInheritanceScanner {
 				genericTransfo(typeParam, tree);
 				parametrizedTypeTree.addChild(tree);
 			}
+		}
+	}
+
+	private <T> String extracted(CtTypeReference<T> reference) {
+		if (reference instanceof CtArrayTypeReference) {
+			return ((CtArrayTypeReference)reference).getComponentType().getSimpleName();
+		} else {
+			return reference.getSimpleName();
 		}
 	}
 
@@ -151,16 +162,18 @@ public class NodeCreator extends CtInheritanceScanner {
 		if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.SUPER_TYPE) {
 			ITree superType = builder.createNode("SUPER_CLASS",
 					builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
-			CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent());
-			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
+			// CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent()); // TODO ckeck why
+			// superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
+			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, reference);
 			reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
 			genericTransfo((CtTypeReference<?>) reference, superType);
 			builder.addSiblingNode(superType);
 		} else if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.INTERFACE) {
 			ITree superType = builder.createNode("INTERFACE",
 					builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
-			CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent());
-			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
+			// CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent());
+			// superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
+			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, reference);
 			reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
 			genericTransfo((CtTypeReference<?>) reference, superType);
 			builder.addSiblingNode(superType);

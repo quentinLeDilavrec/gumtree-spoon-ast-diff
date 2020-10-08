@@ -7,9 +7,15 @@ import com.github.gumtreediff.tree.TreeContext;
 
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtCase;
+import spoon.reflect.code.CtExpression;
+import spoon.reflect.code.CtLiteral;
+import spoon.reflect.code.CtNewArray;
 import spoon.reflect.code.CtOperatorAssignment;
+import spoon.reflect.code.CtStatement;
 import spoon.reflect.code.CtStatementList;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtNamedElement;
+import spoon.reflect.declaration.CtType;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtReference;
 import spoon.reflect.visitor.CtScanner;
@@ -43,13 +49,14 @@ public class TreeScanner extends CtScanner {
 			lf.scan(element);
 			label = lf.label;
 		}
-		pushNodeToTree(createNode(nodeTypeName, element, label));
+		pushNodeToTree(createNode(nodeTypeName, element, nolabel ? element.getRoleInParent().name() : label));
 
 		int depthBefore = nodes.size();
 		if (nolabel) {
 			LabelFinder lf = new LabelFinder();
 			lf.scan(element);
-			if (lf.label != null && lf.label.length()>0) {
+			if (lf.label != null && lf.label.length() > 0 && (element instanceof CtNamedElement
+					|| element instanceof CtExpression || element instanceof CtReference)) {
 				this.addSiblingNode(createNode("LABEL", lf.label));
 			}
 		}
@@ -83,20 +90,39 @@ public class TreeScanner extends CtScanner {
 			return true;
 		}
 
-		if (element instanceof CtReference && (element.getRoleInParent() == CtRole.SUPER_TYPE || element.getRoleInParent() == CtRole.INTERFACE)) {
-			return false;
-		}
-
 		if (element instanceof CtReference) {
-			return true;
+			if (element.getRoleInParent() == CtRole.SUPER_TYPE || element.getRoleInParent() == CtRole.INTERFACE) {
+				return false;
+			} else if ((element.getRoleInParent() == CtRole.SUPER_TYPE
+					|| element.getRoleInParent() == CtRole.INTERFACE)) {
+				return false;
+			} else if (element.getRoleInParent().equals(CtRole.CAST)) {
+				return false;
+			} else if (element.getParent() instanceof CtNewArray) {
+				return false;
+			} else {
+				return true;
+			}
 		}
 
-		while (element!=null) { // TODO look at parser 'cause an implicite this should not contain a non implicit target 
-			if(element.isImplicit()) return true;
-			if(!element.isParentInitialized()) break;
+		// boolean b = element instanceof CtReference;
+		while (element != null) { // TODO look at parser 'cause an implicite this should not contain a non implicit target 
+			if (element.isImplicit())
+				return true;
+			if (!element.isParentInitialized())
+				break;
 			element = element.getParent();
+			if (element instanceof CtBlock)
+				break;
+			if (element instanceof CtNewArray)
+				return false;
+			// else if (element instanceof CtExpression)
+			// 	return b;
+			// else if (element instanceof CtStatement)
+			// 	return b;
+			// else if (element instanceof CtType)
+			// 	return b;
 		}
-
 		return false;
 	}
 
@@ -128,9 +154,9 @@ public class TreeScanner extends CtScanner {
 		if (element != null) {
 			nodeTypeName = getTypeName(element.getClass().getSimpleName());
 		}
-		if (element instanceof CtBlock) {
-			nodeTypeName = element.getRoleInParent().toString();
-		}
+		// if (element instanceof CtBlock) {
+		// 	nodeTypeName = element.getRoleInParent().toString();
+		// }
 		return nodeTypeName;
 	}
 

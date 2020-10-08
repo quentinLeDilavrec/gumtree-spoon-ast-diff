@@ -25,6 +25,8 @@ import spoon.reflect.code.CtWhile;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtNamedElement;
 import spoon.reflect.path.CtRole;
+import spoon.reflect.reference.CtArrayTypeReference;
+import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtInheritanceScanner;
 
@@ -39,6 +41,15 @@ class LabelFinder extends CtInheritanceScanner {
 	@Override
 	public <T> void scanCtVariableAccess(CtVariableAccess<T> variableAccess) {
 		label = variableAccess.getVariable().getSimpleName();
+	}
+
+	@Override
+	public void scanCtReference(CtReference reference) {
+		if (reference instanceof CtArrayTypeReference) {
+			label = ((CtArrayTypeReference)reference).getComponentType().getSimpleName();
+		} else {
+			label = reference.getSimpleName();
+		}
 	}
 
 	@Override
@@ -57,7 +68,8 @@ class LabelFinder extends CtInheritanceScanner {
 	@Override
 	public <T> void visitCtConstructorCall(CtConstructorCall<T> ctConstructorCall) {
 		if (ctConstructorCall.getExecutable() != null) {
-			label = ctConstructorCall.getExecutable().getSignature();
+			label = ctConstructorCall.getExecutable().getSimpleName();
+			// label = ctConstructorCall.getExecutable().getSignature();
 		}
 	}
 
@@ -66,6 +78,8 @@ class LabelFinder extends CtInheritanceScanner {
 		T val = literal.getValue();
 		if (val instanceof String) {
 			label = "\""+((String)val)+"\"";
+		} else if (val instanceof Character) {
+			label = "'"+((Character)val).toString()+"'";
 		} else {
 			label = literal.toString();
 		}

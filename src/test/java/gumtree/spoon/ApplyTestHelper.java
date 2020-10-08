@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNoException;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -134,6 +135,10 @@ public class ApplyTestHelper {
     }
     public static void onInsert(String contents) {
         Factory right = MyUtils.makeFactory(new VirtualFile(contents, "X.java"));
+        onInsert(right.getModel().getRootPackage());
+    }
+    public static void onInsert(File... contents) {
+        Factory right = MyUtils.makeFactory(contents);
         onInsert(right.getModel().getRootPackage());
     }
 }

@@ -1,5 +1,6 @@
 package gumtree.spoon.apply;
 
+import java.io.File;
 import java.util.List;
 
 import com.github.gumtreediff.actions.model.Delete;
@@ -54,6 +55,18 @@ public class MyUtils {
 		SpoonModelBuilder compiler = new JDTBasedSpoonCompiler(factory);
 		compiler.getFactory().getEnvironment().setLevel("OFF");
 		for (VirtualFile resource : resources) {
+			compiler.addInputSource(resource);
+		}
+		compiler.build();
+		return factory;
+	}
+
+	public static Factory makeFactory(File... resources) {
+		Factory factory = MyUtils.createFactory();
+		factory.getModel().setBuildModelIsFinished(false);
+		SpoonModelBuilder compiler = new JDTBasedSpoonCompiler(factory);
+		compiler.getFactory().getEnvironment().setLevel("OFF");
+		for (File resource : resources) {
 			compiler.addInputSource(resource);
 		}
 		compiler.build();
