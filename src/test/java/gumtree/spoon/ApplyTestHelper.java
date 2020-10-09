@@ -3,9 +3,11 @@ package gumtree.spoon;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNoException;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +27,7 @@ import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
 import spoon.compiler.Environment;
+import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
@@ -74,6 +77,42 @@ public class ApplyTestHelper {
             tmp.addAll(children);
         }
         // .getModel().getRootPackage().getTypes().iterator().next()
+        if (right instanceof CtType || right instanceof CtPackage) {
+            CtPackage ori1 = MyUtils.makeFactory(toVirtFiles(pp, right)).getModel().getRootPackage();
+            CtPackage made1  = MyUtils.makeFactory(toVirtFiles(pp, middleE)).getModel().getRootPackage();
+            if (!ori1.equals(made1)) {
+                final SpoonGumTreeBuilder scanner1 = new SpoonGumTreeBuilder();
+                ITree srctree1;
+                srctree1 = scanner1.getTree(made1);
+                MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1);
+                ITree dstTree1 = scanner1.getTree(ori1);
+                DiffImpl diff1 = mdiff.compute(scanner1.getTreeContext(), dstTree1);
+                for (Action action : diff1.getActionsList()) {
+                    System.err.println(action);
+                }
+                check1(right, pp, middleE);
+            }
+        } else {
+            check1(right, pp, middleE);
+        }
+    }
+    // private static void check2(CtElement right, spoon.reflect.visitor.PrettyPrinter pp, CtElement middleE) {
+    //     assertEquals();
+    // }
+
+    private static VirtualFile[] toVirtFiles(PrettyPrinter pp, CtElement ele) {
+        List<VirtualFile> l = new ArrayList<>();
+        if (ele instanceof CtType) {
+            l.add(new VirtualFile(pp.prettyprint(ele)));
+        } else {
+            for (CtType p : ((CtPackage) ele).getTypes()) {
+                l.add(new VirtualFile(pp.prettyprint(p)));
+            }
+        }
+        return l.toArray(new VirtualFile[l.size()]);
+    }
+
+    private static void check1(CtElement right, spoon.reflect.visitor.PrettyPrinter pp, CtElement middleE) {
         HashMap<String, MutablePair<CtType, CtType>> res = new HashMap<>();
         compare(pp, right, middleE, res);
         System.err.println("00000000000000000");
@@ -133,10 +172,12 @@ public class ApplyTestHelper {
             }
         }
     }
+
     public static void onInsert(String contents) {
         Factory right = MyUtils.makeFactory(new VirtualFile(contents, "X.java"));
         onInsert(right.getModel().getRootPackage());
     }
+
     public static void onInsert(File... contents) {
         Factory right = MyUtils.makeFactory(contents);
         onInsert(right.getModel().getRootPackage());

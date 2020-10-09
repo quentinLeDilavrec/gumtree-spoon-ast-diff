@@ -5,12 +5,17 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import com.github.gumtreediff.io.TreeIoUtils;
 import com.github.gumtreediff.io.TreeIoUtils.TreeSerializer;
@@ -39,7 +44,27 @@ import spoon.reflect.factory.Factory;
 import spoon.reflect.path.CtPath;
 import spoon.reflect.visitor.CtScanner;
 
+@RunWith(Parameterized.class)
 public class ExamplesApplyTest {
+	
+	private File file;
+
+    public ExamplesApplyTest(File file) {
+        this.file = file;
+	}
+	
+	@Parameters(name = "{index}: {0}")
+    public static Collection<File[]> data() {
+		File examples = new File("src/test/resources/examples");
+		
+        Collection<File[]> data = new ArrayList<File[]>();
+		
+		for (File f : FileUtils.listFiles(examples, new String[] { "java" }, true)) {
+			data.add(new File[] { f });
+		}
+
+        return data;
+    }
 
     @Before
     public void initProps() {
@@ -48,12 +73,7 @@ public class ExamplesApplyTest {
 	
 	@Test
 	public void test1() throws Exception {
-		// File fl = new File("src/test/resources/examples/roots/test8/left_QuickNotepad_1.13.java");
-		File examples = new File("src/test/resources/examples");
-		
-		for (File f : FileUtils.listFiles(examples, new String[] { "java" }, true)) {
-			ApplyTestHelper.onInsert(f);
-		}
+		ApplyTestHelper.onInsert(this.file);
 	}
 
 }

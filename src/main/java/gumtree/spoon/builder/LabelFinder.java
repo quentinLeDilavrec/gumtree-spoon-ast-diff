@@ -80,8 +80,10 @@ class LabelFinder extends CtInheritanceScanner {
 			label = "\""+((String)val)+"\"";
 		} else if (val instanceof Character) {
 			label = "'"+((Character)val).toString()+"'";
+		} else if (val != null) {
+			label = val.toString();
 		} else {
-			label = literal.toString();
+			label = "null";
 		}
 	}
 

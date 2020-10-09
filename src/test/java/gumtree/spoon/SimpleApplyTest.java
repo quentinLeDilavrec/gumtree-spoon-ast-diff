@@ -2,6 +2,7 @@ package gumtree.spoon;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
@@ -77,6 +78,12 @@ public class SimpleApplyTest {
     }
 
     @Test
+    public void testSimpleApplyInsertHexInt() {
+        String contents = "interface X { int value = 0xffff00ff; }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
     public void testSimpleApplyInsertInterfaceUnicode() {
         String contents = "interface X { char value = '\\uf127'; }";
         ApplyTestHelper.onInsert(contents);
@@ -122,7 +129,7 @@ public class SimpleApplyTest {
         String contents = "interface X { String value = \"Can't skid into hex\"; }";
         ApplyTestHelper.onInsert(contents);
     }
-    
+
     @Test
     public void testSimpleApplyInsertInterfaceFieldBooleanTrue() {
         String contents = "interface X { boolean value = true; }";
@@ -496,5 +503,21 @@ public class SimpleApplyTest {
         String contents = "interface A {public abstract synchronized strictfp transient final void f();}";
         ApplyTestHelper.onInsert(contents);
     }
-
+    // @Test
+    // public void testSimpleApplyInsertSuper() {
+    //     ApplyTestHelper.onInsert(new File("src/test/resources/examples/roots/test9/right_QuickNotepad_1.14.java"));
+    // }
+    
+    @Test
+    public void testSimpleApplyInsertSuper1() {
+        String contents = "class X extends Y { X() { super(); } }";
+        ApplyTestHelper.onInsert(contents);
+    }
+    
+    @Test
+    public void testSimpleApplyInsertThis() {
+        String contents = "class X extends Y { X() { this(0); } X(int i) {} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+    
 }

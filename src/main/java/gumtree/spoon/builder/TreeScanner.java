@@ -8,16 +8,20 @@ import com.github.gumtreediff.tree.TreeContext;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtCase;
 import spoon.reflect.code.CtExpression;
+import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtNewArray;
 import spoon.reflect.code.CtOperatorAssignment;
 import spoon.reflect.code.CtStatement;
 import spoon.reflect.code.CtStatementList;
+import spoon.reflect.code.CtSuperAccess;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtNamedElement;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.declaration.ParentNotInitializedException;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtReference;
+import spoon.reflect.reference.CtWildcardReference;
 import spoon.reflect.visitor.CtScanner;
 
 public class TreeScanner extends CtScanner {
@@ -55,8 +59,9 @@ public class TreeScanner extends CtScanner {
 		if (nolabel) {
 			LabelFinder lf = new LabelFinder();
 			lf.scan(element);
-			if (lf.label != null && lf.label.length() > 0 && (element instanceof CtNamedElement
-					|| element instanceof CtExpression || element instanceof CtReference)) {
+			if (lf.label != null && lf.label.length() > 0 && !(element instanceof CtSuperAccess)
+					&& (element instanceof CtNamedElement || element instanceof CtExpression
+							|| (element instanceof CtReference && !(element instanceof CtWildcardReference)))) {
 				this.addSiblingNode(createNode("LABEL", lf.label));
 			}
 		}
@@ -153,6 +158,22 @@ public class TreeScanner extends CtScanner {
 		String nodeTypeName = NOTYPE;
 		if (element != null) {
 			nodeTypeName = getTypeName(element.getClass().getSimpleName());
+		}
+		if (element instanceof CtInvocation && ((CtInvocation)element).getExecutable().isConstructor()) { // <init>
+			// if (invocation.getExecutable().isConstructor()) { // <init>
+			// It's a constructor (super or this)
+			CtType<?> parentType;
+			try {
+				parentType = element.getParent(CtType.class);
+			} catch (ParentNotInitializedException e) {
+				parentType = null;
+			}
+			if (parentType == null || parentType.getQualifiedName() != null && parentType.getQualifiedName()
+					.equals(((CtInvocation)element).getExecutable().getDeclaringType().getQualifiedName())) {
+				nodeTypeName = "ThisInvocation";
+			} else {
+				nodeTypeName = "SuperInvocation";
+			}
 		}
 		// if (element instanceof CtBlock) {
 		// 	nodeTypeName = element.getRoleInParent().toString();
