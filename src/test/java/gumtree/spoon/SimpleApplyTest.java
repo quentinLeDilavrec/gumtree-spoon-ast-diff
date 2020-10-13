@@ -52,7 +52,7 @@ public class SimpleApplyTest {
     public void initProps() {
         System.setProperty("nolabel", "true");
     }
-
+    
     @Test
     public void testSimpleApplyInsertInterface() {
         String contents = "interface X {}";
@@ -79,7 +79,13 @@ public class SimpleApplyTest {
 
     @Test
     public void testSimpleApplyInsertHexInt() {
-        String contents = "interface X { int value = 0xffff00ff; }";
+        String contents = "interface X { int value = 0xffff00f; }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertHexLong() {
+        String contents = "interface X { long value = 0xffff00ffL; }";
         ApplyTestHelper.onInsert(contents);
     }
 
@@ -156,7 +162,7 @@ public class SimpleApplyTest {
 
     @Test
     public void testSimpleApplyInsertInterfaceFieldFloat() {
-        String contents = "interface X { float value = 0.1f; }";
+        String contents = "interface X { float value = 0.1F; }";
         ApplyTestHelper.onInsert(contents);
     }
 
@@ -354,6 +360,27 @@ public class SimpleApplyTest {
     }
 
     @Test
+    public void testSimpleApplyInsertJavax() {
+        String contents = "import javax.swing.JPanel;"
+                + "public class X extends JPanel implements Y {"
+                + "public X() {"
+                + "super();"
+                + "}"
+                + "}";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertNoSup() {
+        String contents = "import javax.swing.JPanel;"
+                + "public class X extends JPanel {"
+                + "public X() {"
+                + "}"
+                + "}";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
     public void testSimpleApplyInsertClassFieldsStaticConstrInc() {
         String contents = "public class X { static int value = 0; static {value += 1;} }";
         ApplyTestHelper.onInsert(contents);
@@ -393,6 +420,18 @@ public class SimpleApplyTest {
     @Test
     public void testSimpleApplyInsertClassMethodRec2() {
         String contents = "class X { int f() {return X.this.f();} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertMeth() {
+        String contents = "class y {} class X { void f() {y.g();} }";
+        ApplyTestHelper.onInsert(contents);
+    }
+
+    @Test
+    public void testSimpleApplyInsertMeth2() {
+        String contents = "import Y; class X { void f() {Y.g();} }";
         ApplyTestHelper.onInsert(contents);
     }
 
@@ -503,10 +542,15 @@ public class SimpleApplyTest {
         String contents = "interface A {public abstract synchronized strictfp transient final void f();}";
         ApplyTestHelper.onInsert(contents);
     }
-    // @Test
-    // public void testSimpleApplyInsertSuper() {
-    //     ApplyTestHelper.onInsert(new File("src/test/resources/examples/roots/test9/right_QuickNotepad_1.14.java"));
-    // }
+    
+    @Test
+    public void testSimpleApplyInsertSuper2() {
+        ApplyTestHelper.onInsert(new File("src/test/resources/examples/roots/test9/right_QuickNotepad_1.14.java"));
+    }
+    @Test
+    public void testSimpleApplyInsertOOB() {
+        ApplyTestHelper.onInsert(new File("src/test/resources/examples/vs/06b994/UtilityService/UtilityService_t.java"));
+    }
     
     @Test
     public void testSimpleApplyInsertSuper1() {

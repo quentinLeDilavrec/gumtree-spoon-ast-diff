@@ -1,6 +1,8 @@
 package gumtree.spoon.builder;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import gumtree.spoon.apply.MyUtils;
 import spoon.reflect.code.CtAssert;
@@ -29,6 +31,7 @@ import spoon.reflect.reference.CtArrayTypeReference;
 import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtInheritanceScanner;
+import spoon.reflect.visitor.chain.CtScannerListener;
 
 class LabelFinder extends CtInheritanceScanner {
 	public String label = "";
@@ -46,7 +49,7 @@ class LabelFinder extends CtInheritanceScanner {
 	@Override
 	public void scanCtReference(CtReference reference) {
 		if (reference instanceof CtArrayTypeReference) {
-			label = ((CtArrayTypeReference)reference).getComponentType().getSimpleName();
+			label = ((CtArrayTypeReference) reference).getComponentType().getSimpleName();
 		} else {
 			label = reference.getSimpleName();
 		}
@@ -77,9 +80,19 @@ class LabelFinder extends CtInheritanceScanner {
 	public <T> void visitCtLiteral(CtLiteral<T> literal) {
 		T val = literal.getValue();
 		if (val instanceof String) {
-			label = "\""+((String)val)+"\"";
+			label = "\"" + ((String) val) + "\"";
 		} else if (val instanceof Character) {
-			label = "'"+((Character)val).toString()+"'";
+			label = "'" + ((Character) val).toString() + "'";
+		} else if (val instanceof Number) {
+			try {
+				Class<?> c = Class.forName("spoon.reflect.visitor.LiteralHelper");
+				Method m = c.getDeclaredMethod("getLiteralToken", CtLiteral.class);
+				m.setAccessible(true);
+				label = (String) m.invoke(null, literal);
+			} catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalAccessException
+					| IllegalArgumentException | InvocationTargetException e) {
+				e.printStackTrace();
+			}
 		} else if (val != null) {
 			label = val.toString();
 		} else {

@@ -101,10 +101,10 @@ public interface AAction<T extends Action> {
             return (U) new AInsert(left, right);
         } else if (clazz.equals(Delete.class)) {
             return (U) new ADelete(left);
-        } else if (clazz.equals(Insert.class)) {
-            return (U) new AInsert(left, right);
-        } else if (clazz.equals(Insert.class)) {
-            return (U) new AInsert(left, right);
+        } else if (clazz.equals(Update.class)) {
+            return (U) new AUpdate(left, right);
+        } else if (clazz.equals(Move.class)) {
+            return (U) new AMove(left, right);
         } else {
             throw new IllegalArgumentException(clazz.toString() + " not handled");
         }

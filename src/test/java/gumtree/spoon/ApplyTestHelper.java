@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import com.github.gumtreediff.actions.model.Action;
@@ -78,8 +79,8 @@ public class ApplyTestHelper {
         }
         // .getModel().getRootPackage().getTypes().iterator().next()
         if (right instanceof CtType || right instanceof CtPackage) {
+            CtPackage made1 = MyUtils.makeFactory(toVirtFiles(pp, middleE)).getModel().getRootPackage();
             CtPackage ori1 = MyUtils.makeFactory(toVirtFiles(pp, right)).getModel().getRootPackage();
-            CtPackage made1  = MyUtils.makeFactory(toVirtFiles(pp, middleE)).getModel().getRootPackage();
             if (!ori1.equals(made1)) {
                 final SpoonGumTreeBuilder scanner1 = new SpoonGumTreeBuilder();
                 ITree srctree1;
@@ -103,10 +104,12 @@ public class ApplyTestHelper {
     private static VirtualFile[] toVirtFiles(PrettyPrinter pp, CtElement ele) {
         List<VirtualFile> l = new ArrayList<>();
         if (ele instanceof CtType) {
-            l.add(new VirtualFile(pp.prettyprint(ele)));
+            l.add(new VirtualFile("q"+new Random().nextInt(100), pp.prettyprint(ele)));
         } else {
             for (CtType p : ((CtPackage) ele).getTypes()) {
-                l.add(new VirtualFile(pp.prettyprint(p)));
+                if (!p.isShadow()) {
+                    l.add(new VirtualFile("q"+new Random().nextInt(100), pp.prettyprint(p)));
+                }
             }
         }
         return l.toArray(new VirtualFile[l.size()]);
@@ -151,7 +154,9 @@ public class ApplyTestHelper {
                 m.put(t.getQualifiedName(), new MutablePair(t, null));
             }
             for (CtType<?> t : ((CtPackage) middle).getTypes()) {
-                m.get(t.getQualifiedName()).setRight(t);
+                if (!t.isShadow()) {
+                    m.get(t.getQualifiedName()).setRight(t);
+                }
             }
             for (MutablePair<CtType, CtType> p : m.values()) {
                 assertNotNull(p.left);

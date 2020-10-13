@@ -1,5 +1,9 @@
 package gumtree.spoon.apply;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+
 import com.github.gumtreediff.actions.model.Insert;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
@@ -27,6 +31,7 @@ import spoon.reflect.code.CtConditional;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtContinue;
 import spoon.reflect.code.CtDo;
+import spoon.reflect.code.CtExecutableReferenceExpression;
 import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtFieldAccess;
 import spoon.reflect.code.CtFieldRead;
@@ -59,6 +64,7 @@ import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.code.CtVariableRead;
 import spoon.reflect.code.CtVariableWrite;
 import spoon.reflect.code.CtWhile;
+import spoon.reflect.code.LiteralBase;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.CtAnnotation;
@@ -182,16 +188,28 @@ public class ActionApplier {
 						((CtLiteral<Float>) parent).setValue(
 								Float.parseFloat(target.getLabel().substring(0, target.getLabel().length() - 1)));
 					} else if (target.getLabel().endsWith("L")) {
-						((CtLiteral<Long>) parent).setValue(
-								Long.parseLong(target.getLabel().substring(0, target.getLabel().length() - 1)));
+						if (target.getLabel().startsWith("0x")) {
+							((CtLiteral) parent).setBase(LiteralBase.HEXADECIMAL);
+							((CtLiteral<Long>) parent).setValue(Long.decode(target.getLabel().substring(0, target.getLabel().length()-1)));
+						} else {
+							((CtLiteral<Long>) parent).setValue(
+									Long.parseLong(target.getLabel().substring(0, target.getLabel().length() - 1)));
+						}
 					} else if (target.getLabel().endsWith("D")) {
 						((CtLiteral<Double>) parent).setValue(
 								Double.parseDouble(target.getLabel().substring(0, target.getLabel().length())));
 					} else {
+						if (target.getLabel().startsWith("0x")) {
+							((CtLiteral) parent).setBase(LiteralBase.HEXADECIMAL);
+						}
 						try {
 							((CtLiteral<Integer>) parent).setValue(Integer.decode(target.getLabel()));
 						} catch (Exception e) {
-							((CtLiteral<Double>) parent).setValue(Double.parseDouble(target.getLabel()));
+							try {
+								((CtLiteral<Long>) parent).setValue(Long.decode(target.getLabel()));
+							} catch (Exception ee) {
+								((CtLiteral<Double>) parent).setValue(Double.parseDouble(target.getLabel()));
+							}
 						}
 					}
 				} else if (parent instanceof CtFieldAccess) {
@@ -263,6 +281,8 @@ public class ActionApplier {
 							&& target.getParent().getParent().getLabel().equals("TARGET")) {
 						((CtTargetedExpression) parentparent).setTarget((CtTypeAccess<?>) parent);
 					}
+				} else if (parent instanceof CtAnnotation) {
+					((CtAnnotation)parent).setAnnotationType(factory.Type().createReference(target.getLabel()));
 				} else if (parent instanceof CtThisAccess) { // TODO shouldn't get up to there
 					// CtThisAccess ref = factory.createThisAccess();
 					// ref.setSimpleName(target.getLabel());
@@ -280,7 +300,7 @@ public class ActionApplier {
 
 					// ((CtAssignment) parent).setLabel(target.getLabel());
 				} else {
-					System.err.println(parent.getClass());
+					throw new UnsupportedOperationException(parent.getClass() + " for label");
 				}
 				break;
 			}
@@ -317,6 +337,8 @@ public class ActionApplier {
 					((CtType) parent).addNestedType(created);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				} else if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else {
@@ -428,6 +450,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				} else {
 					addExpressionToParent(parent, created, target.getLabel());
 				}
@@ -518,6 +542,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtStatementList) parent);
 				} else if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				} else {
 					addExpressionToParent(parent, created, target.getLabel());
 				}
@@ -546,6 +572,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				// if (parent.getBody() == null) {
 				//     parent.setBody(factory.createBlock());
@@ -576,6 +604,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -588,14 +618,32 @@ public class ActionApplier {
 				// CtReturn<?> parent = (CtReturn<?>)
 				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				CtExecutableReference er = factory.createExecutableReference();
-				er.setDeclaringType(parent.getParent(CtType.class).getSuperclass());
-				er.setSimpleName("<init>");
+				CtType parent2 = parent.getParent(CtType.class);
+				CtTypeReference<?> superclassRef = parent2.getSuperclass();
+				if (superclassRef == null) {
+					superclassRef = factory.Type().OBJECT;
+				}
+				CtClass superclass = (CtClass) factory.Type().get(superclassRef.getQualifiedName());//superclassRef.getTypeDeclaration();
+				if (superclass == null) {
+					CtPackage parentPack = parent.getParent(CtPackage.class);
+					superclass = factory.createClass(parentPack, superclassRef.getSimpleName());
+					superclass.setShadow(true);
+				}
+				CtConstructor constructor = superclass.getConstructor();
+				if (constructor == null) {
+					constructor = factory.createConstructor(superclass, new HashSet<>(), new ArrayList<>(),
+							new HashSet<>(), factory.createBlock());
+					superclass.setShadow(true);
+					constructor.setImplicit(true);
+				}
+				CtExecutableReference er = constructor.getReference();
 				created.setExecutable(er);
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				} else {
 					addExpressionToParent(parent, created, target.getLabel());
 				}
@@ -618,6 +666,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				} else {
 					addExpressionToParent(parent, created, target.getLabel());
 				}
@@ -641,6 +691,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				} else {
 					addExpressionToParent(parent, created, target.getLabel());
 				}
@@ -674,23 +726,31 @@ public class ActionApplier {
 				CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				if (target.getLabel().equals(CtRole.CAST.name())) {
 					((CtExpression) parent).addTypeCast(created);
+				} else if (target.getLabel().equals(CtRole.SUPER_TYPE.name())) {
+					((CtType) parent).setSuperclass(created);
+				} else if (target.getLabel().equals(CtRole.INTERFACE.name())) {
+					created.setSimpleName("PlaceHolder"+((CtType)parent).getSuperInterfaces().size());
+					((CtType) parent).addSuperInterface(created);
 				} else if (parent instanceof CtArrayTypeReference) {
 					((CtArrayTypeReference) parent).setComponentType(created);
+				} else if (parent instanceof CtTypeReference) {
+					((CtTypeReference) parent).addActualTypeArgument(created);
 				} else {
-					// ((CtExpression) parent).setComponentType(created);
+					throw new UnsupportedOperationException(
+							parent.getClass().toString() + " as a parent is no handled for role " + target.getLabel());
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
-			case "SUPER_CLASS": {
-				// System.out.println("isTypeReference");
-				CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				CtType<?> parentType = (CtType<?>) parentTarget.getParent()
-						.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				parentType.setSuperclass((CtTypeReference) parent);
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, (CtTypeReference) parent);
-				break;
-			}
+			// case "SUPER_CLASS": {
+			// 	// System.out.println("isTypeReference");
+			// 	CtType parent = (CtType) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+			// 	CtTypeReference sp = (CtTypeReference) source.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+			// 	CtTypeReference created = factory.Type().createReference(sp.getQualifiedName());
+			// 	parent.setSuperclass(created);
+			// 	target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, (CtTypeReference) created);
+			// 	break;
+			// }
 			// TODO add generators for following elements
 			case "Constructor": {
 				// System.out.println("isConstructor");
@@ -704,14 +764,14 @@ public class ActionApplier {
 				cons.setBody(factory.createBlock());
 				break;
 			}
-			case "INTERFACE": { // when inheriting interface
-				// System.out.println("isINTERFACE");
-				CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				CtType parentType = (CtType) parentTarget.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				parentType.addSuperInterface((CtTypeReference) parent);
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, (CtTypeReference) parent);
-				break;
-			}
+			// case "INTERFACE": { // when inheriting interface
+			// 	// System.out.println("isINTERFACE");
+			// 	CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+			// 	CtType parentType = (CtType) parentTarget.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+			// 	parentType.addSuperInterface((CtTypeReference) parent);
+			// 	target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, (CtTypeReference) parent);
+			// 	break;
+			// }
 			case "ConstructorCall": {
 				// System.out.println("isConstructorCall");
 				CtConstructorCall created = factory.createConstructorCall();
@@ -750,6 +810,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				} else {
 					throw new UnsupportedOperationException(parent.getClass().toString());
 				}
@@ -778,6 +840,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -861,6 +925,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -876,6 +942,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -892,6 +960,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				if (((CtFor) sp).getBody() != null) {
@@ -912,6 +982,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				if (((CtForEach) sp).getBody() != null) {
@@ -935,6 +1007,10 @@ public class ActionApplier {
 					created.setSimpleName("placeHolder" + (((CtStatementList) parent) == null ? 0
 							: ((CtStatementList) parent).getStatements().size()));
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else {
+					created.setSimpleName("placeHolder" + (((CtSynchronized) parent).getBlock() == null ? 0
+							: ((CtSynchronized) parent).getBlock().getStatements().size()));
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -1007,10 +1083,13 @@ public class ActionApplier {
 				CtElement sp = (CtElement) source.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				if (parent instanceof CtStatementList)
+				if (parent instanceof CtStatementList){
 					addInBody(factory, target, created, (CtStatementList) parent);
-				else if (parent instanceof CtBodyHolder)
+				} else if (parent instanceof CtBodyHolder){
 					addInBody(factory, target, created, (CtBodyHolder) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
+				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
 				break;
@@ -1025,6 +1104,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -1052,6 +1133,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -1067,6 +1150,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -1082,6 +1167,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -1124,6 +1211,12 @@ public class ActionApplier {
 					((CtBodyHolder) parent).addAnnotation(created);
 				} else if (parent instanceof CtStatementList) {
 					((CtStatementList) parent).addAnnotation(created);
+				} else if (parent instanceof CtType) {
+					((CtType) parent).addAnnotation(created);
+				} else if (parent instanceof CtExpression) {
+					((CtExpression) parent).addAnnotation(created);
+				} else if (parent instanceof CtStatement) {
+					((CtStatement) parent).addAnnotation(created);
 				} else {
 					((CtExpression) parent).addAnnotation(created);
 				}
@@ -1140,6 +1233,8 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtStatementList) parent);
 				} else if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
 				} else {
 					throw new UnsupportedOperationException(parent.getClass().toString());
 					// addExpressionToParent(parent, created, target.getLabel());
@@ -1189,6 +1284,35 @@ public class ActionApplier {
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				addExpressionToParent(parent, created, target.getLabel());
+				break;
+			}
+			case "TypeParameterReference": {
+				// System.out.println("isTypeParameterReference");
+				CtTypeParameterReference created = factory.createTypeParameterReference();
+				CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				if (target.getLabel().equals(CtRole.CAST.name())) {
+					((CtExpression) parent).addTypeCast(created);
+				} else if (target.getLabel().equals(CtRole.SUPER_TYPE.name())) {
+					((CtType) parent).setSuperclass(created);
+				} else if (target.getLabel().equals(CtRole.INTERFACE.name())) {
+					((CtType) parent).addSuperInterface(created);
+				} else if (parent instanceof CtArrayTypeReference) {
+					((CtArrayTypeReference) parent).setComponentType(created);
+				} else if (parent instanceof CtTypeReference) {
+					((CtTypeReference) parent).addActualTypeArgument(created);
+				} else {
+					throw new UnsupportedOperationException(
+							parent.getClass().toString() + " as a parent is no handled for role " + target.getLabel());
+				}
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				break;
+			}
+			case "ExecutableReferenceExpression": {
+				// System.out.println("isExecutableReferenceExpression");
+				CtExecutableReferenceExpression created = factory.createExecutableReferenceExpression();
+				CtElement parent = (CtElement) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				addExpressionToParent(parent, created, target.getLabel());
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
 			default: {
@@ -1243,6 +1367,8 @@ public class ActionApplier {
 			}
 		} else if (parent instanceof CtLocalVariable) {
 			((CtLocalVariable) parent).setDefaultExpression(created);
+		} else if (parent instanceof CtSynchronized) {
+			((CtSynchronized) parent).setExpression(created);
 		} else if (parent instanceof CtRHSReceiver) {
 			if (role.equals(CtRole.ASSIGNED.name())) {
 				((CtAssignment<?, ?>) parent).setAssigned(created);
@@ -1273,6 +1399,10 @@ public class ActionApplier {
 			((CtNewArray) parent).addDimensionExpression(created);
 		} else if (parent instanceof CtSynchronized) {
 			((CtSynchronized) parent).setExpression(created);
+		} else if (parent instanceof CtField) {
+			((CtField) parent).setDefaultExpression(created);
+		} else if (parent instanceof CtAnnotation) {
+			((CtAnnotation) parent).addValue("value",created);
 		} else {
 			throw new UnsupportedOperationException(
 					parent.getClass().toString() + " as a parent is no handled for " + created.getClass().toString());
@@ -1293,6 +1423,8 @@ public class ActionApplier {
 				((CtForEach) parent).setExpression((CtExpression) created);
 			} else if (parent instanceof CtDo) {
 				((CtDo) parent).setLoopingExpression((CtExpression) created);
+			} else if (parent instanceof CtLambda) {
+				((CtLambda) parent).setExpression((CtExpression) created);
 			} else {
 				((CtWhile) parent).setLoopingExpression((CtExpression) created);
 			}
@@ -1309,6 +1441,10 @@ public class ActionApplier {
 			if (shouldIgnore2(parent, aaa)) {
 				continue;
 			}
+			// if (target.equals(aaa)) {
+			// 	((CtBlock) parent.getBody()).addStatement(i, created);
+			// 	return;
+			// }
 			if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) != null) {
 				i++;
 			}
@@ -1323,9 +1459,10 @@ public class ActionApplier {
 
 	private static boolean shouldIgnore1(AbstractVersionedTree aaa) {
 		return (aaa.getMetadata("type").equals("MODIFIER")) || (aaa.getMetadata("type").equals("RETURN_TYPE"))
-				|| (aaa.getMetadata("type").equals("THROWS")) || (aaa.getMetadata("type").equals("Catch"))
-				|| (aaa.getMetadata("type").equals("LABEL")) || (aaa.getMetadata("type").equals("Parameter"))
-				|| (aaa.getMetadata("type").equals("Annotation")) || (aaa.getLabel().equals("EXPRESSION"));
+				|| (aaa.getMetadata("type").equals("THROWS")) || (aaa.getMetadata("type").equals("TypeParameter"))
+				|| (aaa.getMetadata("type").equals("Catch")) || (aaa.getMetadata("type").equals("LABEL"))
+				|| (aaa.getMetadata("type").equals("Parameter")) || (aaa.getMetadata("type").equals("Annotation"))
+				|| (aaa.getLabel().equals("EXPRESSION"));
 	}
 
 	private static boolean shouldIgnore2(CtBodyHolder parent, AbstractVersionedTree aaa) {
@@ -1343,11 +1480,22 @@ public class ActionApplier {
 			if (shouldIgnore1(aaa)) {
 				continue;
 			}
+			// if (target.equals(aaa)) {
+			// 	parent.addStatement(i, created);
+			// 	return;
+			// }
 			if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) != null) {
 				i++;
 			}
 		}
 		parent.addStatement(i, created);
+	}
+
+	static void addInBody(Factory factory, AbstractVersionedTree target, CtStatement created, CtSynchronized parent) {
+		if (parent.getBlock() == null) {
+			parent.setBlock(factory.createBlock());
+		}
+		addInBody(factory, target, created, parent.getBlock());
 	}
 
 }

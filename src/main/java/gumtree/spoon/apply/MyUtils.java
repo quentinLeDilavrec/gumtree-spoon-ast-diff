@@ -54,6 +54,7 @@ public class MyUtils {
 		factory.getModel().setBuildModelIsFinished(false);
 		SpoonModelBuilder compiler = new JDTBasedSpoonCompiler(factory);
 		compiler.getFactory().getEnvironment().setLevel("OFF");
+		compiler.getFactory().getEnvironment().setNoClasspath(true);
 		for (VirtualFile resource : resources) {
 			compiler.addInputSource(resource);
 		}
