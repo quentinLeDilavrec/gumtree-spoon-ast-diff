@@ -3,7 +3,6 @@ package gumtree.spoon;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeNoException;
 
 import java.io.File;
@@ -28,7 +27,6 @@ import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
 import spoon.compiler.Environment;
-import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
@@ -50,7 +48,7 @@ public class ApplyTestHelper {
         spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
         // System.err.println(pp.prettyprint(right));
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
-        CtElement left = null;// MyUtils.makeFactory().getModel().getRootPackage();
+        CtElement left = null;
         ITree srctree;
         srctree = scanner.getTree(left);
         MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
@@ -71,13 +69,9 @@ public class ApplyTestHelper {
         while (middleE == null) {
             ITree curr = tmp.poll();
             middleE = (CtElement) curr.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-            // if (middleE instanceof CtRootPackage) {
-            //     middleE = ((CtRootPackage) middleE).getTypes().iterator().next();
-            // }
             List<ITree> children = curr.getChildren();
             tmp.addAll(children);
         }
-        // .getModel().getRootPackage().getTypes().iterator().next()
         if (right instanceof CtType || right instanceof CtPackage) {
             CtPackage made1 = MyUtils.makeFactory(toVirtFiles(pp, middleE)).getModel().getRootPackage();
             CtPackage ori1 = MyUtils.makeFactory(toVirtFiles(pp, right)).getModel().getRootPackage();
@@ -97,9 +91,6 @@ public class ApplyTestHelper {
             check1(right, pp, middleE);
         }
     }
-    // private static void check2(CtElement right, spoon.reflect.visitor.PrettyPrinter pp, CtElement middleE) {
-    //     assertEquals();
-    // }
 
     private static VirtualFile[] toVirtFiles(PrettyPrinter pp, CtElement ele) {
         List<VirtualFile> l = new ArrayList<>();

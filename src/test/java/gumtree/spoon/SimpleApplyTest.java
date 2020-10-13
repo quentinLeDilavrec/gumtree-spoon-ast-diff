@@ -1,51 +1,7 @@
 package gumtree.spoon;
 
-import static org.junit.Assert.*;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
-
-import javax.lang.model.util.ElementScanner6;
-
-import com.github.gumtreediff.actions.model.Addition;
-import com.github.gumtreediff.actions.model.Delete;
-import com.github.gumtreediff.actions.model.Update;
-import com.github.gumtreediff.tree.AbstractTree;
-import com.github.gumtreediff.tree.TreeUtils;
-import com.github.gumtreediff.tree.VersionedTree;
-import com.github.gumtreediff.tree.AbstractTree.FakeTree;
-
 import org.junit.Before;
 import org.junit.Test;
-
-import gumtree.spoon.apply.Combination;
-import gumtree.spoon.apply.MyUtils;
-import gumtree.spoon.apply.operations.MyCloneHelper;
-import gumtree.spoon.apply.operations.MyScriptGenerator;
-import gumtree.spoon.diff.Diff;
-import gumtree.spoon.diff.operations.*;
-import gumtree.spoon.diff.support.SpoonSupport;
-import spoon.ContractVerifier;
-import spoon.MavenLauncher;
-import spoon.SpoonModelBuilder;
-import spoon.compiler.SpoonResource;
-import spoon.compiler.SpoonResourceHelper;
-import spoon.compiler.Environment.PRETTY_PRINTING_MODE;
-import spoon.reflect.CtModel;
-import spoon.reflect.CtModelImpl.CtRootPackage;
-import spoon.reflect.code.CtAbstractInvocation;
-import spoon.reflect.code.CtVariableWrite;
-import spoon.reflect.code.LiteralBase;
-import spoon.reflect.declaration.*;
-import spoon.reflect.factory.Factory;
-import spoon.reflect.factory.FactoryImpl;
-import spoon.reflect.reference.CtLocalVariableReference;
-import spoon.reflect.visitor.CtInheritanceScanner;
-import spoon.reflect.visitor.CtScanner;
-import spoon.support.DefaultCoreFactory;
-import spoon.support.compiler.VirtualFile;
-import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 
 public class SimpleApplyTest {
     @Before
@@ -321,66 +277,6 @@ public class SimpleApplyTest {
     }
 
     @Test
-    public void testSimpleApplyInsertAssignCall3() {
-        String contents = "class X { "
-                + "private ServerSocket serverSocket;"
-                + "public X(java.lang.String password, int port) {"
-                // + "this.password = (password.length() > 0) ? password : null;" 
-                + "try {"
-                + "    serverSocket = new java.net.ServerSocket(port);" 
-                + "} catch (java.io.IOException ex) {" 
-                + "}"
-                // + "motd = createMotd();" 
-                // + "game.getOptions().initialize();" 
-                + "}}";
-        ApplyTestHelper.onInsert(contents);
-    }
-    @Test
-    public void testSimpleApplyInsertCall() {
-        String contents = "class X { "
-                + "private Game game = new Game();"
-                + "public X(java.lang.String password, int port) {"
-                // + "this.password = (password.length() > 0) ? password : null;" 
-                + "changePhase(Game.PHASE_LOUNGE);"
-                + "}" 
-                + "private void changePhase(int 0){}" 
-                + "}";
-        ApplyTestHelper.onInsert(contents);
-    }
-
-    @Test
-    public void testSimpleApplyInsertCast() {
-        String contents = "class X { "
-                + "private Hashtable commandsHash = new Hashtable();"
-                + "public ServerCommand getCommand(String name) {"
-                + "return (ServerCommand)commandsHash.get(name);"
-                + "}"
-                + "}";
-        ApplyTestHelper.onInsert(contents);
-    }
-
-    @Test
-    public void testSimpleApplyInsertJavax() {
-        String contents = "import javax.swing.JPanel;"
-                + "public class X extends JPanel implements Y {"
-                + "public X() {"
-                + "super();"
-                + "}"
-                + "}";
-        ApplyTestHelper.onInsert(contents);
-    }
-
-    @Test
-    public void testSimpleApplyInsertNoSup() {
-        String contents = "import javax.swing.JPanel;"
-                + "public class X extends JPanel {"
-                + "public X() {"
-                + "}"
-                + "}";
-        ApplyTestHelper.onInsert(contents);
-    }
-
-    @Test
     public void testSimpleApplyInsertClassFieldsStaticConstrInc() {
         String contents = "public class X { static int value = 0; static {value += 1;} }";
         ApplyTestHelper.onInsert(contents);
@@ -520,36 +416,9 @@ public class SimpleApplyTest {
     }
 
     @Test
-    public void testSimpleApplyInsertClassClassExt2() {
-        String contents = "package x.a; class X { class Y extends x.b.X.Y {} }";
-        String contents1 = "package x.b; class X { class Y extends x.a.X {} }";
-        Factory right = MyUtils.makeFactory(new VirtualFile(contents, "x/a/X.java"),
-                new VirtualFile(contents1, "x/b/X.java"));
-        ApplyTestHelper.onInsert(right.getModel().getRootPackage());
-    }
-
-    @Test
-    public void testSimpleApplyInsertClassClassExt3() {
-        String contents = "package x.a; class X { class Y {} }";
-        String contents1 = "package x.b; class X extends X.Y { class Y {} }";
-        Factory right = MyUtils.makeFactory(new VirtualFile(contents, "x/a/X.java"),
-                new VirtualFile(contents1, "x/b/X.java"));
-        ApplyTestHelper.onInsert(right.getModel().getRootPackage());
-    }
-
-    @Test
     public void testSimpleApplyInsertClassInterface5() {
         String contents = "interface A {public abstract synchronized strictfp transient final void f();}";
         ApplyTestHelper.onInsert(contents);
-    }
-    
-    @Test
-    public void testSimpleApplyInsertSuper2() {
-        ApplyTestHelper.onInsert(new File("src/test/resources/examples/roots/test9/right_QuickNotepad_1.14.java"));
-    }
-    @Test
-    public void testSimpleApplyInsertOOB() {
-        ApplyTestHelper.onInsert(new File("src/test/resources/examples/vs/06b994/UtilityService/UtilityService_t.java"));
     }
     
     @Test
