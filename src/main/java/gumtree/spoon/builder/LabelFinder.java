@@ -13,6 +13,8 @@ import spoon.reflect.code.CtBreak;
 import spoon.reflect.code.CtComment;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtContinue;
+import spoon.reflect.code.CtExecutableReferenceExpression;
+import spoon.reflect.code.CtExpression;
 import spoon.reflect.code.CtIf;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtLiteral;
@@ -100,6 +102,13 @@ class LabelFinder extends CtInheritanceScanner {
 		}
 	}
 
+	@Override
+	public <T, E extends CtExpression<?>> void visitCtExecutableReferenceExpression(
+			CtExecutableReferenceExpression<T, E> e) {
+		// TODO Auto-generated method stub
+		label = e.getExecutable().getSimpleName();
+	}
+	
 	@Override
 	public void visitCtIf(CtIf e) {
 		label = "if";

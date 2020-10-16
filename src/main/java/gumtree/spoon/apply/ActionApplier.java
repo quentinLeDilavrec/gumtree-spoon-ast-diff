@@ -51,7 +51,9 @@ public class ActionApplier {
 					System.err.println(target);
 					System.err.println(parentTarget);
 				} else if (parent instanceof CtExecutableReferenceExpression) {
-					((CtExecutableReferenceExpression) parent).setExecutable(null);
+					CtExecutableReference ref = factory.createExecutableReference();
+					ref.setSimpleName(target.getLabel());
+					((CtExecutableReferenceExpression) parent).setExecutable(ref);
 				} else if (parent instanceof CtNamedElement) {
 					((CtNamedElement) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtWildcardReference) {
