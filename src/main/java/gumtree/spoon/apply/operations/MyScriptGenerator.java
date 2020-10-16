@@ -17,6 +17,7 @@ import com.github.gumtreediff.tree.VersionedTree;
 
 import gnu.trove.map.TIntObjectMap;
 import gumtree.spoon.apply.AAction;
+import gumtree.spoon.apply.MyUtils;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -136,7 +137,40 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 w = cpyMappings.getSrc(x);
                 if (!x.equals(origDst)) { // TODO => x != origDst // Case of the root
                     AbstractVersionedTree v = w.getParent();
-                    if (!w.getLabel().equals(x.getLabel())) {
+                    if (!w.getLabel().equals(x.getLabel()) && !z.equals(v)) {
+                        AbstractVersionedTree wbis = new VersionedTree(w, this.version);
+                        cpyMappings.link(wbis, x);
+                        added.add(wbis);
+                        boolean qwed = deleted.add(w);
+                        int k = y.getChildPosition(x);
+                        w.delete(this.version);
+                        copyToOrig.put(w, x);
+                        ITree gew = copyToOrig.put(wbis, x);
+                        z.insertChild(wbis, k);
+                        wbis.setLabel(x.getLabel());
+                        wbis.setParent(z);
+                        multiVersionMappingStore.link(w, wbis);
+                        // Action uact = AAction.build(Update.class, w, wbis);
+                        // addDeleteAction(uact, w);
+                        // addInsertAction(uact, wbis);
+                        wbis.setMetadata("alsoUpdated", true);
+                        if (NOMOVE) {
+                            Action iact = AAction.build(Insert.class, w, wbis);
+                            actions.add(iact);
+                            // actions.add(uact);
+                            Delete dact = AAction.build(Delete.class, w, null);
+                            actions.add(dact);
+                            ((AbstractVersionedTree) w).delete(version);
+                            addDeleteAction(dact, w);
+                            addInsertAction(iact, wbis);
+                        } else {
+                            Action mact = AAction.build(Move.class, w, wbis);
+                            actions.add(mact);
+                            // actions.add(uact);
+                            addDeleteAction(mact, w);
+                            addInsertAction(mact, wbis);
+                        }
+                    } else if (!w.getLabel().equals(x.getLabel())) {
                         AbstractVersionedTree wbis = new VersionedTree(w, this.version);//VersionedTree.deepCopy(w, this.version);
                         cpyMappings.link(wbis, x);
                         added.add(wbis);
@@ -157,8 +191,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         actions.add(action); // TODO put removedVersion and added version ?
                         addDeleteAction(action, w);
                         addInsertAction(action, wbis);
-                    }
-                    if (!z.equals(v)) {
+                    } else if (!z.equals(v)) {
                         int k = y.getChildPosition(x);//findPos(x);
                         // int oldk = w.positionInParent();
                         AbstractVersionedTree wbis = new VersionedTree(w, this.version);// VersionedTree.deepCopy(w, this.version);
@@ -173,11 +206,22 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         ITree gew = copyToOrig.put(wbis, x);
                         // cpyMappings.link(w, x);
                         multiVersionMappingStore.link(w, wbis);
-                        Action action = AAction.build(Move.class, w, wbis);//new AMove(w, wbis); // TODO put removedVersion and added version ?
-                        actions.add(action);
-                        addDeleteAction(action, w);
-                        addInsertAction(action, wbis);
+                        if (NOMOVE) {
+                            Action iact = AAction.build(Insert.class, w, wbis);//new AMove(w, wbis); // TODO put removedVersion and added version ?
+                            actions.add(iact);
+                            Delete dact = AAction.build(Delete.class, w, null);//new ADelete(w);
+                            actions.add(dact);
+                            ((AbstractVersionedTree) w).delete(version);
+                            addDeleteAction(dact, w);
+                            addInsertAction(iact, wbis);
+                        } else {
+                            Action action = AAction.build(Move.class, w, wbis);//new AMove(w, wbis); // TODO put removedVersion and added version ?
+                            actions.add(action);
+                            addDeleteAction(action, w);
+                            addInsertAction(action, wbis);
+                        }
                     }
+
                 }
             }
 
@@ -190,6 +234,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
 
         return actions;
     }
+
+    static boolean NOMOVE = true;
 
     private void handleDeletion() {
         List<ITree> preOMiddle = TreeUtils.preOrder(middle);
@@ -214,7 +260,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
         }
         if (!cpyMappings.hasSrc(w)) {
             if (w instanceof AbstractVersionedTree && ((AbstractVersionedTree) w).getAddedVersion() == this.version) {
-                System.out.println(w);
+                System.err.println(w);
             } else {
                 Action action = AAction.build(Delete.class, w, null);//new ADelete(w);
                 actions.add(action); // TODO cannot find all nodes, related to hash ?
@@ -295,12 +341,29 @@ public class MyScriptGenerator implements EditScriptGenerator {
             for (ITree a : s1) {
                 if (cpyMappings.has(a, b)) {
                     if (!lcs.contains(new Mapping(a, b))) {
-                        a.getParent().getChildren().remove(a); // remove this node directly.
-                        int k = findPos(b); // find insert position AFTER removing node from old place.
-                        Action mv = new Move(copyToOrig.get(a), copyToOrig.get(w), k);
-                        actions.add(mv);
-                        w.getChildren().add(k, a);
-                        a.setParent(w);
+                        int k = x.getChildPosition(b);
+                        AbstractVersionedTree abis = new VersionedTree(a, this.version);
+                        abis.setParent(w);
+                        w.insertChild(abis, k);
+                        cpyMappings.link(abis, b);
+                        ((AbstractVersionedTree)a).delete(this.version);
+                        copyToOrig.put((AbstractVersionedTree)a, x);
+                        copyToOrig.put(abis, x);
+                        multiVersionMappingStore.link(a, abis);
+                        if (NOMOVE) {
+                            Action iact = AAction.build(Insert.class, a, abis);
+                            actions.add(iact);
+                            Delete dact = AAction.build(Delete.class, a, null);
+                            actions.add(dact);
+                            ((AbstractVersionedTree) a).delete(version);
+                            addDeleteAction(dact, a);
+                            addInsertAction(iact, abis);
+                        } else {
+                            Action action = AAction.build(Move.class, a, abis);
+                            actions.add(action);
+                            addDeleteAction(action, a);
+                            addInsertAction(action, abis);
+                        }
                         srcInOrder.add(a);
                         dstInOrder.add(b);
                     }

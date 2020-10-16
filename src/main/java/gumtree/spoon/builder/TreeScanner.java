@@ -89,7 +89,7 @@ public class TreeScanner extends CtScanner {
 	 */
 	private boolean isToIgnore(CtElement element) {
 		if (element instanceof CtStatementList && !(element instanceof CtCase)) {
-			if (element.getRoleInParent() == CtRole.ELSE || element.getRoleInParent() == CtRole.THEN) {
+			if (element.getRoleInParent() == CtRole.ELSE || element.getRoleInParent() == CtRole.THEN || element.getRoleInParent() == CtRole.STATEMENT) {
 				return false;
 			}
 			return true;

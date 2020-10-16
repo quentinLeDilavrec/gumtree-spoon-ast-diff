@@ -20,7 +20,7 @@ public class ApplicableDiffImpl implements ApplicableDiff {
         
     }
 
-    public Map<Operation<?>, ApplicableOperation<?>> getMap() {
+    public Map<Operation, ApplicableOperation> getMap() {
         return Collections.unmodifiableMap(map);
     }
 

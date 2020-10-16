@@ -62,6 +62,47 @@ public class MyUtils {
 		return factory;
 	}
 
+	public static String toTreeString(ITree tree) {
+		StringBuilder b = new StringBuilder();
+		aux(b, tree, 0);
+		// for (ITree t : TreeUtils.preOrder(tree))
+		// 	b.append(indent(t)
+		// 			+ (tree instanceof AbstractVersionedTree ? ((AbstractVersionedTree) tree).getAddedVersion() + " "
+		// 					: "")
+		// 			+ (t.getMetadata("type") != null ? t.getMetadata("type") + "@" + t.getLabel() : t.toShortString())
+		// 			+ "\n");
+		return b.toString();
+	}
+
+	private static void aux(StringBuilder b, ITree tree, int depth) {
+		for (int i = 0; i < depth; i++) {
+			b.append("\t");
+		}
+		if (tree instanceof AbstractVersionedTree) {
+			b.append(((AbstractVersionedTree) tree).getAddedVersion());
+			if (((AbstractVersionedTree) tree).isRemoved()) {
+				b.append("-");
+				b.append(((AbstractVersionedTree) tree).getRemovedVersion());
+			}
+			b.append(" ");
+		}
+		if (tree.getMetadata("type") != null) {
+			b.append(tree.getMetadata("type") + "@" + tree.getLabel());
+		} else {
+			b.append(tree.toShortString());
+		}
+		b.append("\n");
+		if (tree instanceof AbstractVersionedTree) {
+			for (ITree c : ((AbstractVersionedTree) tree).getAllChildren()) {
+				aux(b, c, depth + 1);
+			}
+		} else {
+			for (ITree c : tree.getChildren()) {
+				aux(b, c, depth + 1);
+			}
+		}
+	}
+
 	public static Factory makeFactory(File... resources) {
 		Factory factory = MyUtils.createFactory();
 		factory.getModel().setBuildModelIsFinished(false);

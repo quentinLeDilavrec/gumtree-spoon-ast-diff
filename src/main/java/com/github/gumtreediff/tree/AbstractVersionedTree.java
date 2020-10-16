@@ -74,6 +74,10 @@ public abstract class AbstractVersionedTree implements ITree {
         return removedVersion.value;
     }
 
+    public boolean isRemoved() {
+        return removedVersion!=null;
+    }
+
     // /**
     //  * Doubly LinkedList
     //  */
@@ -111,7 +115,7 @@ public abstract class AbstractVersionedTree implements ITree {
         int i = 0;
         Version childVersion = ((AbstractVersionedTree) child).addedVersion;
         for (AbstractVersionedTree curr : children) {
-            if (curr.equals(child)) {
+            if (curr==child) {
                 return i;
             } else if (childVersion.compareTo(curr.addedVersion) >= 0) {
                 ++i;
@@ -123,7 +127,7 @@ public abstract class AbstractVersionedTree implements ITree {
     public int getChildPosition(AbstractVersionedTree child, Version maxVersion) {
         int i = 0;
         for (AbstractVersionedTree curr : children) {
-            if (curr.equals(child)) {
+            if (curr==child) {
                 return i;
             } else if (maxVersion.compareTo(curr.addedVersion) >= 0) {
                 ++i;
@@ -278,16 +282,17 @@ public abstract class AbstractVersionedTree implements ITree {
             throw new RuntimeException("should be an AbstractVersionedTree");
         Version childAddedVersion = ((AbstractVersionedTree) child).addedVersion;
         int j = 0;
-        for (int i = 0; i <= children.size(); i++) {
+        for (int i = 0; i < children.size(); i++) {
             if (j == position) {
                 children.add(i, (AbstractVersionedTree) child);
-                break;
+                return;
             } else if (children.get(i).addedVersion.compareTo(childAddedVersion) <= 0
                     && (children.get(i).removedVersion == null
                             || children.get(i).removedVersion.compareTo(childAddedVersion) > 0)) {
                 j++;
             }
         }
+        children.add(children.size(), (AbstractVersionedTree) child);
     }
 
     private String indent(ITree t) {

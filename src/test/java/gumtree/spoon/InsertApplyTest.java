@@ -97,6 +97,7 @@ public class InsertApplyTest {
     public void testSimpleApplyInsertSuper2() {
         ApplyTestHelper.onInsert(new File("src/test/resources/examples/roots/test9/right_QuickNotepad_1.14.java"));
     }
+
     @Test
     public void testSimpleApplyInsertOOB() {
         ApplyTestHelper.onInsert(new File("src/test/resources/examples/vs/06b994/UtilityService/UtilityService_t.java"));

@@ -72,6 +72,9 @@ public class DiffImpl implements Diff {
 		matcher.match();
 
 		String b = System.getProperty("gumtree.match.gt.ag.nomove"); // b != null && b.equals("true")
+		if (b != null && b.equals("true")) {
+			
+		}
 		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle,multiMappingsComp);
 
 		EditScript actions = actionGenerator.computeActions(matcher);

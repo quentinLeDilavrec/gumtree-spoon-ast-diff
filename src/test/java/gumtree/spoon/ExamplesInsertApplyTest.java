@@ -45,53 +45,35 @@ import spoon.reflect.path.CtPath;
 import spoon.reflect.visitor.CtScanner;
 
 @RunWith(Parameterized.class)
-public class ExamplesApplyTest {
+public class ExamplesInsertApplyTest {
+	
+	private File file;
 
-	private File left;
-	private File right;
-
-	public ExamplesApplyTest(File left, File right) {
-		this.left = left;
-		this.right = right;
+    public ExamplesInsertApplyTest(File file) {
+        this.file = file;
 	}
-
-	@Parameters(name = "{index}: {0} {1}")
-	public static Collection<File[]> data() {
+	
+	@Parameters(name = "{index}: {0}")
+    public static Collection<File[]> data() {
 		File examples = new File("src/test/resources/examples");
-
-		Collection<File[]> data = new ArrayList<File[]>();
-
-		aux(data, examples);
-
-		return data;
-	}
-
-	private static void aux(Collection<File[]> data, File d) {
-		File b = null;
-		for (File f : d.listFiles()) {
-			if (f.isDirectory()) {
-				aux(data,f);
-			} else if (b!=null) {
-				data.add(new File[] { b, f });
-			} else if (f.getName().endsWith(".java")) {
-				b = f;
-			}
+		
+        Collection<File[]> data = new ArrayList<File[]>();
+		
+		for (File f : FileUtils.listFiles(examples, new String[] { "java" }, true)) {
+			data.add(new File[] { f });
 		}
-	}
 
-	@Before
-	public void initProps() {
-		System.setProperty("nolabel", "true");
-	}
+        return data;
+    }
 
+    @Before
+    public void initProps() {
+        System.setProperty("nolabel", "true");
+	}
+	
 	@Test
 	public void test1() throws Exception {
-		ApplyTestHelper.onChange(this.left, this.right);
-	}
-
-	@Test
-	public void test2() throws Exception {
-		ApplyTestHelper.onChange(this.right, this.left);
+		ApplyTestHelper.onInsert(this.file);
 	}
 
 }

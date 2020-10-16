@@ -3,7 +3,7 @@ package gumtree.spoon;
 import org.junit.Before;
 import org.junit.Test;
 
-public class SimpleApplyTest {
+public class SimpleInsertApplyTest {
     @Before
     public void initProps() {
         System.setProperty("nolabel", "true");
