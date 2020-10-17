@@ -114,8 +114,12 @@ public class ApplyTestHelper {
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
         for (Action action : diff.getActionsList()) {
-            ActionApplier.applyADelete((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
-                    (Delete & AAction<Delete>) action);
+            try {
+                ActionApplier.applyADelete((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
+                        (Delete & AAction<Delete>) action);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
         CtElement middleE = null;
         Queue<ITree> tmp = new LinkedBlockingDeque<>();

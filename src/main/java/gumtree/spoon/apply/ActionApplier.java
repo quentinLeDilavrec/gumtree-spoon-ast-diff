@@ -1480,7 +1480,7 @@ public class ActionApplier {
 			// }
 			if (aaa == target)
 				break;
-			if (getSpoonEle(aaa) != null) {
+			if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) != null) {
 				i++;
 			}
 			// if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) == null || aaa.getMetadata("type").equals("LABEL")
@@ -1521,7 +1521,7 @@ public class ActionApplier {
 			// }
 			if (aaa == target)
 				break;
-			if (getSpoonEle(aaa) != null) {
+			if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) != null) {
 				i++;
 			}
 		}
@@ -1535,15 +1535,19 @@ public class ActionApplier {
 		addInBody(factory, target, created, parent.getBlock());
 	}
 
-	public static <T extends Delete & AAction<Delete>> void applyADelete(Factory factory, TreeContext ctx, T action) {
+	public static <T extends Delete & AAction<Delete>> void applyADelete(Factory factory, TreeContext ctx, T action)
+			throws WrongAstContextException {
 		ITree source = action.getSource();
-		factory.createLocalVariableReference().getDeclaration();
 		AbstractVersionedTree target = action.getTarget();
 		AbstractVersionedTree parentTarget = target.getParent();
 		CtElement ele = (CtElement) target.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-		target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
 		if (ele != null) {
-			ele.replace(new ArrayList<>());
+			try {
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
+				ele.delete();
+			} catch (Exception e) {
+				throw new WrongAstContextException("while deleting", e);
+			}
 		}
 	}
 
