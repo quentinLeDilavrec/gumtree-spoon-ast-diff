@@ -61,7 +61,7 @@ public class ApplyTestHelper {
                 ActionApplier.applyAInsert((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
                         (Insert & AAction<Insert>) action);
             } catch (Exception e) {
-                throw new RuntimeException();
+                throw new RuntimeException(e);
             }
         }
         CtElement middleE = null;
@@ -148,10 +148,6 @@ public class ApplyTestHelper {
             } catch (Exception e) {
                 assumeNoException(e);
             }
-            // try {
-            //     System.err.println(pp.prettyprint(p.right));
-            // } catch (Exception e) {
-            // }
         }
         for (MutablePair<CtType, CtType> p : res.values()) {
             assertEquals(pp.prettyprint(p.left), pp.prettyprint(p.right));
@@ -258,7 +254,7 @@ public class ApplyTestHelper {
                     throw null;
                 }
             } catch (Exception e) {
-                throw new RuntimeException();
+                throw new RuntimeException(e);
             }
         }
         CtElement middleE = null;
