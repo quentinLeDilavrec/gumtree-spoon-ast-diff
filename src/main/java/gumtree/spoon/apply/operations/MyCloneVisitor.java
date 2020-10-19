@@ -6,10 +6,6 @@ import spoon.reflect.reference.*;
 import spoon.reflect.visitor.CtInheritanceScanner;
 import spoon.reflect.visitor.CtScanner;
 
-/**
- * should be similar to NodeCreator
- * mostly used for insertion ?
- */
 public class MyCloneVisitor extends CtScanner {
 	private final MyCloneHelper cloneHelper;
 

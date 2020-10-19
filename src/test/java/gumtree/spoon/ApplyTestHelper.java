@@ -22,6 +22,8 @@ import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.ITree;
 
 import org.apache.commons.lang3.tuple.MutablePair;
+import org.junit.Assert;
+import org.junit.runner.notification.Failure;
 
 import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.ActionApplier;
@@ -41,13 +43,6 @@ import spoon.support.compiler.VirtualFile;
 
 public class ApplyTestHelper {
     public static void onInsert(CtElement right) {
-        // ContractVerifier cv = new
-        // spoon.ContractVerifier(right.getFactory().getModel().getRootPackage());
-        // try {
-        // cv.verify();
-        // } catch (AssertionError e) {
-        // assumeNoException(e);
-        // }
         Environment env = new StandardEnvironment();
         spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
@@ -242,9 +237,9 @@ public class ApplyTestHelper {
         DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree);
 
         ITree middle = mdiff.getMiddle();
-        System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
-        System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
-        System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
+        // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
+        // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
+        // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
         for (Action action : diff.getActionsList()) {
             try {
                 if (action instanceof Insert) {
@@ -286,10 +281,13 @@ public class ApplyTestHelper {
                 MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1);
                 ITree dstTree1 = scanner1.getTree(ori1);
                 DiffImpl diff1 = mdiff.compute(scanner1.getTreeContext(), dstTree1);
-                for (Action action : diff1.getActionsList()) {
-                    System.err.println(action);
+                try {
+                    check1(right, pp, middleE);
+                } catch (Throwable e) {
+                    for (Action action : diff1.getActionsList()) {
+                        e.addSuppressed(new AssertionError(action));
+                    }
                 }
-                check1(right, pp, middleE);
             }
         } else {
             check1(right, pp, middleE);

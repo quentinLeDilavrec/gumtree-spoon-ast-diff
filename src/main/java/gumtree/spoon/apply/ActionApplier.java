@@ -38,18 +38,12 @@ public class ActionApplier {
 		factory.createLocalVariableReference().getDeclaration();
 		AbstractVersionedTree target = action.getTarget();
 		AbstractVersionedTree parentTarget = target.getParent();
-		// System.out.println("=======");
-		// System.out.println(MyUtils.toPrettyString(ctx, source));
-		// System.out.println(MyUtils.toPrettyString(ctx, target));
-		// System.out.println(MyUtils.toPrettyString(ctx, parentTarget));
 		String targetType = (String) target.getMetadata("type");
 		switch (targetType) {
 			case "LABEL": {
-				// System.out.println("isLabel");
 				CtElement parent = getSpoonEle(parentTarget);
 				if (parent == null) {
-					System.err.println(target);
-					System.err.println(parentTarget);
+					LOGGER.warning("no parent for label "+ target.getLabel());
 				} else if (parent instanceof CtExecutableReferenceExpression) {
 					CtExecutableReference ref = factory.createExecutableReference();
 					ref.setSimpleName(target.getLabel());
@@ -65,9 +59,9 @@ public class ActionApplier {
 					}
 					((CtTypeReference<?>) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtBinaryOperator) {
-					((CtBinaryOperator<?>) parent).setKind(MyUtils.getBinaryOperatorByName(target.getLabel()));
+					((CtBinaryOperator<?>) parent).setKind(BinaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtUnaryOperator) {
-					((CtUnaryOperator<?>) parent).setKind(MyUtils.getUnaryOperatorByName(target.getLabel()));
+					((CtUnaryOperator<?>) parent).setKind(UnaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtLiteral) {
 					if (target.getLabel().startsWith("\"")) {
 						((CtLiteral<String>) parent).setValue(target.getLabel()
@@ -230,7 +224,7 @@ public class ActionApplier {
 					// ref.setImplicit(((CtTypeAccess<?>) parent).isImplicit());
 					// ((CtThisAccess<?>) parent).setAccessedType(ref);
 				} else if (parent instanceof CtOperatorAssignment) {
-					((CtOperatorAssignment) parent).setKind(MyUtils.getBinaryOperatorByName(target.getLabel()));
+					((CtOperatorAssignment) parent).setKind(BinaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtAssignment) { // TODO shouldn't get up to there
 				} else if (parent instanceof CtReturn) { // TODO shouldn't get up to there
 					// CtFieldWrite w = factory.createFieldWrite();
@@ -246,7 +240,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Interface": {
-				// System.out.println("isInterface");
 				CtInterface<?> interf = factory.createInterface();
 				CtElement sp = getSpoonEle(source);
 				interf.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -263,7 +256,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Class": {
-				// System.out.println("isClass");
 				CtClass<?> created = factory.createClass();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -289,13 +281,11 @@ public class ActionApplier {
 				break;
 			}
 			case "RootPackage": {
-				// System.out.println("isRootPackage");
 				CtPackage pack = factory.getModel().getRootPackage();
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, pack);
 				break;
 			}
 			case "Package": {
-				// System.out.println("isPackage");
 				CtPackage pack;
 				CtElement parent = getSpoonEle(parentTarget);
 				if (parent == null || parent instanceof CtRootPackage) {
@@ -309,7 +299,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Method": {
-				// System.out.println("isMethod");
 				CtMethod<Object> method = factory.createMethod();
 				CtElement sp = getSpoonEle(source);
 				method.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -328,7 +317,6 @@ public class ActionApplier {
 				break;
 			}
 			case "RETURN_TYPE": {
-				// System.out.println("isReturnType");
 				CtTypeReference ref = factory.createTypeReference();
 				CtElement parent = getSpoonEle(parentTarget);
 				((CtTypedElement<?>) parent).setType(ref);
@@ -336,7 +324,6 @@ public class ActionApplier {
 				break;
 			}
 			case "MODIFIER": {
-				// System.out.println("isMOdifier");
 				CtElement parent = getSpoonEle(parentTarget);
 				CtWrapper<CtExtendedModifier> mod = getSpoonEle(source);
 				if (!mod.getValue().isImplicit())
@@ -351,7 +338,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Field": {
-				// System.out.println("isField");
 				CtField<?> field = factory.createField();
 				CtElement sp = getSpoonEle(source);
 				field.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -362,7 +348,6 @@ public class ActionApplier {
 				break;
 			}
 			case "VARIABLE_TYPE": {
-				// System.out.println("isVarType");
 				CtTypeReference ref = factory.createTypeReference();
 				CtElement parent = getSpoonEle(parentTarget);
 				((CtTypedElement<?>) parent).setType(ref);
@@ -413,7 +398,6 @@ public class ActionApplier {
 				break;
 			}
 			case "FieldRead": {
-				// System.out.println("isFieldRead");
 				CtFieldRead created = factory.createFieldRead();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -423,7 +407,6 @@ public class ActionApplier {
 				break;
 			}
 			case "VariableRead": {
-				// System.out.println("isVariableRead");
 				CtVariableRead created = factory.createVariableRead();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -433,7 +416,6 @@ public class ActionApplier {
 				break;
 			}
 			case "FieldWrite": {
-				// System.out.println("isFieldWrite");
 				CtElement parent = getSpoonEle(parentTarget);
 				// CtVariable<?> var = factory.Query().createQuery(parent)
 				//         .map(new PotentialVariableDeclarationFunction("simpleName")).first();
@@ -453,7 +435,6 @@ public class ActionApplier {
 				break;
 			}
 			case "TypeAccess": {
-				// System.out.println("isTypeAccess");
 				CtTypeAccess created = factory.createTypeAccess();
 				CtElement parent = getSpoonEle(parentTarget);
 				CtElement sp = getSpoonEle(source);
@@ -464,7 +445,6 @@ public class ActionApplier {
 				break;
 			}
 			case "AnonymousExecutable": {
-				// System.out.println("isAnonymousExecutable");
 				CtAnonymousExecutable created = factory.createAnonymousExecutable();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -474,7 +454,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Assignment": {
-				// System.out.println("isAssignment");
 				CtAssignment created = factory.createAssignment();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -502,7 +481,6 @@ public class ActionApplier {
 				break;
 			}
 			case "OperatorAssignment": {
-				// System.out.println("isOperatorAssignment");
 				CtOperatorAssignment created = factory.createOperatorAssignment();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -536,7 +514,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Return": {
-				// System.out.println("isReturn");
 				CtReturn created = factory.createReturn();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -552,7 +529,6 @@ public class ActionApplier {
 				break;
 			}
 			case "SuperInvocation": {
-				// System.out.println("isSuperInvocation");
 				CtInvocation created = factory.createInvocation();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -597,7 +573,6 @@ public class ActionApplier {
 				break;
 			}
 			case "ThisInvocation": {
-				// System.out.println("isThisInvocation");
 				CtInvocation created = factory.createInvocation();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -621,7 +596,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Invocation": {
-				// System.out.println("isInvocation");
 				CtInvocation created = factory.createInvocation();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -646,7 +620,6 @@ public class ActionApplier {
 				break;
 			}
 			case "ThisAccess": {
-				// System.out.println("isThisAccess");
 				CtElement parent = getSpoonEle(parentTarget);
 				CtThisAccess created = factory.createThisAccess(parent.getParent(CtType.class).getReference(), true);
 				CtElement sp = getSpoonEle(source);
@@ -657,7 +630,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Parameter": {
-				// System.out.println("isParameter");
 				CtParameter<?> created = factory.createParameter();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -667,7 +639,6 @@ public class ActionApplier {
 				break;
 			}
 			case "TypeReference": {
-				// System.out.println("isTypeReference");
 				CtTypeReference created = factory.createTypeReference();
 				CtElement parent = getSpoonEle(parentTarget);
 				if (target.getLabel().equals(CtRole.CAST.name())) {
@@ -689,7 +660,6 @@ public class ActionApplier {
 				break;
 			}
 			// case "SUPER_CLASS": {
-			// 	// System.out.println("isTypeReference");
 			// 	CtType parent = (CtType) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 			// 	CtTypeReference sp = getSpoonEle(source);
 			// 	CtTypeReference created = factory.Type().createReference(sp.getQualifiedName());
@@ -699,7 +669,6 @@ public class ActionApplier {
 			// }
 			// TODO add generators for following elements
 			case "Constructor": {
-				// System.out.println("isConstructor");
 				CtConstructor cons = factory.createConstructor();
 				CtElement sp = getSpoonEle(source);
 				cons.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -711,7 +680,6 @@ public class ActionApplier {
 				break;
 			}
 			// case "INTERFACE": { // when inheriting interface
-			// 	// System.out.println("isINTERFACE");
 			// 	CtElement parent = getSpoonEle(parentTarget);
 			// 	CtType parentType = (CtType) parentTarget.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 			// 	parentType.addSuperInterface((CtTypeReference) parent);
@@ -719,7 +687,6 @@ public class ActionApplier {
 			// 	break;
 			// }
 			case "ConstructorCall": {
-				// System.out.println("isConstructorCall");
 				CtConstructorCall created = factory.createConstructorCall();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -747,7 +714,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Try": {
-				// System.out.println("isTry");
 				CtTry created = factory.createTry();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -766,7 +732,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Catch": {
-				// System.out.println("isCatch");
 				CtCatch created = factory.createCatch();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -777,7 +742,6 @@ public class ActionApplier {
 				break;
 			}
 			case "If": {
-				// System.out.println("isIf");
 				CtIf created = factory.createIf();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -794,7 +758,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Case": {
-				// System.out.println("iscase");
 				CtCase created = factory.createCase();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -805,7 +768,6 @@ public class ActionApplier {
 				break;
 			}
 			case "then": {
-				// System.out.println("isthen");
 				CtBlock created = factory.createBlock();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -816,7 +778,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Block": {
-				// System.out.println("isthen");
 				CtBlock created = factory.createBlock();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -851,7 +812,6 @@ public class ActionApplier {
 				break;
 			}
 			case "else": {
-				// System.out.println("iselse");
 				CtBlock created = factory.createBlock();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -862,7 +822,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Conditional": {
-				// System.out.println("isConditional");
 				CtConditional created = factory.createConditional();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -873,7 +832,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Switch": {
-				// System.out.println("isSwitch");
 				CtSwitch created = factory.createSwitch();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -890,7 +848,6 @@ public class ActionApplier {
 				break;
 			}
 			case "While": {
-				// System.out.println("isWhile");
 				CtWhile created = factory.createWhile();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -907,7 +864,6 @@ public class ActionApplier {
 				break;
 			}
 			case "For": {
-				// System.out.println("isFor");
 				CtFor created = factory.createFor();
 				CtFor sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -929,7 +885,6 @@ public class ActionApplier {
 				break;
 			}
 			case "ForEach": {
-				// System.out.println("isForEach");
 				CtForEach created = factory.createForEach();
 				CtForEach sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -951,7 +906,6 @@ public class ActionApplier {
 				break;
 			}
 			case "LocalVariable": {
-				// System.out.println("isLocalVariable");
 				CtLocalVariable<?> created = factory.createLocalVariable();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -973,7 +927,6 @@ public class ActionApplier {
 				break;
 			}
 			case "NewArray": {
-				// System.out.println("isNewArray");
 				CtNewArray created = factory.createNewArray();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -985,7 +938,6 @@ public class ActionApplier {
 				break;
 			}
 			case "ArrayRead": {
-				// System.out.println("isArrayRead");
 				CtArrayRead created = factory.createArrayRead();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -995,7 +947,6 @@ public class ActionApplier {
 				break;
 			}
 			case "ArrayWrite": {
-				// System.out.println("isArrayRead");
 				CtArrayWrite created = factory.createArrayWrite();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1005,7 +956,6 @@ public class ActionApplier {
 				break;
 			}
 			case "VariableWrite": {
-				// System.out.println("isVariableWrite");
 				CtVariableWrite created = factory.createVariableWrite();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1015,7 +965,6 @@ public class ActionApplier {
 				break;
 			}
 			case "NewClass": {
-				// System.out.println("isNewClass");
 				CtNewClass created = factory.createNewClass();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1025,7 +974,6 @@ public class ActionApplier {
 				break;
 			}
 			case "CatchVariable": {
-				// System.out.println("isCatchVariable");
 				CtCatchVariable created = factory.createCatchVariable();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1035,7 +983,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Break": {
-				// System.out.println("isBreak");
 				CtBreak created = factory.createBreak();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1052,7 +999,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Continue": {
-				// System.out.println("isContinue");
 				CtContinue created = factory.createContinue();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1069,7 +1015,6 @@ public class ActionApplier {
 				break;
 			}
 			case "ArrayTypeReference": {
-				// System.out.println("isTypeReference");
 				CtArrayTypeReference created = factory.createArrayTypeReference();
 				CtElement parent = getSpoonEle(parentTarget);
 				if (parent instanceof CtNewArray) {
@@ -1083,7 +1028,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Throw": {
-				// System.out.println("isThrow");
 				CtThrow created = factory.createThrow();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1100,7 +1044,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Assert": {
-				// System.out.println("isAssert");
 				CtAssert created = factory.createAssert();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1117,7 +1060,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Do": {
-				// System.out.println("isDo");
 				CtDo created = factory.createDo();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1134,7 +1076,6 @@ public class ActionApplier {
 				break;
 			}
 			case "THROWS": {
-				// System.out.println("isTypeReference");
 				CtTypeReference created = factory.createTypeReference();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1145,7 +1086,6 @@ public class ActionApplier {
 				break;
 			}
 			case "SuperAccess": {
-				// System.out.println("isSuperAccess");
 				CtElement parent = getSpoonEle(parentTarget);
 				CtSuperAccess created = factory.createSuperAccess();
 				created.setTarget(
@@ -1159,7 +1099,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Annotation": {
-				// System.out.println("isAnnotation");
 				CtAnnotation created = factory.createAnnotation();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1184,7 +1123,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Synchronized": {
-				// System.out.println("isSynchronized");
 				CtSynchronized created = factory.createSynchronized();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1204,7 +1142,6 @@ public class ActionApplier {
 				break;
 			}
 			case "WildcardReference": {
-				// System.out.println("isWildcardReference");
 				CtWildcardReference created = factory.createWildcardReference();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1221,7 +1158,6 @@ public class ActionApplier {
 				break;
 			}
 			case "TypeParameter": {
-				// System.out.println("isTypeParameter");
 				CtTypeParameter created = factory.createTypeParameter();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1238,7 +1174,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Lambda": {
-				// System.out.println("isLambda");
 				CtLambda created = factory.createLambda();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1248,7 +1183,6 @@ public class ActionApplier {
 				break;
 			}
 			case "TypeParameterReference": {
-				// System.out.println("isTypeParameterReference");
 				CtTypeParameterReference created = factory.createTypeParameterReference();
 				CtElement parent = getSpoonEle(parentTarget);
 				if (target.getLabel().equals(CtRole.CAST.name())) {
@@ -1269,7 +1203,6 @@ public class ActionApplier {
 				break;
 			}
 			case "ExecutableReferenceExpression": {
-				// System.out.println("isExecutableReferenceExpression");
 				CtExecutableReferenceExpression created = factory.createExecutableReferenceExpression();
 				CtElement parent = getSpoonEle(parentTarget);
 				addExpressionToParent(parent, created, target.getLabel());
@@ -1277,7 +1210,6 @@ public class ActionApplier {
 				break;
 			}
 			case "Enum": {
-				// System.out.println("isEnum");
 				CtEnum created = factory.createEnum();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1303,7 +1235,6 @@ public class ActionApplier {
 				break;
 			}
 			case "EnumValue": {
-				// System.out.println("isEnumValue");
 				CtEnumValue created = factory.createEnumValue();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1314,7 +1245,6 @@ public class ActionApplier {
 				break;
 			}
 			case "IntersectionTypeReference": {
-				// System.out.println("isIntersectionTypeReference");
 				CtIntersectionTypeReference created = factory.createIntersectionTypeReference();
 				CtElement parent = getSpoonEle(parentTarget);
 				if (target.getLabel().equals(CtRole.CAST.name())) {
@@ -1336,7 +1266,7 @@ public class ActionApplier {
 				break;
 			}
 			default: {
-				System.err.println(targetType);
+				LOGGER.warning(targetType + " is no handled");
 				throw new AssertionError(targetType + " is no handled");
 				// throw new UnsupportedOperationException(targetType + " is no handled");
 			}
@@ -1561,8 +1491,7 @@ public class ActionApplier {
 			case "LABEL": {
 				CtElement parent = getSpoonEle(parentTarget);
 				if (parent == null) {
-					System.err.println(target);
-					System.err.println(parentTarget);
+					LOGGER.warning("no parent for label "+ target.getLabel());
 				} else if (parent instanceof CtNamedElement) {
 					((CtNamedElement) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtWildcardReference) {
@@ -1574,9 +1503,9 @@ public class ActionApplier {
 					}
 					((CtTypeReference<?>) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtBinaryOperator) {
-					((CtBinaryOperator<?>) parent).setKind(MyUtils.getBinaryOperatorByName(target.getLabel()));
+					((CtBinaryOperator<?>) parent).setKind(BinaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtUnaryOperator) {
-					((CtUnaryOperator<?>) parent).setKind(MyUtils.getUnaryOperatorByName(target.getLabel()));
+					((CtUnaryOperator<?>) parent).setKind(UnaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtLiteral) {
 					if (target.getLabel().startsWith("\"")) {
 						((CtLiteral<String>) parent).setValue(target.getLabel()
@@ -1733,7 +1662,7 @@ public class ActionApplier {
 					// ref.setImplicit(((CtTypeAccess<?>) parent).isImplicit());
 					// ((CtThisAccess<?>) parent).setAccessedType(ref);
 				} else if (parent instanceof CtOperatorAssignment) {
-					((CtOperatorAssignment) parent).setKind(MyUtils.getBinaryOperatorByName(target.getLabel()));
+					((CtOperatorAssignment) parent).setKind(BinaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtAssignment) { // TODO shouldn't get up to there
 				} else if (parent instanceof CtReturn) { // TODO shouldn't get up to there
 					// CtFieldWrite w = factory.createFieldWrite();

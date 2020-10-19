@@ -101,6 +101,13 @@ public class MyQcheckTryTest { // StringProperties
 
     @Property
     public void something3(@From(CtElementGenerator.class) @When(seed = 601495490727140223L) CtElement right) {
+        // ContractVerifier cv = new
+        // spoon.ContractVerifier(right.getFactory().getModel().getRootPackage());
+        // try {
+        // cv.verify();
+        // } catch (AssertionError e) {
+        // assumeNoException(e);
+        // }
         ApplyTestHelper.onInsert(right);
     }
 }

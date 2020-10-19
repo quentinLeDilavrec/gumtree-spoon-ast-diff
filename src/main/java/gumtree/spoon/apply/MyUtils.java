@@ -65,12 +65,6 @@ public class MyUtils {
 	public static String toTreeString(ITree tree) {
 		StringBuilder b = new StringBuilder();
 		aux(b, tree, 0);
-		// for (ITree t : TreeUtils.preOrder(tree))
-		// 	b.append(indent(t)
-		// 			+ (tree instanceof AbstractVersionedTree ? ((AbstractVersionedTree) tree).getAddedVersion() + " "
-		// 					: "")
-		// 			+ (t.getMetadata("type") != null ? t.getMetadata("type") + "@" + t.getLabel() : t.toShortString())
-		// 			+ "\n");
 		return b.toString();
 	}
 
@@ -135,126 +129,6 @@ public class MyUtils {
 		for (int i = 0; i < t.getDepth(); i++)
 			b.append("\t");
 		return b.toString();
-	}
-
-	public static void applyAAction(AAction action) {
-		MyCloneHelper cloneHelper = new MyCloneHelper();
-		ITree leftNode = (ITree) action.getSource();
-		AbstractVersionedTree rightNode = (AbstractVersionedTree) action.getTarget();
-		CtElement leftSpoon = (CtElement) leftNode.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-		assert leftSpoon != null;
-		if (action instanceof Insert) {
-			System.out.println(leftSpoon);
-			CtElement rightSpoon = (CtElement) rightNode.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-			System.out.println(rightSpoon);
-			CtElement rightParentSpoon = (CtElement) rightNode.getParent()
-					.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-			System.out.println(rightParentSpoon);
-			if (rightNode.getMetadata("type").equals("LABEL")) {
-				System.out.println("ignore label insert"); // DO not add it in the first place ?
-			} else {
-				System.out.println("do the insert");
-				List<AbstractVersionedTree> childrenAtInsTime = rightNode.getChildren(rightNode.getAddedVersion());
-				if (childrenAtInsTime.size() > 0 && childrenAtInsTime.get(0).getMetadata("type").equals("LABEL")) {
-					System.out.println("has a label");
-					System.out.println(childrenAtInsTime.size());
-					System.out.println(leftSpoon.getClass());
-					System.out.println(leftSpoon.clone());
-					CtElement clone = cloneHelper.clone(leftSpoon);
-					rightNode.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, clone);
-					if (clone instanceof CtTypeParameter) {
-						((CtType) rightParentSpoon).addFormalCtTypeParameter((CtTypeParameter) clone);
-						// clone.setParent(rightParentSpoon);                        
-					}
-					System.out.println(childrenAtInsTime.get(0).toShortString());
-				}
-				// for (AbstractVersionedTree firstC : rightNode.getChildren(rightNode.getAddedVersion())) {
-				//     System.out.println(firstC.toShortString());
-				// }
-			}
-
-		} else if (action instanceof Update) {
-			assert leftNode.hasSameType(rightNode);
-			if (leftNode.getMetadata("type").equals("LABEL")) {
-				CtElement rightParentSpoon = (CtElement) rightNode.getParent()
-						.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-
-			}
-		} else if (action instanceof Delete) {
-			System.out.println(leftSpoon);
-
-		}
-		System.out.println(action);
-	}
-
-	public static UnaryOperatorKind getUnaryOperatorByName(String o) {
-		switch (o) {
-			case "POS":
-				return UnaryOperatorKind.POS;
-			case "NEG":
-				return UnaryOperatorKind.NEG;
-			case "NOT":
-				return UnaryOperatorKind.NOT;
-			case "COMPL":
-				return UnaryOperatorKind.COMPL;
-			case "PREINC":
-				return UnaryOperatorKind.PREINC;
-			case "POSTINC":
-				return UnaryOperatorKind.POSTINC;
-			case "PREDEC":
-				return UnaryOperatorKind.PREDEC;
-			case "POSTDEC":
-				return UnaryOperatorKind.POSTDEC;
-			default:
-				throw new UnsupportedOperationException(o);
-		}
-	}
-
-	public static BinaryOperatorKind getBinaryOperatorByName(String o) {
-		switch (o) {
-			case "OR":
-				return BinaryOperatorKind.OR;
-			case "AND":
-				return BinaryOperatorKind.AND;
-			case "BITOR":
-				return BinaryOperatorKind.BITOR;
-			case "BITXOR":
-				return BinaryOperatorKind.BITXOR;
-			case "BITAND":
-				return BinaryOperatorKind.BITAND;
-			case "EQ":
-				return BinaryOperatorKind.EQ;
-			case "NE":
-				return BinaryOperatorKind.NE;
-			case "LT":
-				return BinaryOperatorKind.LT;
-			case "GT":
-				return BinaryOperatorKind.GT;
-			case "LE":
-				return BinaryOperatorKind.LE;
-			case "GE":
-				return BinaryOperatorKind.GE;
-			case "SL":
-				return BinaryOperatorKind.SL;
-			case "SR":
-				return BinaryOperatorKind.SR;
-			case "USR":
-				return BinaryOperatorKind.USR;
-			case "PLUS":
-				return BinaryOperatorKind.PLUS;
-			case "MINUS":
-				return BinaryOperatorKind.MINUS;
-			case "MUL":
-				return BinaryOperatorKind.MUL;
-			case "DIV":
-				return BinaryOperatorKind.DIV;
-			case "MOD":
-				return BinaryOperatorKind.MOD;
-			case "INSTANCEOF":
-				return BinaryOperatorKind.INSTANCEOF;
-			default:
-				throw new UnsupportedOperationException(o);
-		}
 	}
 
 	public static UnaryOperatorKind getUnaryOperator(String o) {
