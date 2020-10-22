@@ -21,6 +21,7 @@
 package com.github.gumtreediff.actions;
 
 import com.github.gumtreediff.actions.model.Action;
+import com.github.gumtreediff.actions.model.Move;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,6 +34,7 @@ import java.util.List;
  */
 public class EditScript implements Iterable<Action> {
     private List<Action> actions;
+    private List<Move> composed;
 
     public EditScript() {
         actions = new ArrayList<>();
@@ -73,4 +75,12 @@ public class EditScript implements Iterable<Action> {
     public int lastIndexOf(Action action) {
         return actions.lastIndexOf(action);
     }
+
+	public void addComposed(Move a) {
+        composed.add(a);
+	}
+
+	public List<Move> getComposed() {
+        return composed;
+	}
 }

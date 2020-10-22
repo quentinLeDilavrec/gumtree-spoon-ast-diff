@@ -26,9 +26,17 @@ public class MyScriptGenerator implements EditScriptGenerator {
     AbstractVersionedTree middle = null;
     MultiVersionMappingStore multiVersionMappingStore;
 
-    public MyScriptGenerator(AbstractVersionedTree middle, MultiVersionMappingStore multiVersionMappingStore) {
+    public enum Granularity {
+        ATOMIC, COMPOSE, SPLITED;
+    }
+
+    final Granularity granularity;
+
+    public MyScriptGenerator(AbstractVersionedTree middle, MultiVersionMappingStore multiVersionMappingStore,
+            Granularity granularity) {
         this.middle = middle;
         this.multiVersionMappingStore = multiVersionMappingStore;
+        this.granularity = granularity;
     }
 
     @Override
@@ -154,21 +162,39 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         // addDeleteAction(uact, w);
                         // addInsertAction(uact, wbis);
                         wbis.setMetadata("alsoUpdated", true);
-                        if (NOMOVE) {
-                            Action iact = AAction.build(Insert.class, w, wbis);
-                            actions.add(iact);
-                            // actions.add(uact);
-                            Delete dact = AAction.build(Delete.class, w, null);
-                            actions.add(dact);
-                            ((AbstractVersionedTree) w).delete(version);
-                            addDeleteAction(dact, w);
-                            addInsertAction(iact, wbis);
-                        } else {
-                            Action mact = AAction.build(Move.class, w, wbis);
-                            actions.add(mact);
-                            // actions.add(uact);
-                            addDeleteAction(mact, w);
-                            addInsertAction(mact, wbis);
+                        switch (granularity) {
+                            case COMPOSE: {
+                                Action mact = AAction.build(Move.class, w, wbis);
+                                actions.add(mact);
+                                // actions.add(uact);
+                                addDeleteAction(mact, w);
+                                addInsertAction(mact, wbis);
+                                break;
+                            }
+                            case ATOMIC: {
+                                Action iact = AAction.build(Insert.class, w, wbis);
+                                actions.add(iact);
+                                // actions.add(uact);
+                                Delete dact = AAction.build(Delete.class, w, null);
+                                actions.add(dact);
+                                ((AbstractVersionedTree) w).delete(version);
+                                addDeleteAction(dact, w);
+                                addInsertAction(iact, wbis);
+                                break;
+                            }
+                            case SPLITED: {
+                                Action iact = AAction.build(Insert.class, w, wbis);
+                                actions.add(iact);
+                                // actions.add(uact);
+                                Delete dact = AAction.build(Delete.class, w, null);
+                                actions.add(dact);
+                                ((AbstractVersionedTree) w).delete(version);
+                                addDeleteAction(dact, w);
+                                addInsertAction(iact, wbis);
+                                Move mact = AAction.build(Move.class, w, wbis);
+                                actions.addComposed(mact);
+                                break;
+                            }
                         }
                     } else if (!w.getLabel().equals(x.getLabel())) {
                         AbstractVersionedTree wbis = new VersionedTree(w, this.version);//VersionedTree.deepCopy(w, this.version);
@@ -206,25 +232,41 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         ITree gew = copyToOrig.put(wbis, x);
                         // cpyMappings.link(w, x);
                         multiVersionMappingStore.link(w, wbis);
-                        if (NOMOVE) {
-                            Action iact = AAction.build(Insert.class, w, wbis);//new AMove(w, wbis); // TODO put removedVersion and added version ?
-                            actions.add(iact);
-                            Delete dact = AAction.build(Delete.class, w, null);//new ADelete(w);
-                            actions.add(dact);
-                            ((AbstractVersionedTree) w).delete(version);
-                            addDeleteAction(dact, w);
-                            addInsertAction(iact, wbis);
-                        } else {
-                            Action action = AAction.build(Move.class, w, wbis);//new AMove(w, wbis); // TODO put removedVersion and added version ?
-                            actions.add(action);
-                            addDeleteAction(action, w);
-                            addInsertAction(action, wbis);
+                        switch (granularity) {
+                            case COMPOSE: {
+                                Action mact = AAction.build(Move.class, w, wbis);
+                                actions.add(mact);
+                                addDeleteAction(mact, w);
+                                addInsertAction(mact, wbis);
+                                break;
+                            }
+                            case ATOMIC: {
+                                Action iact = AAction.build(Insert.class, w, wbis);
+                                actions.add(iact);
+                                Delete dact = AAction.build(Delete.class, w, null);
+                                actions.add(dact);
+                                w.delete(version);
+                                addDeleteAction(dact, w);
+                                addInsertAction(iact, wbis);
+                                break;
+                            }
+                            case SPLITED: {
+                                Action iact = AAction.build(Insert.class, w, wbis);
+                                actions.add(iact);
+                                Delete dact = AAction.build(Delete.class, w, null);
+                                actions.add(dact);
+                                w.delete(version);
+                                addDeleteAction(dact, w);
+                                addInsertAction(iact, wbis);
+                                Move mact = AAction.build(Move.class, w, wbis);
+                                actions.addComposed(mact);
+                                break;
+                            }
                         }
                     }
 
                 }
             }
-
             srcInOrder.add(w);
             dstInOrder.add(x);
             alignChildren(w, x);
@@ -234,8 +276,6 @@ public class MyScriptGenerator implements EditScriptGenerator {
 
         return actions;
     }
-
-    static boolean NOMOVE = true;
 
     private void handleDeletion() {
         List<ITree> preOMiddle = TreeUtils.preOrder(middle);
@@ -346,23 +386,40 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         abis.setParent(w);
                         w.insertChild(abis, k);
                         cpyMappings.link(abis, b);
-                        ((AbstractVersionedTree)a).delete(this.version);
-                        copyToOrig.put((AbstractVersionedTree)a, x);
+                        ((AbstractVersionedTree) a).delete(this.version);
+                        copyToOrig.put((AbstractVersionedTree) a, x);
                         copyToOrig.put(abis, x);
                         multiVersionMappingStore.link(a, abis);
-                        if (NOMOVE) {
-                            Action iact = AAction.build(Insert.class, a, abis);
-                            actions.add(iact);
-                            Delete dact = AAction.build(Delete.class, a, null);
-                            actions.add(dact);
-                            ((AbstractVersionedTree) a).delete(version);
-                            addDeleteAction(dact, a);
-                            addInsertAction(iact, abis);
-                        } else {
-                            Action action = AAction.build(Move.class, a, abis);
-                            actions.add(action);
-                            addDeleteAction(action, a);
-                            addInsertAction(action, abis);
+                        switch (granularity) {
+                            case COMPOSE: {
+                                Action action = AAction.build(Move.class, a, abis);
+                                actions.add(action);
+                                addDeleteAction(action, a);
+                                addInsertAction(action, abis);
+                                break;
+                            }
+                            case ATOMIC: {
+                                Action iact = AAction.build(Insert.class, a, abis);
+                                actions.add(iact);
+                                Delete dact = AAction.build(Delete.class, a, null);
+                                actions.add(dact);
+                                ((AbstractVersionedTree) a).delete(version);
+                                addDeleteAction(dact, a);
+                                addInsertAction(iact, abis);
+                                break;
+                            }
+                            case SPLITED: {
+                                Action iact = AAction.build(Insert.class, a, abis);
+                                actions.add(iact);
+                                Delete dact = AAction.build(Delete.class, a, null);
+                                actions.add(dact);
+                                ((AbstractVersionedTree) a).delete(version);
+                                addDeleteAction(dact, a);
+                                addInsertAction(iact, abis);
+                                Action action = AAction.build(Move.class, a, abis);
+                                actions.add(action);
+                                break;
+                            }
                         }
                         srcInOrder.add(a);
                         dstInOrder.add(b);

@@ -75,7 +75,7 @@ public class DiffImpl implements Diff {
 		if (b != null && b.equals("true")) {
 			
 		}
-		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle,multiMappingsComp);
+		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle,multiMappingsComp, MyScriptGenerator.Granularity.SPLITED);
 
 		EditScript actions = actionGenerator.computeActions(matcher);
 		this.actionsList = actions.asList();
