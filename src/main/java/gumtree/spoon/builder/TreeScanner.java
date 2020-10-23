@@ -28,12 +28,11 @@ public class TreeScanner extends CtScanner {
 	public static final String NOTYPE = "<notype>";
 	private final TreeContext treeContext;
 	private final Stack<ITree> nodes = new Stack<>();
-	boolean nolabel = false;
+	boolean nodifiedLabel = false;
 
 	TreeScanner(TreeContext treeContext, ITree root) {
 		this.treeContext = treeContext;
 		nodes.push(root);
-		nolabel = isNoLabelMode();
 	}
 
 	@Override
@@ -46,17 +45,17 @@ public class TreeScanner extends CtScanner {
 		String label = null;
 		String nodeTypeName = getNodeType(element);
 
-		if (nolabel) {
+		if (nodifiedLabel) {
 			label = nodeTypeName;
 		} else {
 			LabelFinder lf = new LabelFinder();
 			lf.scan(element);
 			label = lf.label;
 		}
-		pushNodeToTree(createNode(nodeTypeName, element, nolabel ? element.getRoleInParent().name() : label));
+		pushNodeToTree(createNode(nodeTypeName, element, nodifiedLabel ? element.getRoleInParent().name() : label));
 
 		int depthBefore = nodes.size();
-		if (nolabel) {
+		if (nodifiedLabel) {
 			LabelFinder lf = new LabelFinder();
 			lf.scan(element);
 			if (lf.label != null && lf.label.length() > 0 && !(element instanceof CtSuperAccess)
@@ -71,14 +70,6 @@ public class TreeScanner extends CtScanner {
 			// contract: this should never happen
 			throw new RuntimeException("too many nodes pushed");
 		}
-	}
-
-	public boolean isNoLabelMode() {
-		String nolabel = System.getProperty("nolabel");
-		if (nolabel != null) {
-			return Boolean.valueOf(nolabel);
-		}
-		return false;
 	}
 
 	/**

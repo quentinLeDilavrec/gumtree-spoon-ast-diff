@@ -157,7 +157,7 @@ public class NodeCreator extends CtInheritanceScanner {
 
 	@Override
 	public void scanCtReference(CtReference reference) {
-		if (!builder.nolabel) {
+		if (!builder.nodifiedLabel) {
 			if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.SUPER_TYPE) {
 				ITree superType = builder.createNode("SUPER_CLASS",
 						builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));

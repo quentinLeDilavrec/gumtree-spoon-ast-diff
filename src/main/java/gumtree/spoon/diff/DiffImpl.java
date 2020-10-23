@@ -57,29 +57,38 @@ public class DiffImpl implements Diff {
 	 */
 	private final TreeContext context;
 	private List<Action> actionsList;
+
 	public List<Action> getActionsList() {
 		return actionsList;
 	}
 
-	DiffImpl(AbstractVersionedTree middle, MultiVersionMappingStore multiMappingsComp, TreeContext context, ITree rootSpoonLeft, ITree rootSpoonRight) {
+	DiffImpl(AbstractVersionedTree middle, MultiVersionMappingStore multiMappingsComp, TreeContext context,
+			ITree rootSpoonLeft, ITree rootSpoonRight) {
 		if (context == null) {
 			throw new IllegalArgumentException();
 		}
-		final MappingStore mappingsComp = new SingleVersionMappingStore<ITree,ITree>(rootSpoonLeft, rootSpoonRight);
+		final MappingStore mappingsComp = new SingleVersionMappingStore<ITree, ITree>(rootSpoonLeft, rootSpoonRight);
 		this.context = context;
 
 		final Matcher matcher = new CompositeMatchers.ClassicGumtree(rootSpoonLeft, rootSpoonRight, mappingsComp);
 		matcher.match();
 
-		String b = System.getProperty("gumtree.match.gt.ag.nomove"); // b != null && b.equals("true")
-		if (b != null && b.equals("true")) {
-			
+		String b = System.getProperty("gumtree.ganularity"); // b != null && b.equals("true")
+		MyScriptGenerator.Granularity moveMod;
+		if (b != null && b.equals("splited")) {
+			moveMod = MyScriptGenerator.Granularity.SPLITED;
+		} else if (b != null && b.equals("atomic")) {
+			moveMod = MyScriptGenerator.Granularity.ATOMIC;
+		} else if (b != null && b.equals("compose")) {
+			moveMod = MyScriptGenerator.Granularity.COMPOSE;
+		} else {
+			moveMod = MyScriptGenerator.Granularity.SPLITED;
 		}
-		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle,multiMappingsComp, MyScriptGenerator.Granularity.SPLITED);
+		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle, multiMappingsComp, moveMod);
 
 		EditScript actions = actionGenerator.computeActions(matcher);
 		this.actionsList = actions.asList();
-		
+
 		ActionClassifier actionClassifier = new ActionClassifier(multiMappingsComp.asSet(), actionsList);
 		// Bugfix: the Action classifier must be executed *BEFORE* the convertToSpoon
 		// because it writes meta-data on the trees
