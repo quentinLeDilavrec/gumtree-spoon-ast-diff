@@ -38,6 +38,7 @@ public class EditScript implements Iterable<Action> {
 
     public EditScript() {
         actions = new ArrayList<>();
+        composed = new ArrayList<>();
     }
 
     public Iterator<Action> iterator() {
