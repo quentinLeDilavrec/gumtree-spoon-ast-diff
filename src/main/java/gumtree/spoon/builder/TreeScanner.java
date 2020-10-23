@@ -28,7 +28,7 @@ public class TreeScanner extends CtScanner {
 	public static final String NOTYPE = "<notype>";
 	private final TreeContext treeContext;
 	private final Stack<ITree> nodes = new Stack<>();
-	boolean nodifiedLabel = false;
+	boolean nodifiedLabel = true;
 
 	TreeScanner(TreeContext treeContext, ITree root) {
 		this.treeContext = treeContext;
