@@ -89,7 +89,7 @@
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
-  
+
     <dependency>
       <groupId>com.sparkjava</groupId>
       <artifactId>spark-core</artifactId>

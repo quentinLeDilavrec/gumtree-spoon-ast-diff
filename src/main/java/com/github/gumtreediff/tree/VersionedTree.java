@@ -193,6 +193,7 @@ public class VersionedTree extends AbstractVersionedTree {
                 result = deepCopySpoonAux(currentOrig);
                 cloner = new MyCloner(ele.getFactory());
                 cloner.clone(ele);
+                result.setMetadata("Launcher", cloner.getLauncher());
                 result.setMetadata("Factory", cloner.getLauncher().getFactory());
             } else {
                 result = new VersionedTree(currentOrig, 0);
@@ -200,12 +201,14 @@ public class VersionedTree extends AbstractVersionedTree {
                     AbstractVersionedTree copy = deepCopySpoon(child);
                     result.addChild(copy);
                     copy.setParent(result);
+                    result.setMetadata("Launcher", copy.getMetadata("Launcher"));
                     result.setMetadata("Factory", copy.getMetadata("Factory"));
                 }
                 break;
             }
         } while (ele == null);
         if (result.getMetadata("Factory") == null) {
+            result.setMetadata("Launcher", new Launcher());
             result.setMetadata("Factory", new Launcher().getFactory());
         }
         return result;
