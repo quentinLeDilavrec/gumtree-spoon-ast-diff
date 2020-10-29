@@ -24,6 +24,7 @@ import com.github.gumtreediff.matchers.SingleVersionMappingStore;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
+import com.github.gumtreediff.tree.Version;
 
 import gnu.trove.map.TIntObjectMap;
 import gumtree.spoon.apply.operations.MyScriptGenerator;
@@ -63,7 +64,7 @@ public class DiffImpl implements Diff {
 	}
 
 	DiffImpl(AbstractVersionedTree middle, MultiVersionMappingStore multiMappingsComp, TreeContext context,
-			ITree rootSpoonLeft, ITree rootSpoonRight) {
+			ITree rootSpoonLeft, ITree rootSpoonRight, Version beforeVersion, Version afterVersion) {
 		if (context == null) {
 			throw new IllegalArgumentException();
 		}
@@ -86,7 +87,7 @@ public class DiffImpl implements Diff {
 		}
 		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle, multiMappingsComp, moveMod);
 
-		EditScript actions = actionGenerator.computeActions(matcher);
+		EditScript actions = actionGenerator.computeActions(matcher,beforeVersion,afterVersion);
 		this.actionsList = actions.asList();
 
 		ActionClassifier actionClassifier = new ActionClassifier(multiMappingsComp.asSet(), actionsList);

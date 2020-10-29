@@ -21,6 +21,7 @@ package com.github.gumtreediff.actions;
 
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
+import com.github.gumtreediff.tree.Version;
 
 /**
  * Interface for script generators that compute edit scripts from mappings.
@@ -29,5 +30,5 @@ import com.github.gumtreediff.matchers.Matcher;
  * @see EditScript
  */
 public interface EditScriptGenerator {
-    EditScript computeActions(Matcher matcher);
+    EditScript computeActions(Matcher matcher, Version beforeVersion, Version afterVersion);
 }

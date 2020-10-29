@@ -20,6 +20,7 @@ import com.github.gumtreediff.actions.model.Insert;
 import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Version;
 
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.junit.Assert;
@@ -49,9 +50,18 @@ public class ApplyTestHelper {
         CtElement left = null;
         ITree srctree;
         srctree = scanner.getTree(left);
-        MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
+        final Version1 rightV = new Version1();
+        final Version leftV = new Version() {
+            @Override
+            public COMP_RES partiallyCompareTo(Version other) {
+                return other == this ? Version.COMP_RES.EQUAL
+                        : (other == rightV ? Version.COMP_RES.SUPERIOR : Version.COMP_RES.UNKNOWN);
+            }
+        };
+        rightV.other = leftV;
+        MultiDiffImpl mdiff = new MultiDiffImpl(srctree, leftV);
         ITree dstTree = scanner.getTree(right);
-        DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree);
+        DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree, rightV);
 
         ITree middle = mdiff.getMiddle();
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
@@ -81,9 +91,9 @@ public class ApplyTestHelper {
                 final SpoonGumTreeBuilder scanner1 = new SpoonGumTreeBuilder();
                 ITree srctree1;
                 srctree1 = scanner1.getTree(made1);
-                MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1);
+                MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1, leftV);
                 ITree dstTree1 = scanner1.getTree(ori1);
-                DiffImpl diff1 = mdiff.compute(scanner1.getTreeContext(), dstTree1);
+                DiffImpl diff1 = mdiff1.compute(scanner1.getTreeContext(), dstTree1, rightV);
                 for (Action action : diff1.getActionsList()) {
                     System.err.println(action);
                 }
@@ -97,13 +107,22 @@ public class ApplyTestHelper {
     private static void onDelete(CtElement left) {
         Environment env = new StandardEnvironment();
         spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
+        final Version1 rightV = new Version1();
+        final Version leftV = new Version() {
+            @Override
+            public COMP_RES partiallyCompareTo(Version other) {
+                return other == this ? Version.COMP_RES.EQUAL
+                        : (other == rightV ? Version.COMP_RES.SUPERIOR : Version.COMP_RES.UNKNOWN);
+            }
+        };
+        rightV.other = leftV;
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         CtElement right = null;
         ITree dstTree;
         dstTree = scanner.getTree(right);
-        MultiDiffImpl mdiff = new MultiDiffImpl(dstTree);
+        MultiDiffImpl mdiff = new MultiDiffImpl(dstTree, leftV);
         ITree srcTree = scanner.getTree(left);
-        DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree);
+        DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree, rightV);
 
         ITree middle = mdiff.getMiddle();
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
@@ -121,6 +140,19 @@ public class ApplyTestHelper {
         tmp.add(middle);
         CtModel aaa = ((Factory) middle.getMetadata("Factory")).getModel();
         assertEquals(aaa.getAllTypes().size(), 0);
+    }
+
+    private static final class Version1 implements Version {
+        public Version other;
+
+        @Override
+        public COMP_RES partiallyCompareTo(Version other) {
+            if (other == this) {
+                return Version.COMP_RES.EQUAL;
+            }
+            return other == this ? Version.COMP_RES.EQUAL
+                    : (other == this.other ? Version.COMP_RES.INFERIOR : Version.COMP_RES.UNKNOWN);
+        }
     }
 
     private static VirtualFile[] toVirtFiles(PrettyPrinter pp, CtElement ele) {
@@ -225,12 +257,21 @@ public class ApplyTestHelper {
     public static void onChange(CtElement left, CtElement right) {
         Environment env = new StandardEnvironment();
         spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
+        final Version1 rightV = new Version1();
+        final Version leftV = new Version() {
+            @Override
+            public COMP_RES partiallyCompareTo(Version other) {
+                return other == this ? Version.COMP_RES.EQUAL
+                        : (other == rightV ? Version.COMP_RES.SUPERIOR : Version.COMP_RES.UNKNOWN);
+            }
+        };
+        rightV.other = leftV;
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srcTree;
         srcTree = scanner.getTree(left);
-        MultiDiffImpl mdiff = new MultiDiffImpl(srcTree);
+        MultiDiffImpl mdiff = new MultiDiffImpl(srcTree, leftV);
         ITree dstTree = scanner.getTree(right);
-        DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree);
+        DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree, rightV);
 
         ITree middle = mdiff.getMiddle();
         // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
@@ -274,9 +315,9 @@ public class ApplyTestHelper {
                 final SpoonGumTreeBuilder scanner1 = new SpoonGumTreeBuilder();
                 ITree srctree1;
                 srctree1 = scanner1.getTree(made1);
-                MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1);
+                MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1, leftV);
                 ITree dstTree1 = scanner1.getTree(ori1);
-                DiffImpl diff1 = mdiff.compute(scanner1.getTreeContext(), dstTree1);
+                DiffImpl diff1 = mdiff1.compute(scanner1.getTreeContext(), dstTree1, rightV);
                 try {
                     check1(right, pp, middleE);
                 } catch (Throwable e) {

@@ -10,6 +10,8 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.github.gumtreediff.actions.model.Insert;
+import com.github.gumtreediff.tree.Version;
+import com.github.gumtreediff.tree.Version.COMP_RES;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -77,7 +79,7 @@ public class AstComparator {
 		// System.setProperty("gumtree.match.bu.size","10");
 		// System.setProperty("gt.bum.szt", "1000");
 		// System.setProperty("gumtree.match.gt.ag.nomove", "true");
-		
+
 	}
 	/**
 	 * By default, comments are ignored
@@ -133,10 +135,19 @@ public class AstComparator {
 	 */
 	public Diff compare(CtElement left, CtElement right) {
 		final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
-		MultiDiffImpl r = new MultiDiffImpl(scanner.getTree(left));
-		return r.compute(scanner.getTreeContext() , scanner.getTree(right));
+		final Version1 rightV = new Version1();
+		final Version leftV = new Version() {
+			@Override
+			public COMP_RES partiallyCompareTo(Version other) {
+				return other == this ? Version.COMP_RES.EQUAL
+						: (other == rightV ? Version.COMP_RES.SUPERIOR : Version.COMP_RES.UNKNOWN);
+			}
+		};
+		rightV.other = leftV;
+		MultiDiffImpl r = new MultiDiffImpl(scanner.getTree(left), leftV);
+		return r.compute(scanner.getTreeContext(), scanner.getTree(right), rightV);
 	}
-	
+
 	public Diff compare(CtElement... versions) {
 		return null; // TODO
 	}
@@ -202,6 +213,19 @@ public class AstComparator {
 			// nodeChildens.add(y);
 		}
 		return o;
+	}
+
+	private static final class Version1 implements Version {
+		public Version other;
+
+		@Override
+		public COMP_RES partiallyCompareTo(Version other) {
+			if (other == this) {
+				return Version.COMP_RES.EQUAL;
+			}
+			return other == this ? Version.COMP_RES.EQUAL
+					: (other == this.other ? Version.COMP_RES.INFERIOR : Version.COMP_RES.UNKNOWN);
+		}
 	}
 
 	public static void main(String[] args) throws Exception {

@@ -24,6 +24,7 @@ import com.github.gumtreediff.matchers.SingleVersionMappingStore;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
+import com.github.gumtreediff.tree.Version;
 import com.github.gumtreediff.tree.VersionedTree;
 
 import gnu.trove.map.TIntObjectMap;
@@ -61,23 +62,25 @@ public class MultiDiffImpl implements Diff {
 	private List<Diff> diffs = new ArrayList<>();
 	private MultiVersionMappingStore mappingsComp;
 	AbstractVersionedTree middle;
+	private Version lastVersion;
 
 	public AbstractVersionedTree getMiddle() {
 		return middle;
 	}
 
-	public MultiDiffImpl(ITree initialSpoon) {
+	public MultiDiffImpl(ITree initialSpoon, Version version) {
 		this.lastSpoon = initialSpoon;
+		this.lastVersion = version;
 		mappingsComp = new MultiVersionMappingStore();
-		middle = VersionedTree.deepCopySpoon(initialSpoon);
-		middle.setMetadata("lastVersion", 0);
+		middle = VersionedTree.deepCopySpoon(initialSpoon, version);
 	}
 
-	public DiffImpl compute(TreeContext context, ITree rootSpoonRight) {
-		ITree rootSpoonLeft = lastSpoon;
-		lastSpoon = rootSpoonRight;
-		middle.setMetadata("lastVersion", (int) middle.getMetadata("lastVersion") + 1);
-		DiffImpl r = new DiffImpl(middle, mappingsComp, context, rootSpoonLeft, rootSpoonRight);
+	public DiffImpl compute(TreeContext context, ITree rootSpoonRight, Version versionRight) {
+		ITree rootSpoonLeft = this.lastSpoon;
+		Version rootVersionLeft = this.lastVersion;
+		this.lastSpoon = rootSpoonRight;
+		this.lastVersion = versionRight;
+		DiffImpl r = new DiffImpl(middle, mappingsComp, context, rootSpoonLeft, rootSpoonRight,rootVersionLeft,versionRight);
 		diffs.add(r);
 		return r;
 	}

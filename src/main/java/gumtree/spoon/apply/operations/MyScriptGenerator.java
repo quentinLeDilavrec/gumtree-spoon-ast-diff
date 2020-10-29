@@ -13,11 +13,13 @@ import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.Tree;
 import com.github.gumtreediff.tree.TreeUtils;
+import com.github.gumtreediff.tree.Version;
 import com.github.gumtreediff.tree.VersionedTree;
 
 import gnu.trove.map.TIntObjectMap;
 import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.MyUtils;
+import gumtree.spoon.builder.SpoonGumTreeBuilder;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -31,6 +33,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
     }
 
     final Granularity granularity;
+    Version beforeVersion;
+    Version afterVersion;
 
     public MyScriptGenerator(AbstractVersionedTree middle, MultiVersionMappingStore multiVersionMappingStore,
             Granularity granularity) {
@@ -40,16 +44,15 @@ public class MyScriptGenerator implements EditScriptGenerator {
     }
 
     @Override
-    public EditScript computeActions(Matcher ms) {
-        this.version = (int) middle.getMetadata("lastVersion");
+    public EditScript computeActions(Matcher ms, Version beforeVersion, Version afterVersion) {
+        this.beforeVersion = beforeVersion;
+        this.afterVersion = afterVersion;
         initWith((SingleVersionMappingStore<AbstractVersionedTree, ITree>) ms.getMappings());
         generate();
         middle.setParent(null);
         origDst.setParent(null);
         return actions;
     }
-
-    int version;
 
     private ITree origSrc;
 
@@ -76,36 +79,25 @@ public class MyScriptGenerator implements EditScriptGenerator {
 
         origToCopy = new HashMap<>();
         copyToOrig = new HashMap<>();
-        relateMiddleAndSource2();
+        relateMiddleAndSource(middle, origSrc);
 
         cpyMappings = new SingleVersionMappingStore<AbstractVersionedTree, ITree>(middle, origDst);
-        for (Mapping m : origMappings)
+        for (Mapping m : origMappings) {
             cpyMappings.link(origToCopy.get(m.first), m.second);
-    }
-
-    private void relateMiddleAndSource() {
-        Iterator<AbstractVersionedTree> cpyTreeIterator = (Iterator) TreeUtils.preOrderIterator(middle);
-        for (ITree origTree : TreeUtils.preOrder(origSrc)) {
-            AbstractVersionedTree cpyTree = cpyTreeIterator.next();
-            origToCopy.put(origTree, cpyTree);
-            copyToOrig.put(cpyTree, origTree);
+            // multiVersionMappingStore.link(origToCopy.get(m.first), m.second);
         }
     }
 
-    private void relateMiddleAndSource2() {
-        aux(middle, origSrc);
-    }
-
-    private void aux(AbstractVersionedTree cpyTree, ITree origTree) {
+    private void relateMiddleAndSource(AbstractVersionedTree cpyTree, ITree origTree) {
         origToCopy.put(origTree, cpyTree);
         copyToOrig.put(cpyTree, origTree);
         List<AbstractVersionedTree> cpyChildren = (List) cpyTree.getChildren();
         List<ITree> origChildren = origTree.getChildren();
         if (cpyChildren.size() != origChildren.size()) {
-            throw new RuntimeException("not same # children");
+            throw new RuntimeException("not same number of children");
         }
         for (int i = 0; i < cpyChildren.size(); i++) {
-            aux(cpyChildren.get(i), origChildren.get(i));
+            relateMiddleAndSource(cpyChildren.get(i), origChildren.get(i));
         }
     }
 
@@ -129,16 +121,15 @@ public class MyScriptGenerator implements EditScriptGenerator {
             AbstractVersionedTree z = cpyMappings.getSrc(y);
 
             if (!cpyMappings.hasDst(x)) {
-                int k = y.getChildPosition(x);//findPos(x);
+                int k = y.getChildPosition(x);
                 // Insertion case : insert new node.
-                w = new VersionedTree(x, this.version); // VersionedTree.deepCopy(x, this.version);//new VersionedTree(x, this.version);
-                // In order to use the real nodes from the second tree, we
-                // furnish x instead of w
+                w = new VersionedTree(x, this.afterVersion);
+                w.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
                 copyToOrig.put(w, x);
                 cpyMappings.link(w, x);
                 z.insertChild(w, k);
                 w.setParent(z);
-                Action action = AAction.build(Insert.class, x, w);//new AInsert(x, w);//new Insert(w, z, k);
+                Action action = AAction.build(Insert.class, x, w);
                 actions.add(action);
                 addInsertAction(action, w);
             } else {
@@ -146,120 +137,127 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 if (!x.equals(origDst)) { // TODO => x != origDst // Case of the root
                     AbstractVersionedTree v = w.getParent();
                     if (!w.getLabel().equals(x.getLabel()) && !z.equals(v)) {
-                        AbstractVersionedTree wbis = new VersionedTree(w, this.version);
-                        cpyMappings.link(wbis, x);
-                        added.add(wbis);
-                        boolean qwed = deleted.add(w);
+                        // x was renamed and moved from z to y
+                        // in intermediate: w is was moved from v to z,
+                        // thus w is marked as deleted and newTree is created
+                        AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
+                        newTree.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+                        cpyMappings.link(newTree, x);
+                        added.add(newTree);
+                        deleted.add(w);
                         int k = y.getChildPosition(x);
-                        w.delete(this.version);
+                        w.delete(this.afterVersion);
                         copyToOrig.put(w, x);
-                        ITree gew = copyToOrig.put(wbis, x);
-                        z.insertChild(wbis, k);
-                        wbis.setLabel(x.getLabel());
-                        wbis.setParent(z);
-                        multiVersionMappingStore.link(w, wbis);
+                        copyToOrig.put(newTree, x);
+                        z.insertChild(newTree, k);
+                        newTree.setLabel(x.getLabel());
+                        newTree.setParent(z);
+                        multiVersionMappingStore.link(w, newTree);
                         // Action uact = AAction.build(Update.class, w, wbis);
                         // addDeleteAction(uact, w);
                         // addInsertAction(uact, wbis);
-                        wbis.setMetadata("alsoUpdated", true);
+                        newTree.setMetadata("alsoUpdated", true);
                         switch (granularity) {
                             case COMPOSE: {
-                                Action mact = AAction.build(Move.class, w, wbis);
+                                Move mact = AAction.build(Move.class, w, newTree);
                                 actions.add(mact);
                                 // actions.add(uact);
                                 addDeleteAction(mact, w);
-                                addInsertAction(mact, wbis);
+                                addInsertAction(mact, newTree);
                                 break;
                             }
                             case ATOMIC: {
-                                Action iact = AAction.build(Insert.class, w, wbis);
+                                Action iact = AAction.build(Insert.class, w, newTree);
                                 actions.add(iact);
                                 // actions.add(uact);
                                 Delete dact = AAction.build(Delete.class, w, null);
                                 actions.add(dact);
-                                ((AbstractVersionedTree) w).delete(version);
+                                ((AbstractVersionedTree) w).delete(this.afterVersion);
                                 addDeleteAction(dact, w);
-                                addInsertAction(iact, wbis);
+                                addInsertAction(iact, newTree);
                                 break;
                             }
                             case SPLITED: {
-                                Action iact = AAction.build(Insert.class, w, wbis);
+                                Action iact = AAction.build(Insert.class, w, newTree);
                                 actions.add(iact);
                                 // actions.add(uact);
                                 Delete dact = AAction.build(Delete.class, w, null);
                                 actions.add(dact);
-                                ((AbstractVersionedTree) w).delete(version);
+                                ((AbstractVersionedTree) w).delete(this.afterVersion);
                                 addDeleteAction(dact, w);
-                                addInsertAction(iact, wbis);
-                                Move mact = AAction.build(Move.class, w, wbis);
+                                addInsertAction(iact, newTree);
+                                Move mact = AAction.build(Move.class, w, newTree);
                                 actions.addComposed(mact);
+                                addMoveAction(mact, w, newTree);
                                 break;
                             }
                         }
                     } else if (!w.getLabel().equals(x.getLabel())) {
-                        AbstractVersionedTree wbis = new VersionedTree(w, this.version);//VersionedTree.deepCopy(w, this.version);
-                        cpyMappings.link(wbis, x);
-                        added.add(wbis);
-                        boolean qwed = deleted.add(w);
+                        // x was renamed
+                        // in intermediate: w is marked as deleted,
+                        // newTree is created with new label
+                        AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
+                        newTree.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+                        cpyMappings.link(newTree, x);
+                        added.add(newTree);
+                        deleted.add(w);
                         int k = v.getChildPosition(w);
-                        //cpyMappings.unlink(w, x);
-                        //cpyMappings.link(wbis, x);
-                        w.delete(this.version);
+                        w.delete(this.afterVersion);
                         copyToOrig.put(w, x);
-                        ITree gew = copyToOrig.put(wbis, x);
-                        // copyToOrig.put(w, x);
-                        // cpyMappings.link(w, x);
-                        v.insertChild(wbis, k);
-                        wbis.setLabel(x.getLabel());
-                        wbis.setParent(v);
-                        multiVersionMappingStore.link(w, wbis);
-                        Action action = AAction.build(Update.class, w, wbis);//new AUpdate(w, wbis);
-                        actions.add(action); // TODO put removedVersion and added version ?
+                        copyToOrig.put(newTree, x);
+                        v.insertChild(newTree, k);
+                        newTree.setLabel(x.getLabel());
+                        newTree.setParent(v);
+                        multiVersionMappingStore.link(w, newTree);
+                        Action action = AAction.build(Update.class, w, newTree);
+                        actions.add(action);
                         addDeleteAction(action, w);
-                        addInsertAction(action, wbis);
+                        addInsertAction(action, newTree);
                     } else if (!z.equals(v)) {
-                        int k = y.getChildPosition(x);//findPos(x);
-                        // int oldk = w.positionInParent();
-                        AbstractVersionedTree wbis = new VersionedTree(w, this.version);// VersionedTree.deepCopy(w, this.version);
-                        wbis.setParent(z);
-                        z.insertChild(wbis, k);
-                        cpyMappings.link(wbis, x);
-                        added.add(wbis);
-                        boolean qwed = deleted.add(w);
-                        //cpyMappings.unlink(x, w);
-                        w.delete(this.version);
+                        // x was moved from z to y
+                        // in intermediate: w is was moved from v to z,
+                        // thus w is marked as deleted and newTree is created
+                        int k = y.getChildPosition(x);
+                        AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
+                        newTree.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+                        newTree.setParent(z);
+                        z.insertChild(newTree, k);
+                        cpyMappings.link(newTree, x);
+                        added.add(newTree);
+                        deleted.add(w);
+                        w.delete(this.afterVersion);
                         copyToOrig.put(w, x);
-                        ITree gew = copyToOrig.put(wbis, x);
-                        // cpyMappings.link(w, x);
-                        multiVersionMappingStore.link(w, wbis);
+                        copyToOrig.put(newTree, x);
+                        multiVersionMappingStore.link(w, newTree);
                         switch (granularity) {
                             case COMPOSE: {
-                                Action mact = AAction.build(Move.class, w, wbis);
+                                Action mact = AAction.build(Move.class, w, newTree);
                                 actions.add(mact);
                                 addDeleteAction(mact, w);
-                                addInsertAction(mact, wbis);
+                                addInsertAction(mact, newTree);
                                 break;
                             }
                             case ATOMIC: {
-                                Action iact = AAction.build(Insert.class, w, wbis);
+                                Action iact = AAction.build(Insert.class, w, newTree);
                                 actions.add(iact);
                                 Delete dact = AAction.build(Delete.class, w, null);
                                 actions.add(dact);
-                                w.delete(version);
+                                w.delete(this.afterVersion);
                                 addDeleteAction(dact, w);
-                                addInsertAction(iact, wbis);
+                                addInsertAction(iact, newTree);
                                 break;
                             }
                             case SPLITED: {
-                                Action iact = AAction.build(Insert.class, w, wbis);
+                                Action iact = AAction.build(Insert.class, w, newTree);
                                 actions.add(iact);
                                 Delete dact = AAction.build(Delete.class, w, null);
                                 actions.add(dact);
-                                w.delete(version);
+                                w.delete(this.afterVersion);
                                 addDeleteAction(dact, w);
-                                addInsertAction(iact, wbis);
-                                Move mact = AAction.build(Move.class, w, wbis);
+                                addInsertAction(iact, newTree);
+                                Move mact = AAction.build(Move.class, w, newTree);
                                 actions.addComposed(mact);
+                                addMoveAction(mact, w, newTree);
                                 break;
                             }
                         }
@@ -277,70 +275,25 @@ public class MyScriptGenerator implements EditScriptGenerator {
         return actions;
     }
 
-    private void handleDeletion() {
-        List<ITree> preOMiddle = TreeUtils.preOrder(middle);
-        List<ITree> pOMiddle = TreeUtils.postOrder(middle);
-        for (ITree w : pOMiddle)//middle.postOrder())
-            if (!cpyMappings.hasSrc(w)) {
-                Delete action = AAction.build(Delete.class, w, null);//new ADelete(w);
-                actions.add(action); // TODO cannot find all nodes, related to hash ?
-                ((AbstractVersionedTree) w).delete(version);
-                addDeleteAction(action, w);
-            }
-    }
-
     private void handleDeletion2() {
         handleDeletion2Aux(middle);
     }
 
     private void handleDeletion2Aux(AbstractVersionedTree w) {
-        List<AbstractVersionedTree> children = w.getChildren(this.version - 1);
+        List<AbstractVersionedTree> children = w.getChildren(this.beforeVersion);
         for (int i = children.size() - 1; i >= 0; i--) {
             handleDeletion2Aux(children.get(i));
         }
         if (!cpyMappings.hasSrc(w)) {
-            if (w instanceof AbstractVersionedTree && ((AbstractVersionedTree) w).getAddedVersion() == this.version) {
+            if (w instanceof AbstractVersionedTree && ((AbstractVersionedTree) w).getAddedVersion() == this.afterVersion) {
                 System.err.println(w);
             } else {
-                Action action = AAction.build(Delete.class, w, null);//new ADelete(w);
-                actions.add(action); // TODO cannot find all nodes, related to hash ?
-                ((AbstractVersionedTree) w).delete(version);
+                Action action = AAction.build(Delete.class, w, null);
+                actions.add(action);
+                ((AbstractVersionedTree) w).delete(this.afterVersion);
                 addDeleteAction(action, w);
             }
         }
-    }
-
-    private static boolean isDoingDelete(Action action) {
-        if (action instanceof Delete) {
-            return true;
-        } else if (action instanceof Move) {
-            return true;
-        } else if (action instanceof Update) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private static boolean isDoingInsert(Action action) {
-        if (action instanceof Insert) {
-            return true;
-        } else if (action instanceof Move) {
-            return true;
-        } else if (action instanceof Update) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private void addAction(Action action, ITree w) {
-        List<Action> tmp = (List) w.getMetadata("action");
-        if (tmp == null) {
-            tmp = new ArrayList<>();
-            w.setMetadata("action", tmp);
-        }
-        tmp.add(action);
     }
 
     public static String DELETE_ACTION = "DELETE_ACTION";
@@ -352,6 +305,14 @@ public class MyScriptGenerator implements EditScriptGenerator {
 
     private Action addInsertAction(Action action, ITree w) {
         return (Action) w.setMetadata(INSERT_ACTION, action);
+    }
+
+    public static String MOVE_SRC_ACTION = "MOVE_SRC_ACTION";
+    public static String MOVE_DST_ACTION = "MOVE_DST_ACTION";
+
+    private void addMoveAction(Move action, AbstractVersionedTree w, AbstractVersionedTree wbis) {
+        assert w.setMetadata(MOVE_SRC_ACTION, action) == null;
+        assert wbis.setMetadata(MOVE_DST_ACTION, action) == null;
     }
 
     private void alignChildren(ITree w, ITree x) {
@@ -382,42 +343,44 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 if (cpyMappings.has(a, b)) {
                     if (!lcs.contains(new Mapping(a, b))) {
                         int k = x.getChildPosition(b);
-                        AbstractVersionedTree abis = new VersionedTree(a, this.version);
-                        abis.setParent(w);
-                        w.insertChild(abis, k);
-                        cpyMappings.link(abis, b);
-                        ((AbstractVersionedTree) a).delete(this.version);
+                        AbstractVersionedTree newTree = new VersionedTree(b, this.afterVersion);
+                        newTree.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, b.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+                        newTree.setParent(w);
+                        w.insertChild(newTree, k);
+                        cpyMappings.link(newTree, b);
+                        ((AbstractVersionedTree) a).delete(this.afterVersion);
                         copyToOrig.put((AbstractVersionedTree) a, x);
-                        copyToOrig.put(abis, x);
-                        multiVersionMappingStore.link(a, abis);
+                        copyToOrig.put(newTree, x);
+                        multiVersionMappingStore.link(a, newTree);
                         switch (granularity) {
                             case COMPOSE: {
-                                Action action = AAction.build(Move.class, a, abis);
+                                Action action = AAction.build(Move.class, a, newTree);
                                 actions.add(action);
                                 addDeleteAction(action, a);
-                                addInsertAction(action, abis);
+                                addInsertAction(action, newTree);
                                 break;
                             }
                             case ATOMIC: {
-                                Action iact = AAction.build(Insert.class, a, abis);
+                                Action iact = AAction.build(Insert.class, a, newTree);
                                 actions.add(iact);
                                 Delete dact = AAction.build(Delete.class, a, null);
                                 actions.add(dact);
-                                ((AbstractVersionedTree) a).delete(version);
+                                ((AbstractVersionedTree) a).delete(this.afterVersion);
                                 addDeleteAction(dact, a);
-                                addInsertAction(iact, abis);
+                                addInsertAction(iact, newTree);
                                 break;
                             }
                             case SPLITED: {
-                                Action iact = AAction.build(Insert.class, a, abis);
+                                Action iact = AAction.build(Insert.class, a, newTree);
                                 actions.add(iact);
                                 Delete dact = AAction.build(Delete.class, a, null);
                                 actions.add(dact);
-                                ((AbstractVersionedTree) a).delete(version);
+                                ((AbstractVersionedTree) a).delete(this.afterVersion);
                                 addDeleteAction(dact, a);
-                                addInsertAction(iact, abis);
-                                Action action = AAction.build(Move.class, a, abis);
-                                actions.add(action);
+                                addInsertAction(iact, newTree);
+                                Move action = AAction.build(Move.class, a, newTree);
+                                actions.addComposed(action);
+                                addMoveAction(action,(AbstractVersionedTree) a, newTree);
                                 break;
                             }
                         }
@@ -493,43 +456,4 @@ public class MyScriptGenerator implements EditScriptGenerator {
 
         return lcs;
     }
-
-    private List<Action> removeMovesAndUpdates(MyScriptGenerator actionGenerator) {
-        try {
-            TIntObjectMap<ITree> origSrcTrees = extracted(actionGenerator, "origSrcTrees");
-            TIntObjectMap<ITree> cpySrcTrees = extracted(actionGenerator, "cpySrcTrees");
-            List<Action> actions = extracted(actionGenerator, "actions");
-            MappingStore origMappings = extracted(actionGenerator, "origMappings");
-            List<Action> actionsCpy = new ArrayList<>(actions.size());
-            for (Action a : actions) {
-                if (a instanceof Update) {
-                    Update u = (Update) a;
-                    ITree src = cpySrcTrees.get(a.getNode().getId());
-                    ITree dst = origMappings.getDst(src);
-                    actionsCpy.add(new Insert(dst, dst.getParent(), dst.positionInParent()));
-                    actionsCpy.add(new Delete(origSrcTrees.get(u.getNode().getId())));
-                } else if (a instanceof Move) {
-                    Move m = (Move) a;
-                    ITree src = cpySrcTrees.get(a.getNode().getId());
-                    ITree dst = origMappings.getDst(src);
-                    actionsCpy.add(new Insert(dst, dst.getParent(), m.getPosition()));
-                    actionsCpy.add(new Delete(origSrcTrees.get(m.getNode().getId())));
-                } else {
-                    actionsCpy.add(a);
-                }
-            }
-
-            return actionsCpy;
-        } catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private <T> T extracted(MyScriptGenerator actionGenerator, String name)
-            throws NoSuchFieldException, IllegalAccessException {
-        Field field = actionGenerator.getClass().getDeclaredField(name);
-        field.setAccessible(true);
-        return (T) field.get(actionGenerator);
-    }
-
 }

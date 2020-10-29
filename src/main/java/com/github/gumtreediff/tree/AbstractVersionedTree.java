@@ -26,25 +26,6 @@ import java.util.*;
 
 public abstract class AbstractVersionedTree implements ITree {
 
-    // TODO use ℚ because it's dense, it will avoid recounting all versions if we want to add a new version inbetween existing versions
-    public static class Version implements Comparable<Version> {
-        int value;
-
-        Version(int value) {
-            this.value = value;
-        }
-
-        @Override
-        public int compareTo(Version o) {
-            return value - o.value;
-        }
-
-        @Override
-        public String toString() {
-            return "" + value;
-        }
-    }
-
     protected int id;
     // the version where the node was added to the tree
     protected Version addedVersion; // cannot be null
@@ -66,12 +47,12 @@ public abstract class AbstractVersionedTree implements ITree {
         this.type = type;
     }
 
-    public int getAddedVersion() {
-        return addedVersion.value;
+    public Version getAddedVersion() {
+        return addedVersion;
     }
 
-    public int getRemovedVersion() {
-        return removedVersion.value;
+    public Version getRemovedVersion() {
+        return removedVersion;
     }
 
     public boolean isRemoved() {
@@ -152,10 +133,6 @@ public abstract class AbstractVersionedTree implements ITree {
         return r;
     }
 
-    public List<AbstractVersionedTree> getChildren(int wantedVersion) {
-        return getChildren(new Version(wantedVersion));
-    }
-
     public List<AbstractVersionedTree> getChildren(Version wantedVersion) {
         List<AbstractVersionedTree> r = new ArrayList<>();
         for (AbstractVersionedTree curr : children) {
@@ -181,10 +158,6 @@ public abstract class AbstractVersionedTree implements ITree {
 
     public AbstractVersionedTree getChild(Version wantedVersion, int position) {
         return getChildren(wantedVersion).get(position);
-    }
-
-    public AbstractVersionedTree getChild(int wantedVersion, int position) {
-        return getChild(new Version(wantedVersion), position);
     }
 
     @Override
@@ -327,8 +300,8 @@ public abstract class AbstractVersionedTree implements ITree {
         return getParent() == null;
     }
 
-    public void delete(int version) {
-        this.removedVersion = new Version(version);
+    public void delete(Version version) {
+        this.removedVersion = version;
     }
 
     @Override

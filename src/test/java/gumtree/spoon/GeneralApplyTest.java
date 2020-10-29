@@ -1,37 +1,30 @@
 package gumtree.spoon;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Addition;
-import com.github.gumtreediff.actions.model.Update;
-import com.github.gumtreediff.tree.AbstractTree;
-import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Version;
+import com.github.gumtreediff.tree.VersionInt;
 
 import org.junit.Test;
 
-import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.MyUtils;
-import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
-import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
-import gumtree.spoon.diff.operations.*;
+import gumtree.spoon.diff.operations.DeleteOperation;
+import gumtree.spoon.diff.operations.InsertOperation;
+import gumtree.spoon.diff.operations.Operation;
 import gumtree.spoon.diff.support.SpoonSupport;
-import spoon.MavenLauncher;
-import spoon.compiler.SpoonResource;
-import spoon.compiler.SpoonResourceHelper;
 import spoon.reflect.code.CtAbstractInvocation;
-import spoon.reflect.declaration.*;
+import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtMethod;
+import spoon.reflect.declaration.CtPackage;
+import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
-import spoon.reflect.reference.CtExecutableReference;
-import spoon.reflect.visitor.CtInheritanceScanner;
-import spoon.reflect.visitor.CtScanner;
 import spoon.support.compiler.VirtualFile;
 
 public class GeneralApplyTest {
@@ -250,10 +243,13 @@ public class GeneralApplyTest {
         VirtualFile r3b = new VirtualFile("class X { static void f() {} };", "X.java");
         Factory right2 = MyUtils.makeFactory(r3b, r3, r3bb);
 
+        final Version leftV = new VersionInt(0);
+        final Version rightV = new VersionInt(1);
+
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srctree = scanner.getTree(left.getModel().getRootPackage());
-        MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
-        Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()));
+        MultiDiffImpl mdiff = new MultiDiffImpl(srctree, leftV);
+        Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()), rightV);
         System.out.println(scanner.getTree(left.getModel().getRootPackage().clone()).toShortString());
         CtAbstractInvocation<?> invo = (CtAbstractInvocation<?>) right.getModel().getRootPackage().getType("AAA")
                 .getNestedType("Y").getMethod("h").getBody().getStatements().get(0);
@@ -278,14 +274,14 @@ public class GeneralApplyTest {
 
             }
         }
-        AbstractTree.FakeTree aaaaa = null;
+        final Version rightV2 = new VersionInt(2);
         ITree qqq = mdiff.getMiddle();
         System.out.println(qqq);
         System.out.println("--------------");
         System.out.println(qqq.toTreeString());
         ITree afegwsegwse = scanner.getTree(right2.getModel().getRootPackage());
         System.out.println(afegwsegwse.toTreeString());
-        Diff diff2 = mdiff.compute(scanner.getTreeContext(), afegwsegwse);
+        Diff diff2 = mdiff.compute(scanner.getTreeContext(), afegwsegwse, rightV2);
         ITree qqq2 = mdiff.getMiddle();
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), qqq));
     }
@@ -302,10 +298,13 @@ public class GeneralApplyTest {
         VirtualFile r1b = new VirtualFile("class X { static void f() {} };", "X.java");
         Factory right = MyUtils.makeFactory(r1b, r2);
 
+        final Version leftV = new VersionInt(0);
+        final Version rightV = new VersionInt(1);
+
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srctree = scanner.getTree(left.getModel().getRootPackage());
-        MultiDiffImpl mdiff = new MultiDiffImpl(srctree);
-        Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()));
+        MultiDiffImpl mdiff = new MultiDiffImpl(srctree,leftV);
+        Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()), rightV);
         System.out.println(scanner.getTree(left.getModel().getRootPackage().clone()).toShortString());
         for (Operation<?> x : diff.getAllOperations()) {
             System.out.println(x.getClass());
