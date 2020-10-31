@@ -293,8 +293,10 @@ public class MyScriptGenerator implements EditScriptGenerator {
             middle.setMetadata(ORIGINAL_SPOON_OBJECT_PER_VERSION, tmp);
         }
         tmp.put(this.beforeVersion, oldOri != null ? oldOri : ele);
-        tmp.put(this.afterVersion, ele);
-        ele.putMetadata(VersionedTree.MIDDLE_GUMTREE_NODE, middle);
+        if (ele!=null) {
+            tmp.put(this.afterVersion, ele);
+            ele.putMetadata(VersionedTree.MIDDLE_GUMTREE_NODE, middle);
+        }
     }
 
     private void handleDeletion2() {
