@@ -283,6 +283,9 @@ public class MyScriptGenerator implements EditScriptGenerator {
 
     private void mdForMiddle(ITree original, AbstractVersionedTree middle) {
         CtElement ele = (CtElement)original.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+        if (ele == null) {
+            ele = (CtElement)original.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+        }
         CtElement oldOri = (CtElement)middle.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, ele);
         Map<Version,CtElement> tmp = (Map<Version,CtElement>)middle.getMetadata(ORIGINAL_SPOON_OBJECT_PER_VERSION);
         if (tmp == null) {
