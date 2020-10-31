@@ -335,7 +335,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
     public static String MOVE_DST_ACTION = "MOVE_DST_ACTION";
 
     private void addMoveAction(Move action, ITree x, AbstractVersionedTree w, AbstractVersionedTree wbis) {
-        assert x.setMetadata(MOVE_SRC_ACTION, action) == null;
+        x.setMetadata(MOVE_SRC_ACTION, action);
         assert w.setMetadata(MOVE_SRC_ACTION, action) == null;
         assert wbis.setMetadata(MOVE_DST_ACTION, action) == null;
     }
