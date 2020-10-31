@@ -20,6 +20,7 @@ import gnu.trove.map.TIntObjectMap;
 import gumtree.spoon.apply.AAction;
 import gumtree.spoon.apply.MyUtils;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
+import spoon.reflect.declaration.CtElement;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -124,7 +125,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 int k = y.getChildPosition(x);
                 // Insertion case : insert new node.
                 w = new VersionedTree(x, this.afterVersion);
-                w.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+                mdForMiddle(x, w);
                 copyToOrig.put(w, x);
                 cpyMappings.link(w, x);
                 z.insertChild(w, k);
@@ -141,7 +142,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         // in intermediate: w is was moved from v to z,
                         // thus w is marked as deleted and newTree is created
                         AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
-                        newTree.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+                        mdForMiddle(x, newTree);
                         cpyMappings.link(newTree, x);
                         added.add(newTree);
                         deleted.add(w);
@@ -188,7 +189,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                                 addInsertAction(iact, newTree);
                                 Move mact = AAction.build(Move.class, w, newTree);
                                 actions.addComposed(mact);
-                                addMoveAction(mact, w, newTree);
+                                addMoveAction(mact, x, w, newTree);
                                 break;
                             }
                         }
@@ -197,7 +198,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         // in intermediate: w is marked as deleted,
                         // newTree is created with new label
                         AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
-                        newTree.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+                        mdForMiddle(x, newTree);
                         cpyMappings.link(newTree, x);
                         added.add(newTree);
                         deleted.add(w);
@@ -219,7 +220,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         // thus w is marked as deleted and newTree is created
                         int k = y.getChildPosition(x);
                         AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
-                        newTree.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+                        mdForMiddle(x, newTree);
                         newTree.setParent(z);
                         z.insertChild(newTree, k);
                         cpyMappings.link(newTree, x);
@@ -234,6 +235,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                                 Action mact = AAction.build(Move.class, w, newTree);
                                 actions.add(mact);
                                 addDeleteAction(mact, w);
+                                addDeleteAction(mact, x);
                                 addInsertAction(mact, newTree);
                                 break;
                             }
@@ -244,6 +246,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                                 actions.add(dact);
                                 w.delete(this.afterVersion);
                                 addDeleteAction(dact, w);
+                                addDeleteAction(dact, x);
                                 addInsertAction(iact, newTree);
                                 break;
                             }
@@ -254,10 +257,11 @@ public class MyScriptGenerator implements EditScriptGenerator {
                                 actions.add(dact);
                                 w.delete(this.afterVersion);
                                 addDeleteAction(dact, w);
+                                addDeleteAction(dact, x);
                                 addInsertAction(iact, newTree);
                                 Move mact = AAction.build(Move.class, w, newTree);
                                 actions.addComposed(mact);
-                                addMoveAction(mact, w, newTree);
+                                addMoveAction(mact, x, w, newTree);
                                 break;
                             }
                         }
@@ -273,6 +277,21 @@ public class MyScriptGenerator implements EditScriptGenerator {
         handleDeletion2();
 
         return actions;
+    }
+
+    public static String ORIGINAL_SPOON_OBJECT_PER_VERSION = "ORIGINAL_SPOON_OBJECT_PER_VERSION";
+
+    private void mdForMiddle(ITree original, AbstractVersionedTree middle) {
+        CtElement ele = (CtElement)original.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+        CtElement oldOri = (CtElement)middle.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, ele);
+        Map<Version,CtElement> tmp = (Map<Version,CtElement>)middle.getMetadata(ORIGINAL_SPOON_OBJECT_PER_VERSION);
+        if (tmp == null) {
+            tmp = new HashMap<>();
+            middle.setMetadata(ORIGINAL_SPOON_OBJECT_PER_VERSION, tmp);
+        }
+        tmp.put(this.beforeVersion, oldOri != null ? oldOri : ele);
+        tmp.put(this.afterVersion, ele);
+        ele.putMetadata(VersionedTree.MIDDLE_GUMTREE_NODE, middle);
     }
 
     private void handleDeletion2() {
@@ -310,7 +329,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
     public static String MOVE_SRC_ACTION = "MOVE_SRC_ACTION";
     public static String MOVE_DST_ACTION = "MOVE_DST_ACTION";
 
-    private void addMoveAction(Move action, AbstractVersionedTree w, AbstractVersionedTree wbis) {
+    private void addMoveAction(Move action, ITree x, AbstractVersionedTree w, AbstractVersionedTree wbis) {
+        assert x.setMetadata(MOVE_SRC_ACTION, action) == null;
         assert w.setMetadata(MOVE_SRC_ACTION, action) == null;
         assert wbis.setMetadata(MOVE_DST_ACTION, action) == null;
     }
@@ -344,7 +364,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                     if (!lcs.contains(new Mapping(a, b))) {
                         int k = x.getChildPosition(b);
                         AbstractVersionedTree newTree = new VersionedTree(b, this.afterVersion);
-                        newTree.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, b.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+                        mdForMiddle(b, newTree);
                         newTree.setParent(w);
                         w.insertChild(newTree, k);
                         cpyMappings.link(newTree, b);
@@ -380,7 +400,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                                 addInsertAction(iact, newTree);
                                 Move action = AAction.build(Move.class, a, newTree);
                                 actions.addComposed(action);
-                                addMoveAction(action,(AbstractVersionedTree) a, newTree);
+                                addMoveAction(action,b, (AbstractVersionedTree) a, newTree);
                                 break;
                             }
                         }
