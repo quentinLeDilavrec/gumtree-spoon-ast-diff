@@ -62,7 +62,7 @@ public class MatchingTest {
                 // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
                 // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
                 // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
-                for (Action action : diff.getActionsList()) {
+                for (Action action : diff.getAtomicActions()) {
                         try {
                                 if (action instanceof Insert) {
                                         ActionApplier.applyAInsert((Factory) middle.getMetadata("Factory"),

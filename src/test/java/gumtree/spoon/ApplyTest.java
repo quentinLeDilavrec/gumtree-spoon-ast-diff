@@ -21,9 +21,16 @@ public class ApplyTest {
         }
 
         @Test
-        public void testSimpleApplyInsertAssignCall3() {
+        public void testSimpleApply() {
                 String contentsLeft = "class X { " + "}";
                 String contentsRight = "class Y { " + "}";
+                ApplyTestHelper.onChange(contentsLeft, contentsRight);
+        }
+
+        @Test
+        public void testSimpleApplyA() {
+                String contentsLeft = "class X { " + "}";
+                String contentsRight = "interface X { " + "}";
                 ApplyTestHelper.onChange(contentsLeft, contentsRight);
         }
 

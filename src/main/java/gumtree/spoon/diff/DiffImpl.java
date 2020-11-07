@@ -57,10 +57,15 @@ public class DiffImpl implements Diff {
 	 * Context of the spoon diff.
 	 */
 	private final TreeContext context;
-	private List<Action> actionsList;
+	private List<Action> atomicActionsList;
+	private List<Action> composedActionsList;
 
-	public List<Action> getActionsList() {
-		return actionsList;
+	public List<Action> getAtomicActions() {
+		return atomicActionsList;
+	}
+
+	public List<Action> getComposedActions() {
+		return composedActionsList;
 	}
 
 	DiffImpl(AbstractVersionedTree middle, MultiVersionMappingStore multiMappingsComp, TreeContext context,
@@ -88,13 +93,14 @@ public class DiffImpl implements Diff {
 		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle, multiMappingsComp, moveMod);
 
 		EditScript actions = actionGenerator.computeActions(matcher,beforeVersion,afterVersion);
-		this.actionsList = actions.asList();
+		this.atomicActionsList = actions.asList();
+		this.composedActionsList = (List)actions.getComposed();
 
-		ActionClassifier actionClassifier = new ActionClassifier(multiMappingsComp.asSet(), actionsList);
+		ActionClassifier actionClassifier = new ActionClassifier(multiMappingsComp.asSet(), atomicActionsList);
 		// Bugfix: the Action classifier must be executed *BEFORE* the convertToSpoon
 		// because it writes meta-data on the trees
 		this.rootOperations = wrapSpoon(actionClassifier.getRootActions());
-		this.allOperations = wrapSpoon(actionsList);
+		this.allOperations = wrapSpoon(atomicActionsList);
 
 		this._mappingsComp = mappingsComp;
 

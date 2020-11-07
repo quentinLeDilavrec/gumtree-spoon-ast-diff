@@ -66,7 +66,7 @@ public class ApplyTestHelper {
         ITree middle = mdiff.getMiddle();
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
-        for (Action action : diff.getActionsList()) {
+        for (Action action : diff.getAtomicActions()) {
             try {
                 ActionApplier.applyAInsert((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
                         (Insert & AAction<Insert>) action);
@@ -94,7 +94,7 @@ public class ApplyTestHelper {
                 MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1, leftV);
                 ITree dstTree1 = scanner1.getTree(ori1);
                 DiffImpl diff1 = mdiff1.compute(scanner1.getTreeContext(), dstTree1, rightV);
-                for (Action action : diff1.getActionsList()) {
+                for (Action action : diff1.getAtomicActions()) {
                     System.err.println(action);
                 }
                 check1(right, pp, middleE);
@@ -127,7 +127,7 @@ public class ApplyTestHelper {
         ITree middle = mdiff.getMiddle();
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
-        for (Action action : diff.getActionsList()) {
+        for (Action action : diff.getAtomicActions()) {
             try {
                 ActionApplier.applyADelete((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
                         (Delete & AAction<Delete>) action);
@@ -277,7 +277,7 @@ public class ApplyTestHelper {
         // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
         // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
         // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
-        for (Action action : diff.getActionsList()) {
+        for (Action action : diff.getAtomicActions()) {
             try {
                 if (action instanceof Insert) {
                     ActionApplier.applyAInsert((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
@@ -321,7 +321,7 @@ public class ApplyTestHelper {
                 try {
                     check1(right, pp, middleE);
                 } catch (Throwable e) {
-                    for (Action action : diff1.getActionsList()) {
+                    for (Action action : diff1.getAtomicActions()) {
                         e.addSuppressed(new AssertionError(action));
                     }
                 }

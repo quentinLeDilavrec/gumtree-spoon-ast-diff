@@ -9,8 +9,20 @@ import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 
 public interface AAction<T extends Action> {
+    /**
+     * 
+     * @return always the newly added tree inserted by the action 
+     * (in case of delete the tree is not really inserted, it get a removing version)
+     */
     public AbstractVersionedTree getTarget();
-
+    /**
+     * 
+     * @return the source is the closest tree compared to target
+     * - insert: the original tree
+     * - delete: null
+     * - update: the modified tree (maybe this node does not contain a spoon object)
+     * - move: the moved tree
+     */
     public ITree getSource();
 
     static class AMove extends Move implements AAction<Move> {

@@ -1,15 +1,32 @@
 package gumtree.spoon;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.AbstractTree.FakeTree;
+import com.github.gumtreediff.tree.AbstractVersionedTree;
+import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Version;
+import com.github.gumtreediff.tree.VersionInt;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.junit.Test;
 
 import gumtree.spoon.apply.Combination;
+import gumtree.spoon.apply.MyUtils;
+import gumtree.spoon.apply.Combination.CombinationHelper;
+import gumtree.spoon.builder.SpoonGumTreeBuilder;
+import gumtree.spoon.diff.DiffImpl;
+import gumtree.spoon.diff.MultiDiffImpl;
 import gumtree.spoon.diff.operations.Operation;
+import spoon.compiler.Environment;
+import spoon.reflect.declaration.CtPackage;
+import spoon.reflect.factory.Factory;
+import spoon.support.StandardEnvironment;
+import spoon.support.compiler.VirtualFile;
 
 public class GrayCodeTest {
 
@@ -36,6 +53,7 @@ public class GrayCodeTest {
         }
 
     }
+
     @Test
     public void testJohnson1() {
         System.out.println(johnsonGrayCode(1, 0));
@@ -77,6 +95,7 @@ public class GrayCodeTest {
 
     /**
      * johnson x y = if (y mod (2*x))<x then (1,y mod (2*x)) else (0,y mod (x))
+     * 
      * @param x x > 0
      * @param y
      * @return
@@ -186,7 +205,8 @@ public class GrayCodeTest {
 
         /**
          * 
-         * @param ll constraints as a tree, ll[i] give the position of parent needed by node at index i
+         * @param ll constraints as a tree, ll[i] give the position of parent needed by
+         *           node at index i
          */
         ItWithConstraints(long[] ll) {
             this.ll = ll;
@@ -194,6 +214,7 @@ public class GrayCodeTest {
 
         /**
          * get the new case to validate
+         * 
          * @return
          */
         public long next() {
@@ -279,8 +300,8 @@ public class GrayCodeTest {
 
     @Test
     public void testItWithConstraints8() {
-        int[] deps = new int[] { 0, 0, 0, 2 };//, 2, 0, 5, 5, 6, 8, 9, 10, 10, 13 };
-        int[] leafs = new int[] { 0, 1, 0, 1 };//, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0 };
+        int[] deps = new int[] { 0, 0, 0, 2 };// , 2, 0, 5, 5, 6, 8, 9, 10, 10, 13 };
+        int[] leafs = new int[] { 0, 1, 0, 1 };// , 1, 0, 0, 1, 0, 0, 0, 1, 1, 0 };
         int[] constr = Combination.populateAndFillConstr(new int[] { 1, 1 }, new int[4], leafs, deps);
         // should be 1 1 1 1
         for (int x : constr) {
@@ -290,10 +311,11 @@ public class GrayCodeTest {
         System.out.println();
     }
 
-    // [0, 0, 0, 0]  0 False  0
-    // [1, 0, 0, 0]  1 False  1
-    // [1, 0, 1, 0]  1 False  2
-    // [1, 0, 1, 1]  1 False  3
-    // [1, 1, 1, 1]  1 False  4
-    // [1, 1, 0, 0]  2 False  5
+    // [0, 0, 0, 0] 0 False 0
+    // [1, 0, 0, 0] 1 False 1
+    // [1, 0, 1, 0] 1 False 2
+    // [1, 0, 1, 1] 1 False 3
+    // [1, 1, 1, 1] 1 False 4
+    // [1, 1, 0, 0] 2 False 5
+    
 }

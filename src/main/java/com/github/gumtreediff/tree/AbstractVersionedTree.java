@@ -398,7 +398,7 @@ public abstract class AbstractVersionedTree implements ITree {
 
     @Override
     public String toString() {
-        System.err.println("This method should currently not be used (please use toShortString())");
+        // System.err.println("This method should currently not be used (please use toShortString())");
         return toShortString();
     }
 
