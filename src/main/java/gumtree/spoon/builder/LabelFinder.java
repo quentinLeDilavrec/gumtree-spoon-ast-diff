@@ -71,7 +71,7 @@ class LabelFinder extends CtInheritanceScanner {
 			label = reference.getSimpleName();
 		}
 		if (labEle == null) {
-			labEle.setPosition(CtWrapper.makePosition(reference.getPosition(),reference.getSimpleName().length()))
+			labEle.setPosition(CtWrapper.makePosition(reference.getPosition(),reference.getSimpleName().length()));
 		}
 	}
 
