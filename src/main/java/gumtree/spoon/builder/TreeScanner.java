@@ -61,7 +61,7 @@ public class TreeScanner extends CtScanner {
 			if (lf.label != null && lf.label.length() > 0 && !(element instanceof CtSuperAccess)
 					&& (element instanceof CtNamedElement || element instanceof CtExpression
 							|| (element instanceof CtReference && !(element instanceof CtWildcardReference)))) {
-				this.addSiblingNode(createNode("LABEL", lf.label));
+				this.addSiblingNode(lf.labEle==null?createNode("LABEL", lf.label):createNode("LABEL", lf.labEle, lf.label));
 			}
 		}
 		new NodeCreator(this).scan(element);

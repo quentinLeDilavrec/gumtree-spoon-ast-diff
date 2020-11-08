@@ -209,6 +209,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         v.insertChild(newTree, k);
                         newTree.setLabel(x.getLabel());
                         newTree.setParent(v);
+                        mdForMiddle(x.getParent(), newTree.getParent());
                         multiVersionMappingStore.link(w, newTree);
                         Action action = AAction.build(Update.class, w, newTree);
                         actions.add(action);

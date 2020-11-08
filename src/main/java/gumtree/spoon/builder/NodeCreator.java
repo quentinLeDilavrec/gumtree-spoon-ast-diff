@@ -71,7 +71,7 @@ public class NodeCreator extends CtInheritanceScanner {
 			ITree modifier = builder.createNode("MODIFIER", mod.getKind().toString());
 			// modifiers.addChild(modifier);
 			// We wrap the modifier (which is not a ctelement)
-			modifier.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new CtWrapper(mod, m));
+			modifier.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new CtWrapper.CtModifierWrapper(mod, m));
 			builder.addSiblingNode(modifier);
 		}
 		// builder.addSiblingNode(modifiers);

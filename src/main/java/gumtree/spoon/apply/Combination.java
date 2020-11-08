@@ -495,8 +495,7 @@ public class Combination {
     }
 
     public static ReflectedConstrainedHelper<AbstractVersionedTree> build(AbstractVersionedTree middle,
-            List<AAction> wanted) {
-
+            Collection<AAction> wanted) {
         List<ImmutablePair<Integer, AbstractVersionedTree>> l = Combination.flattenItreeToList2(middle,
                 new HashSet<>(wanted));
         int[] init = Combination.initialState(l);
@@ -985,7 +984,7 @@ public class Combination {
             if (node.getAddedVersion().equals(parent.getAddedVersion())) {
                 parent.setMetadata("firstLABEL", node);
                 lastLabel.put(parent, i);
-            } else {
+            } else if (!isAlwaysPresent) {
                 Integer j = lastLabel.get(parent);
                 int newi = r.size();
                 r.add(new ImmutablePair<Integer, AbstractVersionedTree>(j, (AbstractVersionedTree) node));
@@ -1025,7 +1024,7 @@ public class Combination {
             boolean isPopulated = p.right.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) != null;
             boolean isLabel = p.right.getMetadata("type").equals("LABEL");
             boolean isParentInit = p.left == -1 || r[p.left] > 0;
-            r[i] = isPopulated || (isLabel && isParentInit) ? 1 : 0;
+            r[i] = isPopulated && isLabel && isParentInit ? 1 : 0;
             i++;
         }
         return r;

@@ -56,28 +56,28 @@ public abstract class AbstractVersionedTree implements ITree {
     }
 
     public boolean isRemoved() {
-        return removedVersion!=null;
+        return removedVersion != null;
     }
 
     // /**
-    //  * Doubly LinkedList
-    //  */
+    // * Doubly LinkedList
+    // */
     // static class LL<T> {
 
-    //     Node head; // head of list
-    //     Node tail; // tail of list
+    // Node head; // head of list
+    // Node tail; // tail of list
 
-    //     Node node(T d){ return new Node(d);}
+    // Node node(T d){ return new Node(d);}
 
-    //     class Node {
-    //         T content;
-    //         Node prev;
-    //         Node next;
+    // class Node {
+    // T content;
+    // Node prev;
+    // Node next;
 
-    //         Node(T d) {
-    //             content = d;
-    //         }
-    //     }
+    // Node(T d) {
+    // content = d;
+    // }
+    // }
 
     // }
 
@@ -96,7 +96,7 @@ public abstract class AbstractVersionedTree implements ITree {
         int i = 0;
         Version childVersion = ((AbstractVersionedTree) child).addedVersion;
         for (AbstractVersionedTree curr : children) {
-            if (curr==child) {
+            if (curr == child) {
                 return i;
             } else if (childVersion.compareTo(curr.addedVersion) >= 0) {
                 ++i;
@@ -108,7 +108,7 @@ public abstract class AbstractVersionedTree implements ITree {
     public int getChildPosition(AbstractVersionedTree child, Version maxVersion) {
         int i = 0;
         for (AbstractVersionedTree curr : children) {
-            if (curr==child) {
+            if (curr == child) {
                 return i;
             } else if (maxVersion.compareTo(curr.addedVersion) >= 0) {
                 ++i;
@@ -257,6 +257,10 @@ public abstract class AbstractVersionedTree implements ITree {
         int j = 0;
         for (int i = 0; i < children.size(); i++) {
             if (j == position) {
+                if (children.get(i).getMetadata("type").equals("LABEL")
+                        && children.get(i).addedVersion == addedVersion) {
+                    continue;// TODO it mostly a trick for the linear constraint on labels
+                }
                 children.add(i, (AbstractVersionedTree) child);
                 return;
             } else if (children.get(i).addedVersion.compareTo(childAddedVersion) <= 0
@@ -398,7 +402,8 @@ public abstract class AbstractVersionedTree implements ITree {
 
     @Override
     public String toString() {
-        // System.err.println("This method should currently not be used (please use toShortString())");
+        // System.err.println("This method should currently not be used (please use
+        // toShortString())");
         return toShortString();
     }
 
