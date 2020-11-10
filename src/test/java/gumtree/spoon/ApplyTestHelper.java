@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import com.github.gumtreediff.actions.model.Action;
@@ -32,8 +33,10 @@ import gumtree.spoon.apply.MyUtils;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
+import spoon.MavenLauncher;
 import spoon.compiler.Environment;
 import spoon.reflect.CtModel;
+import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;

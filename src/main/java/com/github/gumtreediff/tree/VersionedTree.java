@@ -17,6 +17,7 @@ import gumtree.spoon.CloneVisitorNewFactory;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import spoon.Launcher;
 import spoon.reflect.CtModelImpl.CtRootPackage;
+import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
@@ -123,8 +124,8 @@ public class VersionedTree extends AbstractVersionedTree {
     // public static final String COPIED_SPOON_OBJECT = "copied_spoon_object";
     public static final String MIDDLE_GUMTREE_NODE = "middle_gumtree_node";
 
-    static class MyCloner extends CloneHelper {
-        private Launcher launcher;
+    public static class MyCloner extends CloneHelper {
+        public final Launcher launcher;
         
         @Override
         public <T extends CtElement> T clone(T element) {
@@ -142,6 +143,11 @@ public class VersionedTree extends AbstractVersionedTree {
                 gtnode.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, clone);
             }
             return clone;
+        }
+
+        public SourcePosition clone(SourcePosition position) {
+            final CloneVisitorNewFactory cloneVisitor = new CloneVisitorNewFactory(this, launcher.getFactory());
+            return cloneVisitor.clonePosition(position);
         }
 
         /**
@@ -185,6 +191,7 @@ public class VersionedTree extends AbstractVersionedTree {
                 result = deepCopySpoonAux(currentOrig, version);
                 cloner = new MyCloner(ele.getFactory());
                 cloner.clone(ele);
+                result.setMetadata("Cloner", cloner);
                 result.setMetadata("Launcher", cloner.getLauncher());
                 result.setMetadata("Factory", cloner.getLauncher().getFactory());
             } else {
@@ -193,13 +200,15 @@ public class VersionedTree extends AbstractVersionedTree {
                     AbstractVersionedTree copy = deepCopySpoon(child, version);
                     result.addChild(copy);
                     copy.setParent(result);
-                    result.setMetadata("Launcher", copy.getMetadata("Launcher"));
+                result.setMetadata("Cloner", cloner);
+                result.setMetadata("Launcher", copy.getMetadata("Launcher"));
                     result.setMetadata("Factory", copy.getMetadata("Factory"));
                 }
                 break;
             }
         } while (ele == null);
         if (result.getMetadata("Factory") == null) {
+            result.setMetadata("Cloner", cloner);
             result.setMetadata("Launcher", new Launcher());
             result.setMetadata("Factory", new Launcher().getFactory());
         }

@@ -1,5 +1,6 @@
 package gumtree.spoon.apply;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.logging.Logger;
@@ -13,11 +14,17 @@ import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.github.gumtreediff.tree.VersionedTree;
 
+import org.apache.commons.lang3.tuple.ImmutableTriple;
+
+import gumtree.spoon.CloneVisitorNewFactory;
 import gumtree.spoon.builder.CtWrapper;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
+import spoon.MavenLauncher;
+import spoon.MavenLauncher.SOURCE_TYPE;
 import spoon.compiler.Environment;
 import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.code.*;
+import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.*;
 import spoon.reflect.factory.Factory;
@@ -26,11 +33,73 @@ import spoon.reflect.reference.*;
 import spoon.reflect.visitor.filter.PotentialVariableDeclarationFunction;
 import spoon.support.StandardEnvironment;
 import spoon.support.reflect.CtExtendedModifier;
+import spoon.support.visitor.equals.CloneHelper;
 
 public class ActionApplier {
-    static Logger LOGGER = Logger.getLogger("ApplyTestHelper");
+	static Logger LOGGER = Logger.getLogger("ApplyTestHelper");
 	static Environment env = new StandardEnvironment();
 	static spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
+
+	public static class MyOtherCloner extends CloneHelper {
+		private Factory facto;
+
+		public MyOtherCloner(Factory facto) {
+			this.facto = facto;
+		}
+
+		@Override
+		public <T extends CtElement> T clone(T element) {
+			final CloneVisitorNewFactory cloneVisitor = new CloneVisitorNewFactory(this, facto);
+			cloneVisitor.scan(element);
+			T clone = cloneVisitor.getClone();
+			return clone;
+		}
+
+		public SourcePosition clone(SourcePosition position, CtElement parent) {
+			if (parent == null) {
+				throw new RuntimeException();
+			} else if (parent instanceof CtPackage) {
+				final CloneVisitorNewFactory cloneVisitor = new CloneVisitorNewFactory(this, facto) {
+					@Override
+					public void visitCtCompilationUnit(CtCompilationUnit compilationUnit) {
+						CtCompilationUnit aCtCompilationUnit = this.factory.Core().createCompilationUnit();
+						this.builder.copy(compilationUnit, aCtCompilationUnit);
+						aCtCompilationUnit.setPosition(clonePosition(compilationUnit.getPosition()));
+
+						// parent: ProjRoot/ --------------
+						// current: ------ /srcDir/filePath
+						ImmutableTriple<Path, Path, SOURCE_TYPE> parentTriple = (ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE>) parent
+								.getPosition().getCompilationUnit().getMetadata("SourceTypeNRootDirectory");
+						ImmutableTriple<Path, Path, SOURCE_TYPE> srcTriple = (ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE>) compilationUnit
+								.getMetadata("SourceTypeNRootDirectory");
+						if (parentTriple != null && srcTriple != null) {
+							aCtCompilationUnit
+									.setFile(parentTriple.left.resolve(srcTriple.left.resolve(srcTriple.middle)
+											.relativize(compilationUnit.getFile().toPath())).toFile());
+							aCtCompilationUnit.putMetadata("SourceTypeNRootDirectory",
+									new ImmutableTriple<>(parentTriple.left, srcTriple.middle, srcTriple.right));
+						}
+
+						aCtCompilationUnit.setComments(this.cloneHelper.clone(compilationUnit.getComments()));
+						aCtCompilationUnit.setAnnotations(this.cloneHelper.clone(compilationUnit.getAnnotations()));
+						aCtCompilationUnit
+								.setPackageDeclaration(this.cloneHelper.clone(compilationUnit.getPackageDeclaration()));
+						aCtCompilationUnit.setImports(this.cloneHelper.clone(compilationUnit.getImports()));
+						aCtCompilationUnit.setDeclaredModuleReference(
+								this.cloneHelper.clone(compilationUnit.getDeclaredModuleReference()));
+						aCtCompilationUnit.setDeclaredTypeReferences(
+								this.cloneHelper.clone(compilationUnit.getDeclaredTypeReferences()));
+						this.cloneHelper.tailor(compilationUnit, aCtCompilationUnit);
+						this.other = aCtCompilationUnit;
+					}
+				};
+				return cloneVisitor.clonePosition(position);
+			} else {
+				return new CloneVisitorNewFactory(this, facto).clonePositionAux(position,
+						parent.getPosition().getCompilationUnit());
+			}
+		}
+	}
 
 	public static <T extends Insert & AAction<Insert>> void applyAInsert(Factory factory, TreeContext ctx, T action)
 			throws WrongAstContextException {
@@ -43,7 +112,7 @@ public class ActionApplier {
 			case "LABEL": {
 				CtElement parent = getSpoonEle(parentTarget);
 				if (parent == null) {
-					LOGGER.warning("no parent for label "+ target.getLabel());
+					LOGGER.warning("no parent for label " + target.getLabel());
 				} else if (parent instanceof CtExecutableReferenceExpression) {
 					CtExecutableReference ref = factory.createExecutableReference();
 					ref.setSimpleName(target.getLabel());
@@ -242,7 +311,9 @@ public class ActionApplier {
 			case "Interface": {
 				CtInterface<?> interf = factory.createInterface();
 				CtElement sp = getSpoonEle(source);
-				interf.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				interf.setPosition(new MyOtherCloner(factory).clone(sp.getPosition())); // TODO how do we handle
+																						// Compilation unit and
+																						// position?
 				CtElement parent = getSpoonEle(parentTarget);
 				if (parent == null) {
 					factory.getModel().getRootPackage().addType(interf);
@@ -383,16 +454,16 @@ public class ActionApplier {
 				}
 				// if (parent == null) {
 				// } else if (parent instanceof CtField) {
-				// 	((CtField<?>) parent).setDefaultExpression(created);
+				// ((CtField<?>) parent).setDefaultExpression(created);
 				// } else if (parent instanceof CtReturn) {
-				// 	((CtReturn<?>) parent).setReturnedExpression(created);
+				// ((CtReturn<?>) parent).setReturnedExpression(created);
 				// } else if (parent instanceof CtBodyHolder) {
-				// 	addInBody(factory, target, created, (CtBodyHolder) parent);
+				// addInBody(factory, target, created, (CtBodyHolder) parent);
 				// } else if (parent instanceof CtIf) {
-				// 	((CtIf) parent).setCondition(created);
+				// ((CtIf) parent).setCondition(created);
 				// } else {
-				// 	throw new UnsupportedOperationException(
-				// 			parent.getClass().toString() + " as a parent is no handled");
+				// throw new UnsupportedOperationException(
+				// parent.getClass().toString() + " as a parent is no handled");
 				// }
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -418,7 +489,7 @@ public class ActionApplier {
 			case "FieldWrite": {
 				CtElement parent = getSpoonEle(parentTarget);
 				// CtVariable<?> var = factory.Query().createQuery(parent)
-				//         .map(new PotentialVariableDeclarationFunction("simpleName")).first();
+				// .map(new PotentialVariableDeclarationFunction("simpleName")).first();
 				CtFieldWrite created = factory.createFieldWrite();
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -468,13 +539,13 @@ public class ActionApplier {
 					addExpressionToParent(parent, created, target.getLabel());
 				}
 				// if (parent.getBody() == null) {
-				//     parent.setBody(factory.createBlock());
+				// parent.setBody(factory.createBlock());
 				// }
 				// int i = 0;
 				// for (AbstractVersionedTree aaa : parentTarget.getAllChildren()) {
-				//     if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) == null) {
-				//         i++;
-				//     }
+				// if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) == null) {
+				// i++;
+				// }
 				// }
 				// parent.getBody().addStatement(i, created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
@@ -495,19 +566,19 @@ public class ActionApplier {
 					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
 				// if (parent.getBody() == null) {
-				//     parent.setBody(factory.createBlock());
+				// parent.setBody(factory.createBlock());
 				// }
 				// int i = 0;
 				// for (AbstractVersionedTree aaa : parentTarget.getAllChildren()) {
-				//     if (aaa.getMetadata("type").equals("MODIFIER")) {
-				//         continue;
-				//     }
-				//     if (aaa.getMetadata("type").equals("RETURN_TYPE")) {
-				//         continue;
-				//     }
-				//     if (getSpoonEle(aaa) != null) {
-				//         i++;
-				//     }
+				// if (aaa.getMetadata("type").equals("MODIFIER")) {
+				// continue;
+				// }
+				// if (aaa.getMetadata("type").equals("RETURN_TYPE")) {
+				// continue;
+				// }
+				// if (getSpoonEle(aaa) != null) {
+				// i++;
+				// }
 				// }
 				// parent.getBody().addStatement(i, created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
@@ -544,7 +615,7 @@ public class ActionApplier {
 				try {
 					superclass = (CtClass) factory.Class().get(superclassRef.getQualifiedName());
 				} catch (Exception e) {
-					throw new WrongAstContextException("cannot get the super Class",e);
+					throw new WrongAstContextException("cannot get the super Class", e);
 				}
 				if (superclass == null) {
 					CtPackage parentPack = parent.getParent(CtPackage.class);
@@ -660,12 +731,15 @@ public class ActionApplier {
 				break;
 			}
 			// case "SUPER_CLASS": {
-			// 	CtType parent = (CtType) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-			// 	CtTypeReference sp = getSpoonEle(source);
-			// 	CtTypeReference created = factory.Type().createReference(sp.getQualifiedName());
-			// 	parent.setSuperclass(created);
-			// 	target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, (CtTypeReference) created);
-			// 	break;
+			// CtType parent = (CtType)
+			// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+			// CtTypeReference sp = getSpoonEle(source);
+			// CtTypeReference created =
+			// factory.Type().createReference(sp.getQualifiedName());
+			// parent.setSuperclass(created);
+			// target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, (CtTypeReference)
+			// created);
+			// break;
 			// }
 			// TODO add generators for following elements
 			case "Constructor": {
@@ -680,11 +754,13 @@ public class ActionApplier {
 				break;
 			}
 			// case "INTERFACE": { // when inheriting interface
-			// 	CtElement parent = getSpoonEle(parentTarget);
-			// 	CtType parentType = (CtType) parentTarget.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-			// 	parentType.addSuperInterface((CtTypeReference) parent);
-			// 	target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, (CtTypeReference) parent);
-			// 	break;
+			// CtElement parent = getSpoonEle(parentTarget);
+			// CtType parentType = (CtType)
+			// parentTarget.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+			// parentType.addSuperInterface((CtTypeReference) parent);
+			// target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, (CtTypeReference)
+			// parent);
+			// break;
 			// }
 			case "ConstructorCall": {
 				CtConstructorCall created = factory.createConstructorCall();
@@ -699,16 +775,16 @@ public class ActionApplier {
 					addExpressionToParent(parent, created, target.getLabel());
 				}
 				// if (parent instanceof CtReturn) {
-				// 	((CtReturn<?>) parent).setReturnedExpression(created);
+				// ((CtReturn<?>) parent).setReturnedExpression(created);
 				// } else if (parent instanceof CtExecutable) {
-				// 	addInBody(factory, target, (CtStatement) created, (CtExecutable<?>) parent);
+				// addInBody(factory, target, (CtStatement) created, (CtExecutable<?>) parent);
 				// } else if (parent instanceof CtRHSReceiver) {
-				// 	((CtRHSReceiver<?>) parent).setAssignment(created);
+				// ((CtRHSReceiver<?>) parent).setAssignment(created);
 				// } else if (parent instanceof CtAbstractInvocation) {
-				// 	((CtAbstractInvocation<?>) parent).addArgument(created);
+				// ((CtAbstractInvocation<?>) parent).addArgument(created);
 				// } else {
-				// 	throw new UnsupportedOperationException(
-				// 			parent.getClass().toString() + " as a parent is no handled");
+				// throw new UnsupportedOperationException(
+				// parent.getClass().toString() + " as a parent is no handled");
 				// }
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -1088,8 +1164,7 @@ public class ActionApplier {
 			case "SuperAccess": {
 				CtElement parent = getSpoonEle(parentTarget);
 				CtSuperAccess created = factory.createSuperAccess();
-				created.setTarget(
-						factory.createTypeAccess(parent.getParent(CtType.class).getSuperclass()));
+				created.setTarget(factory.createTypeAccess(parent.getParent(CtType.class).getSuperclass()));
 				// created.setVariable(factory.createConstructorCall(parent.getParent(CtType.class).getSuperclass()));
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
@@ -1282,8 +1357,9 @@ public class ActionApplier {
 		return r;
 	}
 
-	// private static void addExpressionToParent(CtElement parent, CtExpression created) {
-	// 	addExpressionToParent(parent, created, null);
+	// private static void addExpressionToParent(CtElement parent, CtExpression
+	// created) {
+	// addExpressionToParent(parent, created, null);
 	// }
 
 	private static void addExpressionToParent(CtElement parent, CtExpression created, String role) {
@@ -1405,17 +1481,19 @@ public class ActionApplier {
 				continue;
 			}
 			// if (target.equals(aaa)) {
-			// 	((CtBlock) parent.getBody()).addStatement(i, created);
-			// 	return;
+			// ((CtBlock) parent.getBody()).addStatement(i, created);
+			// return;
 			// }
 			if (aaa == target)
 				break;
 			if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) != null) {
 				i++;
 			}
-			// if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) == null || aaa.getMetadata("type").equals("LABEL")
-			//         || aaa.getMetadata("type").equals("MODIFIER") || aaa.getMetadata("type").equals("RETURN_TYPE")) {
-			//     continue;
+			// if (aaa.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT) == null ||
+			// aaa.getMetadata("type").equals("LABEL")
+			// || aaa.getMetadata("type").equals("MODIFIER") ||
+			// aaa.getMetadata("type").equals("RETURN_TYPE")) {
+			// continue;
 			// }
 			// i++;
 		}
@@ -1446,8 +1524,8 @@ public class ActionApplier {
 				continue;
 			}
 			// if (target.equals(aaa)) {
-			// 	parent.addStatement(i, created);
-			// 	return;
+			// parent.addStatement(i, created);
+			// return;
 			// }
 			if (aaa == target)
 				break;
@@ -1491,7 +1569,7 @@ public class ActionApplier {
 			case "LABEL": {
 				CtElement parent = getSpoonEle(parentTarget);
 				if (parent == null) {
-					LOGGER.warning("no parent for label "+ target.getLabel());
+					LOGGER.warning("no parent for label " + target.getLabel());
 				} else if (parent instanceof CtNamedElement) {
 					((CtNamedElement) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtWildcardReference) {
@@ -1634,7 +1712,8 @@ public class ActionApplier {
 					((CtConstructorCall<?>) parent).setExecutable(ref);
 				} else if (parent instanceof CtInvocation) {
 					if (!target.getLabel().equals("<init>")) {
-						CtExecutableReference ref = factory.createExecutableReference();
+						CtExecutableReference ref = factory.createExecutableReference(); // TODO maybe get the old one
+																							// if available
 						ref.setSimpleName(target.getLabel());
 						((CtInvocation<?>) parent).setExecutable(ref);
 					}
@@ -1680,15 +1759,14 @@ public class ActionApplier {
 			case "MODIFIER": {
 				ModifierKind current = (ModifierKind) target.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				CtModifiable parent = (CtModifiable) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				ModifierKind tmp = (ModifierKind)source.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				ModifierKind tmp = (ModifierKind) source.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				if (tmp == null) {
 					tmp = ((CtWrapper<CtExtendedModifier>) source.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT))
 							.getValue().getKind();
 				}
 				ModifierKind smod = tmp;
-				if (!((CtModifiable)getSpoonEle(source.getParent()))
-						.getExtendedModifiers().stream().filter(x -> x.getKind().equals(smod)).findFirst().get()
-						.isImplicit()) {
+				if (!((CtModifiable) getSpoonEle(source.getParent())).getExtendedModifiers().stream()
+						.filter(x -> x.getKind().equals(smod)).findFirst().get().isImplicit()) {
 					parent.removeModifier(current);
 					parent.addModifier(smod);
 				}
