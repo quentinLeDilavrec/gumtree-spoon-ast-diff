@@ -76,7 +76,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		} else if (pos instanceof SourcePositionImpl) {
 			SourcePositionImpl casted = (SourcePositionImpl) pos;
 			newpos = this.factory.Core().createSourcePosition(newcu, casted.getSourceStart(), casted.getSourceEnd(),
-					pos.getCompilationUnit().getLineSeparatorPositions());
+			newcu.getLineSeparatorPositions());
 		} else {
 			throw new RuntimeException(pos.getClass().toString());
 		}
