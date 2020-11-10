@@ -57,18 +57,18 @@ public class CloneVisitorNewFactory extends CtScanner {
 			newpos = this.factory.Core().createBodyHolderSourcePosition(newcu, casted.getNameStart(),
 					casted.getNameEnd(), casted.getModifierSourceStart(), casted.getModifierSourceEnd(),
 					casted.getSourceStart(), casted.getSourceEnd(), casted.getBodyStart(), casted.getBodyEnd(),
-					pos.getCompilationUnit().getLineSeparatorPositions());
+					newcu.getLineSeparatorPositions());
 		} else if (pos instanceof DeclarationSourcePositionImpl) {
 			DeclarationSourcePositionImpl casted = (DeclarationSourcePositionImpl) pos;
 			newpos = this.factory.Core().createDeclarationSourcePosition(newcu, casted.getNameStart(),
 					casted.getNameEnd(), casted.getModifierSourceStart(), casted.getModifierSourceEnd(),
 					casted.getSourceStart(), casted.getSourceEnd(),
-					pos.getCompilationUnit().getLineSeparatorPositions());
+					newcu.getLineSeparatorPositions());
 		} else if (pos instanceof CompoundSourcePositionImpl) {
 			CompoundSourcePositionImpl casted = (CompoundSourcePositionImpl) pos;
 			newpos = this.factory.Core().createCompoundSourcePosition(newcu, casted.getNameStart(), casted.getNameEnd(),
 					casted.getSourceStart(), casted.getSourceEnd(),
-					pos.getCompilationUnit().getLineSeparatorPositions());
+					newcu.getLineSeparatorPositions());
 		} else if (pos instanceof PartialSourcePositionImpl) {
 			newpos = this.factory.Core().createPartialSourcePosition(newcu);
 		} else if (pos instanceof NoSourcePosition) {
