@@ -41,6 +41,8 @@ public class CloneVisitorNewFactory extends CtScanner {
 	}
 	
 	public SourcePosition clonePosition(SourcePosition pos) {
+		if(pos instanceof NoSourcePosition)
+			return null;
 		CompilationUnit newcu = this.factory.CompilationUnit().getOrCreate(pos.getFile().getPath());
 		if (newcu == null) {
 			this.cloneHelper.clone(pos.getCompilationUnit());
