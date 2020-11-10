@@ -1,6 +1,5 @@
 package gumtree.spoon.apply;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.logging.Logger;
@@ -14,17 +13,11 @@ import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.github.gumtreediff.tree.VersionedTree;
 
-import org.apache.commons.lang3.tuple.ImmutableTriple;
-
-import gumtree.spoon.CloneVisitorNewFactory;
 import gumtree.spoon.builder.CtWrapper;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
-import spoon.MavenLauncher;
-import spoon.MavenLauncher.SOURCE_TYPE;
 import spoon.compiler.Environment;
 import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.code.*;
-import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.*;
 import spoon.reflect.factory.Factory;
@@ -33,73 +26,11 @@ import spoon.reflect.reference.*;
 import spoon.reflect.visitor.filter.PotentialVariableDeclarationFunction;
 import spoon.support.StandardEnvironment;
 import spoon.support.reflect.CtExtendedModifier;
-import spoon.support.visitor.equals.CloneHelper;
 
 public class ActionApplier {
 	static Logger LOGGER = Logger.getLogger("ApplyTestHelper");
 	static Environment env = new StandardEnvironment();
 	static spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
-
-	public static class MyOtherCloner extends CloneHelper {
-		private Factory facto;
-
-		public MyOtherCloner(Factory facto) {
-			this.facto = facto;
-		}
-
-		@Override
-		public <T extends CtElement> T clone(T element) {
-			final CloneVisitorNewFactory cloneVisitor = new CloneVisitorNewFactory(this, facto);
-			cloneVisitor.scan(element);
-			T clone = cloneVisitor.getClone();
-			return clone;
-		}
-
-		public SourcePosition clone(SourcePosition position, CtElement parent) {
-			if (parent == null) {
-				throw new RuntimeException();
-			} else if (parent instanceof CtPackage) {
-				final CloneVisitorNewFactory cloneVisitor = new CloneVisitorNewFactory(this, facto) {
-					@Override
-					public void visitCtCompilationUnit(CtCompilationUnit compilationUnit) {
-						CtCompilationUnit aCtCompilationUnit = this.factory.Core().createCompilationUnit();
-						this.builder.copy(compilationUnit, aCtCompilationUnit);
-						aCtCompilationUnit.setPosition(clonePosition(compilationUnit.getPosition()));
-
-						// parent: ProjRoot/ --------------
-						// current: ------ /srcDir/filePath
-						ImmutableTriple<Path, Path, SOURCE_TYPE> parentTriple = (ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE>) parent
-								.getPosition().getCompilationUnit().getMetadata("SourceTypeNRootDirectory");
-						ImmutableTriple<Path, Path, SOURCE_TYPE> srcTriple = (ImmutableTriple<Path, Path, MavenLauncher.SOURCE_TYPE>) compilationUnit
-								.getMetadata("SourceTypeNRootDirectory");
-						if (parentTriple != null && srcTriple != null) {
-							aCtCompilationUnit
-									.setFile(parentTriple.left.resolve(srcTriple.left.resolve(srcTriple.middle)
-											.relativize(compilationUnit.getFile().toPath())).toFile());
-							aCtCompilationUnit.putMetadata("SourceTypeNRootDirectory",
-									new ImmutableTriple<>(parentTriple.left, srcTriple.middle, srcTriple.right));
-						}
-
-						aCtCompilationUnit.setComments(this.cloneHelper.clone(compilationUnit.getComments()));
-						aCtCompilationUnit.setAnnotations(this.cloneHelper.clone(compilationUnit.getAnnotations()));
-						aCtCompilationUnit
-								.setPackageDeclaration(this.cloneHelper.clone(compilationUnit.getPackageDeclaration()));
-						aCtCompilationUnit.setImports(this.cloneHelper.clone(compilationUnit.getImports()));
-						aCtCompilationUnit.setDeclaredModuleReference(
-								this.cloneHelper.clone(compilationUnit.getDeclaredModuleReference()));
-						aCtCompilationUnit.setDeclaredTypeReferences(
-								this.cloneHelper.clone(compilationUnit.getDeclaredTypeReferences()));
-						this.cloneHelper.tailor(compilationUnit, aCtCompilationUnit);
-						this.other = aCtCompilationUnit;
-					}
-				};
-				return cloneVisitor.clonePosition(position);
-			} else {
-				return new CloneVisitorNewFactory(this, facto).clonePositionAux(position,
-						parent.getPosition().getCompilationUnit());
-			}
-		}
-	}
 
 	public static <T extends Insert & AAction<Insert>> void applyAInsert(Factory factory, TreeContext ctx, T action)
 			throws WrongAstContextException {
@@ -309,28 +240,27 @@ public class ActionApplier {
 				break;
 			}
 			case "Interface": {
-				CtInterface<?> interf = factory.createInterface();
+				CtInterface<?> created = factory.createInterface();
 				CtElement sp = getSpoonEle(source);
-				interf.setPosition(new MyOtherCloner(factory).clone(sp.getPosition())); // TODO how do we handle
-																						// Compilation unit and
-																						// position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent == null) {
-					factory.getModel().getRootPackage().addType(interf);
+					factory.getModel().getRootPackage().addType(created);
 				} else if (parent instanceof CtPackage) {
-					interf.setSimpleName("PlaceHolder" + ((CtPackage) parent).getTypes().size());
-					((CtPackage) parent).addType(interf);
+					created.setSimpleName("PlaceHolder" + ((CtPackage) parent).getTypes().size());
+					((CtPackage) parent).addType(created);
 				} else {
-					((CtType) parent).addNestedType(interf);
+					((CtType) parent).addNestedType(created);
 				}
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, interf);
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
 			case "Class": {
 				CtClass<?> created = factory.createClass();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				CtElement parent = getSpoonEle(parentTarget);
+				CtElement parent = getSpoonEle(parentTarget);				
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				// TODO eval if should add this new type to cu
 				if (parent == null) {
 					factory.getModel().getRootPackage().addType(created);
 				} else if (parent instanceof CtPackage) {
@@ -352,54 +282,61 @@ public class ActionApplier {
 				break;
 			}
 			case "RootPackage": {
-				CtPackage pack = factory.getModel().getRootPackage();
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, pack);
+				CtPackage created = factory.getModel().getRootPackage();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
 			case "Package": {
-				CtPackage pack;
+				CtPackage created;
+				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEle(parentTarget);
 				if (parent == null || parent instanceof CtRootPackage) {
 					String name = "placeholderpack" + factory.getModel().getRootPackage().getPackages().size();
-					pack = factory.Package().getOrCreate(name);
+					created = factory.Package().getOrCreate(name);
 				} else {
 					String name = "placeholderpack" + ((CtPackage) parent).getPackages().size();
-					pack = factory.createPackage((CtPackage) parent, name);
+					created = factory.createPackage((CtPackage) parent, name);
 				}
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, pack);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
 			case "Method": {
-				CtMethod<Object> method = factory.createMethod();
+				CtMethod<Object> created = factory.createMethod();
 				CtElement sp = getSpoonEle(source);
-				method.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				method.setDefaultMethod(((CtMethod) sp).isDefaultMethod());
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, method);
 				CtType<?> parent = (CtType<?>) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				parent.addMethod(method);
-				method.setSimpleName("placeHolder" + parent.getMethods().size());
-				if (method.isAbstract()) {
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setDefaultMethod(((CtMethod) sp).isDefaultMethod());
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				parent.addMethod(created);
+				created.setSimpleName("placeHolder" + parent.getMethods().size());
+				if (created.isAbstract()) {
 					break;
 				}
-				if (parent instanceof CtInterface && !method.isDefaultMethod()) {
+				if (parent instanceof CtInterface && !created.isDefaultMethod()) {
 					break;
 				}
-				method.setBody(factory.createBlock());
+				created.setBody(factory.createBlock());
 				break;
 			}
 			case "RETURN_TYPE": {
-				CtTypeReference ref = factory.createTypeReference();
+				CtTypeReference created = factory.createTypeReference();
+				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEle(parentTarget);
-				((CtTypedElement<?>) parent).setType(ref);
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, ref);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				((CtTypedElement<?>) parent).setType(created);
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
 			case "MODIFIER": {
+				CtWrapper<CtExtendedModifier> sp = getSpoonEle(source);
 				CtElement parent = getSpoonEle(parentTarget);
-				CtWrapper<CtExtendedModifier> mod = getSpoonEle(source);
-				if (!mod.getValue().isImplicit())
-					((CtModifiable) parent).addModifier(mod.getValue().getKind());
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, mod.getValue().getKind());
+				if (!sp.getValue().isImplicit())
+					((CtModifiable) parent).addModifier(sp.getValue().getKind());
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, sp.getValue().getKind());
 				if (parent instanceof CtMethod && ((CtMethod) parent).isStatic()
 						&& ((CtMethod) parent).getBody() == null)
 					((CtMethod) parent).setBody(factory.createBlock());
@@ -409,39 +346,47 @@ public class ActionApplier {
 				break;
 			}
 			case "Field": {
-				CtField<?> field = factory.createField();
+				CtField<?> created = factory.createField();
 				CtElement sp = getSpoonEle(source);
-				field.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, field);
 				CtType<?> parent = getSpoonEle(parentTarget);
-				field.setSimpleName("placeHolder" + parent.getFields().size());
-				parent.addField(field);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				created.setSimpleName("placeHolder" + parent.getFields().size());
+				parent.addField(created);
 				break;
 			}
 			case "VARIABLE_TYPE": {
-				CtTypeReference ref = factory.createTypeReference();
+				CtTypeReference created = factory.createTypeReference();
+				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEle(parentTarget);
-				((CtTypedElement<?>) parent).setType(ref);
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, ref);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				((CtTypedElement<?>) parent).setType(created);
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
 			case "Literal": {
-				CtElement parent = getSpoonEle(parentTarget);
 				CtLiteral created = factory.createLiteral();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
 			}
 			case "BinaryOperator": {
-				CtElement parent = getSpoonEle(parentTarget);
 				CtBinaryOperator created = factory.createBinaryOperator();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				addExpressionToParent(parent, created, target.getLabel());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
 			case "UnaryOperator": {
 				CtUnaryOperator created = factory.createUnaryOperator();
+				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
@@ -471,18 +416,18 @@ public class ActionApplier {
 			case "FieldRead": {
 				CtFieldRead created = factory.createFieldRead();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
 			}
 			case "VariableRead": {
 				CtVariableRead created = factory.createVariableRead();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
 			}
@@ -492,7 +437,7 @@ public class ActionApplier {
 				// .map(new PotentialVariableDeclarationFunction("simpleName")).first();
 				CtFieldWrite created = factory.createFieldWrite();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				created.setTarget(factory.createThisAccess(parent.getParent(CtType.class).getReference(), true));
 				addExpressionToParent(parent, created, target.getLabel());
@@ -509,7 +454,7 @@ public class ActionApplier {
 				CtTypeAccess created = factory.createTypeAccess();
 				CtElement parent = getSpoonEle(parentTarget);
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				created.setImplicit(((CtTypeAccess) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
@@ -518,17 +463,17 @@ public class ActionApplier {
 			case "AnonymousExecutable": {
 				CtAnonymousExecutable created = factory.createAnonymousExecutable();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtClass<?> parent = (CtClass<?>) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				parent.addAnonymousExecutable(created);
 				break;
 			}
 			case "Assignment": {
 				CtAssignment created = factory.createAssignment();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
 				} else if (parent instanceof CtBodyHolder) {
@@ -554,9 +499,9 @@ public class ActionApplier {
 			case "OperatorAssignment": {
 				CtOperatorAssignment created = factory.createOperatorAssignment();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				created.setKind(BinaryOperatorKind.MINUS);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setKind(BinaryOperatorKind.MINUS);
 
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
@@ -587,8 +532,8 @@ public class ActionApplier {
 			case "Return": {
 				CtReturn created = factory.createReturn();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -602,10 +547,10 @@ public class ActionApplier {
 			case "SuperInvocation": {
 				CtInvocation created = factory.createInvocation();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				// CtReturn<?> parent = (CtReturn<?>)
 				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				CtElement parent = getSpoonEle(parentTarget);
 				CtType parent2 = parent.getParent(CtType.class);
 				CtTypeReference<?> superclassRef = parent2.getSuperclass();
 				if (superclassRef == null) {
@@ -646,10 +591,8 @@ public class ActionApplier {
 			case "ThisInvocation": {
 				CtInvocation created = factory.createInvocation();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				// CtReturn<?> parent = (CtReturn<?>)
-				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				CtExecutableReference er = factory.createExecutableReference();
 				er.setDeclaringType(parent.getParent(CtType.class).getReference());
 				er.setSimpleName("<init>");
@@ -669,10 +612,10 @@ public class ActionApplier {
 			case "Invocation": {
 				CtInvocation created = factory.createInvocation();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				// CtReturn<?> parent = (CtReturn<?>)
 				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				CtElement parent = getSpoonEle(parentTarget);
 
 				created.setTarget(factory.createThisAccess(
 						(parent instanceof CtType ? (CtType) parent : parent.getParent(CtType.class)).getReference(),
@@ -694,7 +637,7 @@ public class ActionApplier {
 				CtElement parent = getSpoonEle(parentTarget);
 				CtThisAccess created = factory.createThisAccess(parent.getParent(CtType.class).getReference(), true);
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				created.setImplicit(((CtThisAccess) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
@@ -703,9 +646,9 @@ public class ActionApplier {
 			case "Parameter": {
 				CtParameter<?> created = factory.createParameter();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtExecutable<?> parent = (CtExecutable<?>) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				parent.addParameter(created);
 				break;
 			}
@@ -765,10 +708,10 @@ public class ActionApplier {
 			case "ConstructorCall": {
 				CtConstructorCall created = factory.createConstructorCall();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				// CtReturn<?> parent = (CtReturn<?>)
 				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				CtElement parent = getSpoonEle(parentTarget);
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else {
@@ -792,8 +735,8 @@ public class ActionApplier {
 			case "Try": {
 				CtTry created = factory.createTry();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -810,8 +753,8 @@ public class ActionApplier {
 			case "Catch": {
 				CtCatch created = factory.createCatch();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtTry parent = (CtTry) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				parent.addCatcher(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				created.setBody(factory.createBlock());
@@ -820,8 +763,8 @@ public class ActionApplier {
 			case "If": {
 				CtIf created = factory.createIf();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -836,8 +779,8 @@ public class ActionApplier {
 			case "Case": {
 				CtCase created = factory.createCase();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtSwitch parent = (CtSwitch) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				parent.addCase(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -846,8 +789,8 @@ public class ActionApplier {
 			case "then": {
 				CtBlock created = factory.createBlock();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtIf parent = (CtIf) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				parent.setThenStatement(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -856,21 +799,19 @@ public class ActionApplier {
 			case "Block": {
 				CtBlock created = factory.createBlock();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				created.setImplicit(sp.isImplicit());
 				switch (target.getLabel()) {
 					case "THEN": {
-						CtIf parent = (CtIf) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-						parent.setThenStatement(created);
+						((CtIf)parent).setThenStatement(created);
 						break;
 					}
 					case "ELSE": {
-						CtIf parent = (CtIf) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-						parent.setElseStatement(created);
+						((CtIf)parent).setElseStatement(created);
 						break;
 					}
 					case "STATEMENT": {
-						CtElement parent = getSpoonEle(parentTarget);
 						if (parent instanceof CtBodyHolder) {
 							addInBody(factory, target, created, (CtBodyHolder) parent);
 						} else if (parent instanceof CtStatementList) {
@@ -890,8 +831,8 @@ public class ActionApplier {
 			case "else": {
 				CtBlock created = factory.createBlock();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtIf parent = (CtIf) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				parent.setElseStatement(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -900,8 +841,8 @@ public class ActionApplier {
 			case "Conditional": {
 				CtConditional created = factory.createConditional();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				addExpressionToParent(parent, created, target.getLabel());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -910,8 +851,8 @@ public class ActionApplier {
 			case "Switch": {
 				CtSwitch created = factory.createSwitch();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -926,8 +867,8 @@ public class ActionApplier {
 			case "While": {
 				CtWhile created = factory.createWhile();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -942,8 +883,8 @@ public class ActionApplier {
 			case "For": {
 				CtFor created = factory.createFor();
 				CtFor sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
@@ -963,8 +904,8 @@ public class ActionApplier {
 			case "ForEach": {
 				CtForEach created = factory.createForEach();
 				CtForEach sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
@@ -984,8 +925,8 @@ public class ActionApplier {
 			case "LocalVariable": {
 				CtLocalVariable<?> created = factory.createLocalVariable();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					created.setSimpleName("placeHolder" + (((CtBodyHolder) parent).getBody() == null ? 0
 							: ((CtBlock) ((CtBodyHolder) parent).getBody()).getStatements().size()));
@@ -1005,10 +946,10 @@ public class ActionApplier {
 			case "NewArray": {
 				CtNewArray created = factory.createNewArray();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				// CtReturn<?> parent = (CtReturn<?>)
 				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				CtElement parent = getSpoonEle(parentTarget);
 				addExpressionToParent(parent, created, target.getLabel());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -1016,35 +957,35 @@ public class ActionApplier {
 			case "ArrayRead": {
 				CtArrayRead created = factory.createArrayRead();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
 			}
 			case "ArrayWrite": {
 				CtArrayWrite created = factory.createArrayWrite();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
 			}
 			case "VariableWrite": {
 				CtVariableWrite created = factory.createVariableWrite();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
 			}
 			case "NewClass": {
 				CtNewClass created = factory.createNewClass();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				addExpressionToParent(parent, created, target.getLabel());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -1052,17 +993,17 @@ public class ActionApplier {
 			case "CatchVariable": {
 				CtCatchVariable created = factory.createCatchVariable();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtCatch parent = (CtCatch) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				parent.setParameter(created);
 				break;
 			}
 			case "Break": {
 				CtBreak created = factory.createBreak();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
 				} else if (parent instanceof CtBodyHolder) {
@@ -1077,8 +1018,8 @@ public class ActionApplier {
 			case "Continue": {
 				CtContinue created = factory.createContinue();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -1106,8 +1047,8 @@ public class ActionApplier {
 			case "Throw": {
 				CtThrow created = factory.createThrow();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -1122,8 +1063,8 @@ public class ActionApplier {
 			case "Assert": {
 				CtAssert created = factory.createAssert();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -1138,8 +1079,8 @@ public class ActionApplier {
 			case "Do": {
 				CtDo created = factory.createDo();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -1154,8 +1095,8 @@ public class ActionApplier {
 			case "THROWS": {
 				CtTypeReference created = factory.createTypeReference();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				((CtMethod) parent).addThrownType(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -1167,7 +1108,7 @@ public class ActionApplier {
 				created.setTarget(factory.createTypeAccess(parent.getParent(CtType.class).getSuperclass()));
 				// created.setVariable(factory.createConstructorCall(parent.getParent(CtType.class).getSuperclass()));
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				created.setImplicit(((CtSuperAccess) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
@@ -1176,10 +1117,10 @@ public class ActionApplier {
 			case "Annotation": {
 				CtAnnotation created = factory.createAnnotation();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				created.setImplicit(((CtAnnotation) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
-				CtElement parent = getSpoonEle(parentTarget);
 				if (parent instanceof CtBodyHolder) {
 					((CtBodyHolder) parent).addAnnotation(created);
 				} else if (parent instanceof CtStatementList) {
@@ -1200,9 +1141,9 @@ public class ActionApplier {
 			case "Synchronized": {
 				CtSynchronized created = factory.createSynchronized();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				created.setImplicit(((CtSynchronized) sp).isImplicit());
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setImplicit(((CtSynchronized) sp).isImplicit());
 				if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
 				} else if (parent instanceof CtBodyHolder) {
@@ -1219,10 +1160,10 @@ public class ActionApplier {
 			case "WildcardReference": {
 				CtWildcardReference created = factory.createWildcardReference();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				created.setImplicit(((CtWildcardReference) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
-				CtElement parent = getSpoonEle(parentTarget);
 				if (parent instanceof CtTypeParameterReference) {
 					((CtTypeParameterReference) parent).addActualTypeArgument(created);
 				} else if (parent instanceof CtTypeReference) {
@@ -1235,10 +1176,10 @@ public class ActionApplier {
 			case "TypeParameter": {
 				CtTypeParameter created = factory.createTypeParameter();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
+				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				created.setImplicit(((CtTypeParameter) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
-				CtElement parent = getSpoonEle(parentTarget);
 				if (parent instanceof CtType) {
 					((CtType) parent).addFormalCtTypeParameter(created);
 				} else if (parent instanceof CtMethod) {
@@ -1251,9 +1192,9 @@ public class ActionApplier {
 			case "Lambda": {
 				CtLambda created = factory.createLambda();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
 			}
@@ -1287,8 +1228,8 @@ public class ActionApplier {
 			case "Enum": {
 				CtEnum created = factory.createEnum();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent == null) {
 					factory.getModel().getRootPackage().addType(created);
 				} else if (parent instanceof CtPackage) {
@@ -1312,16 +1253,18 @@ public class ActionApplier {
 			case "EnumValue": {
 				CtEnumValue created = factory.createEnumValue();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(sp.getPosition()); // TODO how do we handle Compilation unit and position?
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				CtType<?> parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				created.setSimpleName("placeHolder" + parent.getFields().size());
 				parent.addField(created);
 				break;
 			}
 			case "IntersectionTypeReference": {
 				CtIntersectionTypeReference created = factory.createIntersectionTypeReference();
+				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEle(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (target.getLabel().equals(CtRole.CAST.name())) {
 					((CtExpression) parent).addTypeCast(created);
 				} else if (target.getLabel().equals(CtRole.SUPER_TYPE.name())) {
