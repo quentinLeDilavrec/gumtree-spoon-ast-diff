@@ -301,6 +301,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
         CtElement oldOri = (CtElement)middle.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
         if (oldOri != null && !tmp.containsKey(this.beforeVersion)) {
             tmp.put(this.beforeVersion, oldOri);
+        } else if(oldOri == null) {
+            middle.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT,ele);
         }
         tmp.put(this.afterVersion, ele);
         if (!modParent) {
