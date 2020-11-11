@@ -125,7 +125,6 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 int k = y.getChildPosition(x);
                 // Insertion case : insert new node.
                 w = new VersionedTree(x, this.afterVersion);
-                mdForMiddle(x, w);
                 copyToOrig.put(w, x);
                 cpyMappings.link(w, x);
                 z.insertChild(w, k);
@@ -133,6 +132,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 Action action = AAction.build(Insert.class, x, w);
                 actions.add(action);
                 addInsertAction(action, w);
+                mdForMiddle(x, w);
             } else {
                 w = cpyMappings.getSrc(x);
                 if (!x.equals(origDst)) { // TODO => x != origDst // Case of the root
@@ -142,7 +142,6 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         // in intermediate: w is was moved from v to z,
                         // thus w is marked as deleted and newTree is created
                         AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
-                        mdForMiddle(x, newTree);
                         cpyMappings.link(newTree, x);
                         added.add(newTree);
                         deleted.add(w);
@@ -154,6 +153,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         newTree.setLabel(x.getLabel());
                         newTree.setParent(z);
                         multiVersionMappingStore.link(w, newTree);
+                        mdForMiddle(x, newTree);
                         // Action uact = AAction.build(Update.class, w, wbis);
                         // addDeleteAction(uact, w);
                         // addInsertAction(uact, wbis);
@@ -198,7 +198,6 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         // in intermediate: w is marked as deleted,
                         // newTree is created with new label
                         AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
-                        mdForMiddle(x, newTree);
                         cpyMappings.link(newTree, x);
                         added.add(newTree);
                         deleted.add(w);
@@ -215,13 +214,13 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         actions.add(action);
                         addDeleteAction(action, w);
                         addInsertAction(action, newTree);
+                        mdForMiddle(x, newTree);
                     } else if (!z.equals(v)) {
                         // x was moved from z to y
                         // in intermediate: w is was moved from v to z,
                         // thus w is marked as deleted and newTree is created
                         int k = y.getChildPosition(x);
                         AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
-                        mdForMiddle(x, newTree);
                         newTree.setParent(z);
                         z.insertChild(newTree, k);
                         cpyMappings.link(newTree, x);
@@ -231,6 +230,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         copyToOrig.put(w, x);
                         copyToOrig.put(newTree, x);
                         multiVersionMappingStore.link(w, newTree);
+                        mdForMiddle(x, newTree);
                         switch (granularity) {
                             case COMPOSE: {
                                 Action mact = AAction.build(Move.class, w, newTree);
@@ -378,7 +378,6 @@ public class MyScriptGenerator implements EditScriptGenerator {
                     if (!lcs.contains(new Mapping(a, b))) {
                         int k = x.getChildPosition(b);
                         AbstractVersionedTree newTree = new VersionedTree(b, this.afterVersion);
-                        mdForMiddle(b, newTree);
                         newTree.setParent(w);
                         w.insertChild(newTree, k);
                         cpyMappings.link(newTree, b);
@@ -386,6 +385,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         copyToOrig.put((AbstractVersionedTree) a, x);
                         copyToOrig.put(newTree, x);
                         multiVersionMappingStore.link(a, newTree);
+                        mdForMiddle(b, newTree);
                         switch (granularity) {
                             case COMPOSE: {
                                 Action action = AAction.build(Move.class, a, newTree);
