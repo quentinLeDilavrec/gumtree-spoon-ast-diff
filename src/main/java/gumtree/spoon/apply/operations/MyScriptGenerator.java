@@ -290,7 +290,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
             ele = (CtElement)original.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
             middle = middle.getParent();
         }
-        if (ele==null) {
+        if (ele==null || middle == null) {
             return;
         }
         Map<Version,CtElement> tmp = (Map<Version,CtElement>)middle.getMetadata(ORIGINAL_SPOON_OBJECT_PER_VERSION);
