@@ -283,19 +283,26 @@ public class MyScriptGenerator implements EditScriptGenerator {
     public static String ORIGINAL_SPOON_OBJECT_PER_VERSION = "ORIGINAL_SPOON_OBJECT_PER_VERSION";
 
     private void mdForMiddle(ITree original, AbstractVersionedTree middle) {
+        boolean modParent = false;
         CtElement ele = (CtElement)original.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
         if (ele == null) {
-            ele = (CtElement)original.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+            modParent = true;
+            ele = (CtElement)original.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
         }
-        CtElement oldOri = (CtElement)middle.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, ele);
+        if (ele==null) {
+            return;
+        }
         Map<Version,CtElement> tmp = (Map<Version,CtElement>)middle.getMetadata(ORIGINAL_SPOON_OBJECT_PER_VERSION);
         if (tmp == null) {
             tmp = new HashMap<>();
             middle.setMetadata(ORIGINAL_SPOON_OBJECT_PER_VERSION, tmp);
         }
-        tmp.put(this.beforeVersion, oldOri != null ? oldOri : ele);
-        if (ele!=null) {
-            tmp.put(this.afterVersion, ele);
+        CtElement oldOri = (CtElement)middle.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, ele);
+        if (oldOri != null) {
+            tmp.put(this.beforeVersion, oldOri);
+        }
+        tmp.put(this.afterVersion, ele);
+        if (!modParent) {
             ele.putMetadata(VersionedTree.MIDDLE_GUMTREE_NODE, middle);
         }
     }
