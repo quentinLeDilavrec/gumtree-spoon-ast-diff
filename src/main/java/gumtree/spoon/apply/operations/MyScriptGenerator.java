@@ -288,6 +288,7 @@ public class MyScriptGenerator implements EditScriptGenerator {
         if (ele == null) {
             modParent = true;
             ele = (CtElement)original.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+            middle = middle.getParent();
         }
         if (ele==null) {
             return;
