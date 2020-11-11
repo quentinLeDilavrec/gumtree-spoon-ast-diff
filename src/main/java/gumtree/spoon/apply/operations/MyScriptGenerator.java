@@ -297,8 +297,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
             tmp = new HashMap<>();
             middle.setMetadata(ORIGINAL_SPOON_OBJECT_PER_VERSION, tmp);
         }
-        CtElement oldOri = (CtElement)middle.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT, ele);
-        if (oldOri != null) {
+        CtElement oldOri = (CtElement)middle.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+        if (oldOri != null && !tmp.containsKey(this.beforeVersion)) {
             tmp.put(this.beforeVersion, oldOri);
         }
         tmp.put(this.afterVersion, ele);
