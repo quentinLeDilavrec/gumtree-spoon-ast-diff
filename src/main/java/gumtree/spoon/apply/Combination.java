@@ -211,6 +211,10 @@ public class Combination {
             public boolean isInit() {
                 throw new UnsupportedOperationException();
             }
+
+            public int minExposant() {
+                return this.path.length;
+            };
         }
 
         public static CombinationHelper<Integer> build(int[] init) {
@@ -223,6 +227,16 @@ public class Combination {
         Reflected.ReflectedHelper reflectedHelper;
         int[] nextKeyPoint;
         protected int[] leafs;
+
+        public int minExposant() {
+            int r = 0;
+            for (int i = 0; i < leafs.length; i++) {
+                if (leafs[1] != 0) {
+                    r = r + 1;
+                }
+            }
+            return r;
+        }
 
         public int[] getLeafs() {
             return Arrays.copyOf(leafs, leafs.length);
@@ -250,6 +264,7 @@ public class Combination {
         }
 
         protected int[] originalInit;
+
         public int[] getOriginalInit() {
             return Arrays.copyOf(originalInit, originalInit.length);
         }
@@ -548,7 +563,9 @@ public class Combination {
 
         abstract CHANGE<T> prev();
 
-        boolean isInit();
+        abstract boolean isInit();
+
+        abstract int minExposant();
     }
 
     public static class Monotonic {
