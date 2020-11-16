@@ -268,6 +268,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         }
                     }
 
+                } else {
+                    mdForMiddle(x, w);
                 }
             }
             srcInOrder.add(w);
@@ -281,14 +283,14 @@ public class MyScriptGenerator implements EditScriptGenerator {
     }
 
     public static String ORIGINAL_SPOON_OBJECT_PER_VERSION = "ORIGINAL_SPOON_OBJECT_PER_VERSION";
-
+    
     private void mdForMiddle(ITree original, AbstractVersionedTree middle) {
-        boolean modParent = false;
         CtElement ele = (CtElement)original.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
         if (ele == null) {
-            modParent = true;
             ele = (CtElement)original.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
             middle = middle.getParent();
+        } else {
+            ele.putMetadata(VersionedTree.MIDDLE_GUMTREE_NODE, middle);
         }
         if (ele==null || middle == null) {
             return;
@@ -305,9 +307,6 @@ public class MyScriptGenerator implements EditScriptGenerator {
             middle.setMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT,ele);
         }
         tmp.put(this.afterVersion, ele);
-        if (!modParent) {
-            ele.putMetadata(VersionedTree.MIDDLE_GUMTREE_NODE, middle);
-        }
     }
 
     private void handleDeletion2() {
