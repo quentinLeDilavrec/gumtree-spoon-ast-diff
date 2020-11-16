@@ -266,6 +266,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
                                 break;
                             }
                         }
+                    } else {
+                        mdForMiddle(x, w);
                     }
 
                 } else {
