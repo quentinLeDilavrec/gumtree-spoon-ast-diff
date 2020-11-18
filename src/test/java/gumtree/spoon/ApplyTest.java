@@ -1,8 +1,12 @@
 package gumtree.spoon;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 
 import com.github.gumtreediff.tree.ITree;
+import com.github.gumtreediff.tree.Version;
+import com.github.gumtreediff.tree.VersionInt;
 
 import org.junit.Before;
 import org.junit.Test;
