@@ -1497,7 +1497,7 @@ public class ActionApplier {
 		ITree source = action.getSource();
 		AbstractVersionedTree target = action.getTarget();
 		AbstractVersionedTree parentTarget = target.getParent();
-		CtElement ele = getSpoonEleStrict(target);
+		CtElement ele = (CtElement) target.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 		if (ele != null) {
 			try {
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
