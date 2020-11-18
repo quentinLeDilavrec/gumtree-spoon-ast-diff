@@ -28,8 +28,8 @@ public abstract class AbstractVersionedTree implements ITree {
 
     protected int id;
     // the version where the node was added to the tree
-    protected Version addedVersion; // cannot be null
-    protected Version removedVersion; // can be null, i.e not removed
+    protected Version insertVersion; // can be null, i.e not knowing when added
+    protected Version removeVersion; // can be null, i.e not removed
 
     protected AbstractVersionedTree parent;
 
@@ -47,16 +47,16 @@ public abstract class AbstractVersionedTree implements ITree {
         this.type = type;
     }
 
-    public Version getAddedVersion() {
-        return addedVersion;
+    public Version getInsertVersion() {
+        return insertVersion;
     }
 
-    public Version getRemovedVersion() {
-        return removedVersion;
+    public Version getRemoveVersion() {
+        return removeVersion;
     }
 
     public boolean isRemoved() {
-        return removedVersion != null;
+        return removeVersion != null;
     }
 
     // /**
@@ -93,24 +93,18 @@ public abstract class AbstractVersionedTree implements ITree {
     public int getChildPosition(ITree child) {
         if (!(child instanceof AbstractVersionedTree))
             return -1;
-        int i = 0;
-        Version childVersion = ((AbstractVersionedTree) child).addedVersion;
-        for (AbstractVersionedTree curr : children) {
-            if (curr == child) {
-                return i;
-            } else if (childVersion.compareTo(curr.addedVersion) >= 0) {
-                ++i;
-            }
-        }
-        return -1;
+        return getChildPosition((AbstractVersionedTree) child, ((AbstractVersionedTree) child).insertVersion);
     }
 
-    public int getChildPosition(AbstractVersionedTree child, Version maxVersion) {
+    public int getChildPosition(AbstractVersionedTree child, Version version) {
         int i = 0;
         for (AbstractVersionedTree curr : children) {
             if (curr == child) {
                 return i;
-            } else if (maxVersion.compareTo(curr.addedVersion) >= 0) {
+            } else if (curr.insertVersion == null) {
+                ++i;
+            } else if (version == null) {
+            } else if (version.compareTo(curr.insertVersion) <= 0) {
                 ++i;
             }
         }
@@ -126,7 +120,7 @@ public abstract class AbstractVersionedTree implements ITree {
     public List<ITree> getChildren() {
         List<ITree> r = new ArrayList<>();
         for (AbstractVersionedTree curr : children) {
-            if (curr.removedVersion == null) {
+            if (curr.removeVersion == null) {
                 r.add(curr);
             }
         }
@@ -136,12 +130,23 @@ public abstract class AbstractVersionedTree implements ITree {
     public List<AbstractVersionedTree> getChildren(Version wantedVersion) {
         List<AbstractVersionedTree> r = new ArrayList<>();
         for (AbstractVersionedTree curr : children) {
-            if (curr.removedVersion == null) {
-                if (wantedVersion.compareTo(curr.addedVersion) >= 0) {
+            if (curr.removeVersion == null && curr.insertVersion == null) {
+                r.add(curr);
+            } else if (curr.removeVersion == null) {
+                if (wantedVersion == null) {
+                    r.add(curr);
+                } else if (wantedVersion.compareTo(curr.insertVersion) <= 0) {
                     r.add(curr);
                 }
-            } else if (wantedVersion.compareTo(curr.addedVersion) >= 0
-                    && wantedVersion.compareTo(curr.removedVersion) < 0) {
+            } else if (curr.insertVersion == null) {
+                if (wantedVersion == null) {
+                    r.add(curr);
+                } else if (wantedVersion.compareTo(curr.removeVersion) > 0) {
+                    r.add(curr);
+                }
+            } else if (wantedVersion == null) {
+            } else if (wantedVersion.compareTo(curr.insertVersion) <= 0
+                    && wantedVersion.compareTo(curr.removeVersion) > 0) {
                 r.add(curr);
             }
         }
@@ -252,24 +257,39 @@ public abstract class AbstractVersionedTree implements ITree {
     @Override
     public void insertChild(ITree child, int position) {
         if (!(child instanceof AbstractVersionedTree))
-            throw new RuntimeException("should be an AbstractVersionedTree");
-        Version childAddedVersion = ((AbstractVersionedTree) child).addedVersion;
-        int j = 0;
+            throw new UnsupportedOperationException("inserted child should be an AbstractVersionedTree");
+        insertChildAux((AbstractVersionedTree) child, position, ((AbstractVersionedTree) child).insertVersion,
+                ((AbstractVersionedTree) child).removeVersion);
+    }
+
+    private void insertChildAux(AbstractVersionedTree child, int position, Version addedVersion,
+            Version removedVersion) {
+        int indexAtVersion = 0;
         for (int i = 0; i < children.size(); i++) {
-            if (j == position) {
-                if (children.get(i).getMetadata("type").equals("LABEL")
-                        && children.get(i).addedVersion == addedVersion) {
-                    continue;// TODO it mostly a trick for the linear constraint on labels
+            Version cAdded = children.get(i).insertVersion;
+            if (indexAtVersion == position) {
+                if (children.get(i).getMetadata("type").equals("LABEL") && cAdded == this.insertVersion) {
+                    continue;// TODO it's mostly a trick for the linear constraint on labels
                 }
-                children.add(i, (AbstractVersionedTree) child);
+                children.add(i, child);
                 return;
-            } else if (children.get(i).addedVersion.compareTo(childAddedVersion) <= 0
-                    && (children.get(i).removedVersion == null
-                            || children.get(i).removedVersion.compareTo(childAddedVersion) > 0)) {
-                j++;
+            }
+            Version cRemoved = children.get(i).removeVersion;
+            if (addedVersion==null && cAdded != null) {
+                continue;
+            }
+            if (removedVersion==null && cRemoved != null) {
+                continue;
+            }
+            if ((cAdded == null || cAdded.compareTo(addedVersion) >= 0)
+                    && (cRemoved == null || cRemoved.compareTo(removedVersion) <= 0)) {
+                indexAtVersion++;
             }
         }
-        children.add(children.size(), (AbstractVersionedTree) child);
+        if (position != indexAtVersion) {
+            throw new RuntimeException(position + " " + indexAtVersion);
+        }
+        children.add(children.size(), child);
     }
 
     private String indent(ITree t) {
@@ -305,7 +325,7 @@ public abstract class AbstractVersionedTree implements ITree {
     }
 
     public void delete(Version version) {
-        this.removedVersion = version;
+        this.removeVersion = version;
     }
 
     @Override
@@ -415,8 +435,24 @@ public abstract class AbstractVersionedTree implements ITree {
     @Override
     public String toTreeString() {
         StringBuilder b = new StringBuilder();
-        for (ITree t : TreeUtils.preOrder(this))
-            b.append(indent(t) + ((AbstractVersionedTree) t).addedVersion + " " + t.toShortString() + "\n");
+        for (ITree t : TreeUtils.preOrder(this)) {
+            AbstractVersionedTree tt = (AbstractVersionedTree) t;
+            b.append(indent(t));
+            if (tt.insertVersion != null) {
+                b.append(tt.insertVersion);
+            }
+            if (tt.insertVersion != null || tt.removeVersion != null) {
+                b.append("-");
+            }
+            if (tt.removeVersion != null) {
+                b.append(tt.removeVersion);
+            }
+            if (tt.insertVersion != null || tt.removeVersion != null) {
+                b.append(" ");
+            }
+            b.append(t.toShortString());
+            b.append("\n");
+        }
         return b.toString();
     }
 

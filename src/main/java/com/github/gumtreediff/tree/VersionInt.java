@@ -15,7 +15,7 @@ public final class VersionInt implements Version {
         if (other instanceof VersionInt) {
             int j = ((VersionInt) other).i;
             return j == i ? Version.COMP_RES.EQUAL
-                    : (j < i ? Version.COMP_RES.INFERIOR : Version.COMP_RES.SUPERIOR);
+                    : (i < j ? Version.COMP_RES.INFERIOR : Version.COMP_RES.SUPERIOR);
         } else {
             return Version.COMP_RES.UNKNOWN;
         }

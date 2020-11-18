@@ -22,6 +22,7 @@ import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.Version;
+import com.github.gumtreediff.tree.VersionInt;
 
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.junit.Assert;
@@ -53,15 +54,8 @@ public class ApplyTestHelper {
         CtElement left = null;
         ITree srctree;
         srctree = scanner.getTree(left);
-        final Version1 rightV = new Version1();
-        final Version leftV = new Version() {
-            @Override
-            public COMP_RES partiallyCompareTo(Version other) {
-                return other == this ? Version.COMP_RES.EQUAL
-                        : (other == rightV ? Version.COMP_RES.SUPERIOR : Version.COMP_RES.UNKNOWN);
-            }
-        };
-        rightV.other = leftV;
+        final Version leftV = new VersionInt(0);
+        final Version rightV = new VersionInt(1);
         MultiDiffImpl mdiff = new MultiDiffImpl(srctree, leftV);
         ITree dstTree = scanner.getTree(right);
         DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree, rightV);
@@ -110,15 +104,8 @@ public class ApplyTestHelper {
     private static void onDelete(CtElement left) {
         Environment env = new StandardEnvironment();
         spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
-        final Version1 rightV = new Version1();
-        final Version leftV = new Version() {
-            @Override
-            public COMP_RES partiallyCompareTo(Version other) {
-                return other == this ? Version.COMP_RES.EQUAL
-                        : (other == rightV ? Version.COMP_RES.SUPERIOR : Version.COMP_RES.UNKNOWN);
-            }
-        };
-        rightV.other = leftV;
+        final Version leftV = new VersionInt(0);
+        final Version rightV = new VersionInt(1);
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         CtElement right = null;
         ITree dstTree;
@@ -260,15 +247,8 @@ public class ApplyTestHelper {
     public static void onChange(CtElement left, CtElement right) {
         Environment env = new StandardEnvironment();
         spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
-        final Version1 rightV = new Version1();
-        final Version leftV = new Version() {
-            @Override
-            public COMP_RES partiallyCompareTo(Version other) {
-                return other == this ? Version.COMP_RES.EQUAL
-                        : (other == rightV ? Version.COMP_RES.SUPERIOR : Version.COMP_RES.UNKNOWN);
-            }
-        };
-        rightV.other = leftV;
+        final Version leftV = new VersionInt(0);
+        final Version rightV = new VersionInt(1);
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srcTree;
         srcTree = scanner.getTree(left);

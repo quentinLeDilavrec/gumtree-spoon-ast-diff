@@ -35,34 +35,8 @@ public class VersionedTree extends AbstractVersionedTree {
     // Begin position of the tree in terms of absolute character index and length
     private int pos;
     private int length;
-    // Start position = pos
-    // End position = pos + length
 
     private AssociationMap metadata;
-
-    public VersionedTree(int type, String label) {
-        this.type = type;
-        this.label = (label == null) ? NO_LABEL : label.intern();
-        this.id = NO_ID;
-        this.depth = NO_VALUE;
-        this.hash = NO_VALUE;
-        this.height = NO_VALUE;
-        this.depth = NO_VALUE;
-        this.size = NO_VALUE;
-        this.pos = NO_VALUE;
-        this.length = NO_VALUE;
-        this.children = new LinkedList<>();
-    }
-
-    // private VersionedTree(AbstractVersionedTree other, int version) {
-    // this((ITree)other, version);
-    // // Iterator<Entry<String, Object>> map = other.getMetadata();
-    // // while (map.hasNext()) {
-    // // Entry<String, Object> curr = map.next();
-    // // this.metadata.set(curr.getKey(), curr.getValue());
-
-    // // }
-    // }
 
     private VersionedTree(ITree other, Version version) {
         this.type = other.getType();
@@ -76,14 +50,24 @@ public class VersionedTree extends AbstractVersionedTree {
         this.hash = other.getHash();
         this.depth = other.getDepth();
         this.depth = other.getDepth();
-        this.addedVersion = version;
+        this.insertVersion = version;
         this.children = new LinkedList<>();
         this.metadata = new AssociationMap();
         this.metadata.set("type", other.getMetadata("type"));
     }
 
+    private VersionedTree(ITree other, String... wantedMD) {
+        this(other, (Version)null);
+        for (String key : wantedMD) {
+            this.metadata.set(key, other.getMetadata(key));
+        }
+    }
+
     public VersionedTree(ITree other, Version version, String... wantedMD) {
         this(other, version);
+        if (version == null) {
+            throw new UnsupportedOperationException("version must be non null");
+        }
         for (String key : wantedMD) {
             this.metadata.set(key, other.getMetadata(key));
         }
@@ -91,7 +75,9 @@ public class VersionedTree extends AbstractVersionedTree {
 
     @Override
     public VersionedTree deepCopy() {
-        VersionedTree copy = new VersionedTree(this, this.getAddedVersion());
+        VersionedTree copy = new VersionedTree(this);
+        copy.insertVersion = this.insertVersion;
+        copy.removeVersion = this.removeVersion;
         for (ITree child : getChildren()) {
             ITree tmp = child.deepCopy();
             copy.addChild(tmp);
@@ -100,28 +86,7 @@ public class VersionedTree extends AbstractVersionedTree {
         return copy;
     }
 
-    public static VersionedTree deepCopy(ITree other, Version version) {
-        VersionedTree copy = new VersionedTree(other, version);
-        for (ITree child : other.getChildren()) {
-            ITree tmp = deepCopy(child, version);
-            copy.addChild(tmp);
-            tmp.setParent(copy);
-        }
-        return copy;
-    }
-
-    public static VersionedTree deepCopy(ITree other, Version version, String... wantedMD) {
-        VersionedTree copy = new VersionedTree(other, version, wantedMD);
-        for (ITree child : other.getChildren()) {
-            ITree tmp = deepCopy(child, version, wantedMD);
-            copy.addChild(tmp);
-            tmp.setParent(copy);
-        }
-        return copy;
-    }
-
     public static final String ORIGINAL_SPOON_OBJECT = "original_spoon_object";
-    // public static final String COPIED_SPOON_OBJECT = "copied_spoon_object";
     public static final String MIDDLE_GUMTREE_NODE = "middle_gumtree_node";
 
     public static class MyCloner extends CloneHelper {
@@ -150,27 +115,6 @@ public class VersionedTree extends AbstractVersionedTree {
             return cloneVisitor.clonePosition(position);
         }
 
-        /**
-         * Is called by {@link CloneVisitor} at the end of the cloning for each element.
-         */
-        public void tailor(final spoon.reflect.declaration.CtElement topLevelElement,
-                final spoon.reflect.declaration.CtElement topLevelClone) {
-            // this scanner visit certain nodes to done some additional work after cloning
-            new CtScanner() {
-
-                @Override
-                public <T> void visitCtExecutableReference(CtExecutableReference<T> clone) {
-                    // for instance, here we can do additional things
-                    // after cloning an executable reference
-                    // we have access here to "topLevelElement" and "topLevelClone"
-                    // if we want to analyze them as well.
-
-                    // super must be called to visit the subelements
-                    super.visitCtExecutableReference(clone);
-                }
-            }.scan(topLevelClone);
-        }
-
         public MyCloner(Factory pFactory) {
             this.launcher = new Launcher();
         }
@@ -180,7 +124,7 @@ public class VersionedTree extends AbstractVersionedTree {
         }
     }
 
-    public static AbstractVersionedTree deepCopySpoon(ITree initialSpooned, Version version) {
+    public static AbstractVersionedTree deepCopySpoon(ITree initialSpooned) {
         ITree currentOrig = initialSpooned;
         CtElement ele;
         AbstractVersionedTree result;
@@ -188,16 +132,16 @@ public class VersionedTree extends AbstractVersionedTree {
         do {
             ele = (CtElement) currentOrig.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
             if (ele != null) {
-                result = deepCopySpoonAux(currentOrig, version);
+                result = deepCopySpoonAux(currentOrig);
                 cloner = new MyCloner(ele.getFactory());
                 cloner.clone(ele);
                 result.setMetadata("Cloner", cloner);
                 result.setMetadata("Launcher", cloner.getLauncher());
                 result.setMetadata("Factory", cloner.getLauncher().getFactory());
             } else {
-                result = new VersionedTree(currentOrig, version);
+                result = new VersionedTree(currentOrig);
                 for (ITree child : currentOrig.getChildren()) {
-                    AbstractVersionedTree copy = deepCopySpoon(child, version);
+                    AbstractVersionedTree copy = deepCopySpoon(child);
                     result.addChild(copy);
                     copy.setParent(result);
                 result.setMetadata("Cloner", cloner);
@@ -215,8 +159,8 @@ public class VersionedTree extends AbstractVersionedTree {
         return result;
     }
 
-    private static AbstractVersionedTree deepCopySpoonAux(ITree original, Version version) {
-        VersionedTree result = new VersionedTree(original, version);
+    private static AbstractVersionedTree deepCopySpoonAux(ITree original) {
+        VersionedTree result = new VersionedTree(original);
         CtElement ele = (CtElement) original.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
         if (ele != null) {
             ele.putMetadata(MIDDLE_GUMTREE_NODE, result);
@@ -225,7 +169,7 @@ public class VersionedTree extends AbstractVersionedTree {
         // copy.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT,
         // original.getMetadata(COPIED_SPOON_OBJECT));
         for (ITree child : original.getChildren()) {
-            ITree copy = deepCopySpoonAux(child, version);
+            ITree copy = deepCopySpoonAux(child);
             result.addChild(copy);
             copy.setParent(result);
         }

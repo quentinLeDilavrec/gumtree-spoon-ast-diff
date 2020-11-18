@@ -998,7 +998,7 @@ public class Combination {
         boolean isAlwaysPresent = insertEvo == null && !isDeleted;
         if (node.getMetadata("type") != null && node.getMetadata("type").equals("LABEL")) {
             AbstractVersionedTree parent = node.getParent();
-            if (node.getAddedVersion().equals(parent.getAddedVersion())) {
+            if (node.getInsertVersion()==null || node.getInsertVersion().equals(parent.getInsertVersion())) {
                 parent.setMetadata("firstLABEL", node);
                 lastLabel.put(parent, i);
             } else if (!isAlwaysPresent) {

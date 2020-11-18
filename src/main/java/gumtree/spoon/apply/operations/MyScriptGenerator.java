@@ -127,8 +127,8 @@ public class MyScriptGenerator implements EditScriptGenerator {
                 w = new VersionedTree(x, this.afterVersion);
                 copyToOrig.put(w, x);
                 cpyMappings.link(w, x);
-                z.insertChild(w, k);
                 w.setParent(z);
+                z.insertChild(w, k);
                 Action action = AAction.build(Insert.class, x, w);
                 actions.add(action);
                 addInsertAction(action, w);
@@ -149,9 +149,9 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         w.delete(this.afterVersion);
                         copyToOrig.put(w, x);
                         copyToOrig.put(newTree, x);
+                        newTree.setParent(z);
                         z.insertChild(newTree, k);
                         newTree.setLabel(x.getLabel());
-                        newTree.setParent(z);
                         multiVersionMappingStore.link(w, newTree);
                         mdForMiddle(x, newTree);
                         // Action uact = AAction.build(Update.class, w, wbis);
@@ -205,9 +205,9 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         w.delete(this.afterVersion);
                         copyToOrig.put(w, x);
                         copyToOrig.put(newTree, x);
+                        newTree.setParent(v);
                         v.insertChild(newTree, k);
                         newTree.setLabel(x.getLabel());
-                        newTree.setParent(v);
                         // mdForMiddle(x.getParent(), newTree.getParent());
                         multiVersionMappingStore.link(w, newTree);
                         Action action = AAction.build(Update.class, w, newTree);
@@ -221,12 +221,12 @@ public class MyScriptGenerator implements EditScriptGenerator {
                         // thus w is marked as deleted and newTree is created
                         int k = y.getChildPosition(x);
                         AbstractVersionedTree newTree = new VersionedTree(x, this.afterVersion);
+                        w.delete(this.afterVersion);
                         newTree.setParent(z);
                         z.insertChild(newTree, k);
                         cpyMappings.link(newTree, x);
                         added.add(newTree);
                         deleted.add(w);
-                        w.delete(this.afterVersion);
                         copyToOrig.put(w, x);
                         copyToOrig.put(newTree, x);
                         multiVersionMappingStore.link(w, newTree);
@@ -321,12 +321,12 @@ public class MyScriptGenerator implements EditScriptGenerator {
             handleDeletion2Aux(children.get(i));
         }
         if (!cpyMappings.hasSrc(w)) {
-            if (w instanceof AbstractVersionedTree && ((AbstractVersionedTree) w).getAddedVersion() == this.afterVersion) {
+            if (w.getInsertVersion() == this.afterVersion) {
                 System.err.println(w);
             } else {
                 Action action = AAction.build(Delete.class, w, null);
                 actions.add(action);
-                ((AbstractVersionedTree) w).delete(this.afterVersion);
+                w.delete(this.afterVersion);
                 addDeleteAction(action, w);
             }
         }
@@ -381,10 +381,10 @@ public class MyScriptGenerator implements EditScriptGenerator {
                     if (!lcs.contains(new Mapping(a, b))) {
                         int k = x.getChildPosition(b);
                         AbstractVersionedTree newTree = new VersionedTree(b, this.afterVersion);
+                        ((AbstractVersionedTree) a).delete(this.afterVersion);
                         newTree.setParent(w);
                         w.insertChild(newTree, k);
                         cpyMappings.link(newTree, b);
-                        ((AbstractVersionedTree) a).delete(this.afterVersion);
                         copyToOrig.put((AbstractVersionedTree) a, x);
                         copyToOrig.put(newTree, x);
                         multiVersionMappingStore.link(a, newTree);

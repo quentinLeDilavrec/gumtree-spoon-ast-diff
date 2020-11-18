@@ -73,12 +73,20 @@ public class MyUtils {
 			b.append("\t");
 		}
 		if (tree instanceof AbstractVersionedTree) {
-			b.append(((AbstractVersionedTree) tree).getAddedVersion());
-			if (((AbstractVersionedTree) tree).isRemoved()) {
-				b.append("-");
-				b.append(((AbstractVersionedTree) tree).getRemovedVersion());
-			}
-			b.append(" ");
+			AbstractVersionedTree tt = (AbstractVersionedTree) tree;
+			
+            if (tt.getInsertVersion() != null) {
+                b.append(tt.getInsertVersion());
+            }
+            if (tt.getInsertVersion() != null || tt.getRemoveVersion() != null) {
+                b.append("-");
+            }
+            if (tt.getRemoveVersion() != null) {
+                b.append(tt.getRemoveVersion());
+            }
+            if (tt.getInsertVersion() != null || tt.getRemoveVersion() != null) {
+                b.append(" ");
+            }
 		}
 		if (tree.getMetadata("type") != null) {
 			b.append(tree.getMetadata("type") + "@" + tree.getLabel());

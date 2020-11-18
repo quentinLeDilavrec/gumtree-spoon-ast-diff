@@ -21,6 +21,17 @@ public class ApplyTest {
         }
 
         @Test
+        public void testVersion() {
+                Version v0 = new VersionInt(0);
+                Version v1 = new VersionInt(1);
+                Version v2 = new VersionInt(2);
+                assertTrue(v0.compareTo(v0)==0);
+                assertTrue(v0.compareTo(v1)<0);
+                assertTrue(v0.compareTo(v2)<0);
+                assertTrue(v1.compareTo(v0)>0);
+        }
+
+        @Test
         public void testSimpleApply() {
                 String contentsLeft = "class X { " + "}";
                 String contentsRight = "class Y { " + "}";
