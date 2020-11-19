@@ -104,8 +104,9 @@ public abstract class AbstractVersionedTree implements ITree {
             } else if (curr.insertVersion == null) {
                 ++i;
             } else if (version == null) {
-            } else if (version.compareTo(curr.insertVersion) <= 0) {
-                ++i;
+            } else if (version.compareTo(curr.insertVersion) >= 0
+                    && version.compareTo(curr.removeVersion) < 0) {
+                        ++i;
             }
         }
         return -1;
@@ -135,18 +136,18 @@ public abstract class AbstractVersionedTree implements ITree {
             } else if (curr.removeVersion == null) {
                 if (wantedVersion == null) {
                     r.add(curr);
-                } else if (wantedVersion.compareTo(curr.insertVersion) <= 0) {
+                } else if (wantedVersion.compareTo(curr.insertVersion) >= 0) {
                     r.add(curr);
                 }
             } else if (curr.insertVersion == null) {
                 if (wantedVersion == null) {
                     r.add(curr);
-                } else if (wantedVersion.compareTo(curr.removeVersion) > 0) {
+                } else if (wantedVersion.compareTo(curr.removeVersion) < 0) {
                     r.add(curr);
                 }
             } else if (wantedVersion == null) {
-            } else if (wantedVersion.compareTo(curr.insertVersion) <= 0
-                    && wantedVersion.compareTo(curr.removeVersion) > 0) {
+            } else if (wantedVersion.compareTo(curr.insertVersion) >= 0
+                    && wantedVersion.compareTo(curr.removeVersion) < 0) {
                 r.add(curr);
             }
         }
