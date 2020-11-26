@@ -509,14 +509,14 @@ public class Combination {
         }
     }
 
-    public static ReflectedConstrainedHelper<AbstractVersionedTree> build(AbstractVersionedTree middle,
-            Collection<AAction> wanted) {
+    public static <T> ReflectedConstrainedHelper<AbstractVersionedTree> build(AbstractVersionedTree middle,
+            Collection<T> wanted) {
         List<ImmutablePair<Integer, AbstractVersionedTree>> l = Combination.flattenItreeToList2(middle,
                 new HashSet<>(wanted));
         int[] init = Combination.initialState(l);
         int[] leafs = Combination.detectLeafs(l);
-        AbstractVersionedTree[] nodes = l.stream().map(x -> x.right).toArray(AbstractVersionedTree[]::new);
-        int[] deps = l.stream().map(x -> x.left).mapToInt(Integer::intValue).toArray();
+        AbstractVersionedTree[] nodes = l.stream().map(ImmutablePair::getRight).toArray(AbstractVersionedTree[]::new);
+        int[] deps = l.stream().map(ImmutablePair::getLeft).mapToInt(Integer::intValue).toArray();
         return new ReflectedConstrainedHelper<AbstractVersionedTree>(init, leafs, deps, nodes);
     }
 
@@ -941,8 +941,8 @@ public class Combination {
         return r;
     }
 
-    public static List<ImmutablePair<Integer, AbstractVersionedTree>> flattenItreeToList2(AbstractVersionedTree node,
-            Set<AAction> wanted) {
+    public static <T> List<ImmutablePair<Integer, AbstractVersionedTree>> flattenItreeToList2(AbstractVersionedTree node,
+            Set<T> wanted) {
         List<ImmutablePair<Integer, AbstractVersionedTree>> r = new ArrayList<>();
         flattenAux2(r, node, -1, wanted, new HashMap<>());
         return r;
@@ -988,10 +988,10 @@ public class Combination {
         }
     }
 
-    static void flattenAux2(List<ImmutablePair<Integer, AbstractVersionedTree>> r, AbstractVersionedTree node,
-            Integer i, Set<AAction> wanted, Map<AbstractVersionedTree, Integer> lastLabel) {
-        AAction insertEvo = (AAction) node.getMetadata(MyScriptGenerator.INSERT_ACTION);
-        AAction deleteEvo = (AAction) node.getMetadata(MyScriptGenerator.DELETE_ACTION);
+    static <T> void flattenAux2(List<ImmutablePair<Integer, AbstractVersionedTree>> r, AbstractVersionedTree node,
+            Integer i, Set<T> wanted, Map<AbstractVersionedTree, Integer> lastLabel) {
+        T insertEvo = (T) node.getMetadata(MyScriptGenerator.INSERT_ACTION);
+        T deleteEvo = (T) node.getMetadata(MyScriptGenerator.DELETE_ACTION);
 
         boolean isInserted = insertEvo != null && wanted.contains(insertEvo);
         boolean isDeleted = deleteEvo != null && wanted.contains(deleteEvo);

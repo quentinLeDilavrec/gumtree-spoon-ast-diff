@@ -367,7 +367,7 @@ public class TreeTest {
 
 		DiffImpl diffC = (DiffImpl) diff.compare(astLeft, astRight);
 
-		TreeContext context = diffC.getContext();
+		TreeContext context = diff.getContext();
 
 		assertTrue(diffC.getAllOperations().size() > 0);
 		assertTrue(diffC.getAllOperations().get(0) instanceof InsertOperation);

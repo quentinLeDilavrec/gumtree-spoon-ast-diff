@@ -1737,7 +1737,7 @@ public class AstComparatorTest {
 		DiffImpl idiff = (DiffImpl) resulta;
 
 		for (Mapping map : idiff.getMappingsComp()) {
-			if ((map.getFirst().toPrettyString(idiff.getContext()).startsWith(NodeCreator.MODIFIERS))) {
+			if ((map.getFirst().toPrettyString(diff.getContext()).startsWith(NodeCreator.MODIFIERS))) {
 				assertFalse(map.getFirst().getChildren().isEmpty());
 				assertFalse(map.getSecond().getChildren().isEmpty());
 			}

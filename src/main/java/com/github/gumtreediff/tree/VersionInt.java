@@ -20,4 +20,8 @@ public final class VersionInt implements Version {
             return Version.COMP_RES.UNKNOWN;
         }
     }
+    @Override
+    public String toString() {
+        return Integer.toString(i);
+    }
 }

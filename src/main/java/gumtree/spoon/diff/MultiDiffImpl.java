@@ -3,14 +3,16 @@ package gumtree.spoon.diff;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.github.gumtreediff.actions.ActionGenerator;
 import com.github.gumtreediff.actions.EditScript;
-import com.github.gumtreediff.actions.EditScriptGenerator;
+import com.github.gumtreediff.actions.VersionedEditScriptGenerator;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
@@ -60,7 +62,6 @@ public class MultiDiffImpl implements Diff {
 	// private final TreeContext context;
 	private ITree lastSpoon;
 	private List<Diff> diffs = new ArrayList<>();
-	private MultiVersionMappingStore mappingsComp;
 	AbstractVersionedTree middle;
 	private Version lastVersion;
 
@@ -71,18 +72,36 @@ public class MultiDiffImpl implements Diff {
 	public MultiDiffImpl(ITree initialSpoon, Version version) {
 		this.lastSpoon = initialSpoon;
 		this.lastVersion = version;
-		mappingsComp = new MultiVersionMappingStore();
 		middle = VersionedTree.deepCopySpoon(initialSpoon);
+		
+		Set<Version> visitedVersions =  new HashSet<>();
+		visitedVersions.add(version);
+		middle.setMetadata("visitedVersions", visitedVersions);
 	}
 
-	public DiffImpl compute(TreeContext context, ITree rootSpoonRight, Version versionRight) {
+	public DiffImpl compute(ITree rootSpoonRight, Version versionRight) {
 		ITree rootSpoonLeft = this.lastSpoon;
 		Version rootVersionLeft = this.lastVersion;
 		this.lastSpoon = rootSpoonRight;
 		this.lastVersion = versionRight;
-		DiffImpl r = new DiffImpl(middle, mappingsComp, context, rootSpoonLeft, rootSpoonRight,rootVersionLeft,versionRight);
+		DiffImpl r = new DiffImpl(new MyScriptGenerator(middle, getGlobalGranularity()), rootSpoonLeft, rootSpoonRight,rootVersionLeft,versionRight);
 		diffs.add(r);
 		return r;
+	}
+
+	private MyScriptGenerator.Granularity getGlobalGranularity() {
+		String b = System.getProperty("gumtree.ganularity"); // b != null && b.equals("true")
+		MyScriptGenerator.Granularity moveMod;
+		if (b != null && b.equals("splited")) {
+			moveMod = MyScriptGenerator.Granularity.SPLITED;
+		} else if (b != null && b.equals("atomic")) {
+			moveMod = MyScriptGenerator.Granularity.ATOMIC;
+		} else if (b != null && b.equals("compose")) {
+			moveMod = MyScriptGenerator.Granularity.COMPOSE;
+		} else {
+			moveMod = MyScriptGenerator.Granularity.SPLITED;
+		}
+		return moveMod;
 	}
 
 	@Override

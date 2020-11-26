@@ -35,7 +35,6 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 
-import gumtree.spoon.apply.AAction;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;

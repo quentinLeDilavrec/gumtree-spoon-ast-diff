@@ -59,7 +59,7 @@ public class ExamplesApplyTest {
 	public static Collection<File[]> data() {
 		File examples = new File("src/test/resources/examples");
 
-		Collection<File[]> data = new ArrayList<File[]>();
+		List<File[]> data = new ArrayList<File[]>();
 
 		aux(data, examples);
 

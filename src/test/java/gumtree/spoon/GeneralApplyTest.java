@@ -249,7 +249,7 @@ public class GeneralApplyTest {
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srctree = scanner.getTree(left.getModel().getRootPackage());
         MultiDiffImpl mdiff = new MultiDiffImpl(srctree, leftV);
-        Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()), rightV);
+        Diff diff = mdiff.compute(scanner.getTree(right.getModel().getRootPackage()), rightV);
         System.out.println(scanner.getTree(left.getModel().getRootPackage().clone()).toShortString());
         CtAbstractInvocation<?> invo = (CtAbstractInvocation<?>) right.getModel().getRootPackage().getType("AAA")
                 .getNestedType("Y").getMethod("h").getBody().getStatements().get(0);
@@ -281,7 +281,7 @@ public class GeneralApplyTest {
         System.out.println(qqq.toTreeString());
         ITree afegwsegwse = scanner.getTree(right2.getModel().getRootPackage());
         System.out.println(afegwsegwse.toTreeString());
-        Diff diff2 = mdiff.compute(scanner.getTreeContext(), afegwsegwse, rightV2);
+        Diff diff2 = mdiff.compute(afegwsegwse, rightV2);
         ITree qqq2 = mdiff.getMiddle();
         System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), qqq));
     }
@@ -304,7 +304,7 @@ public class GeneralApplyTest {
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srctree = scanner.getTree(left.getModel().getRootPackage());
         MultiDiffImpl mdiff = new MultiDiffImpl(srctree,leftV);
-        Diff diff = mdiff.compute(scanner.getTreeContext(), scanner.getTree(right.getModel().getRootPackage()), rightV);
+        Diff diff = mdiff.compute(scanner.getTree(right.getModel().getRootPackage()), rightV);
         System.out.println(scanner.getTree(left.getModel().getRootPackage().clone()).toShortString());
         for (Operation<?> x : diff.getAllOperations()) {
             System.out.println(x.getClass());

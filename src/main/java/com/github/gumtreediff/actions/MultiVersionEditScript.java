@@ -1,4 +1,3 @@
-package com.github.gumtreediff.actions;
 
 /*
  * This file is part of GumTree.
@@ -19,16 +18,28 @@ package com.github.gumtreediff.actions;
  * Copyright 2019 Jean-Rémy Falleri <jr.falleri@gmail.com>
  */
 
-import com.github.gumtreediff.matchers.MappingStore;
-import com.github.gumtreediff.matchers.Matcher;
+package com.github.gumtreediff.actions;
+
+import com.github.gumtreediff.actions.MyAction.AtomicAction;
+import com.github.gumtreediff.actions.MyAction.ComposedAction;
+import com.github.gumtreediff.actions.model.Action;
+import com.github.gumtreediff.actions.model.Move;
+import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.Version;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 /**
- * Interface for script generators that compute edit scripts from mappings.
+ * Class representing edit scripts: sequence of edit actions.
  *
- * @see MappingStore
- * @see EditScript
+ * @see Action
  */
-public interface EditScriptGenerator {
-    EditScript computeActions(Matcher matcher, Version beforeVersion, Version afterVersion);
+public class MultiVersionEditScript<AA extends Action & AtomicAction<AbstractVersionedTree>, CA extends Action & ComposedAction<AbstractVersionedTree>> extends EditScript<AbstractVersionedTree> {
+
+    public MultiVersionEditScript(Version initialVersion) {
+
+    }
+
 }

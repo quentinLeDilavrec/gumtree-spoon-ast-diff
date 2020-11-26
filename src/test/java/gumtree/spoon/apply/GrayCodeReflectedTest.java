@@ -50,7 +50,7 @@ public class GrayCodeReflectedTest {
         srcTree = scanner.getTree(left);
         MultiDiffImpl mdiff = new MultiDiffImpl(srcTree, leftV);
         ITree dstTree = scanner.getTree(right);
-        DiffImpl diff = mdiff.compute(scanner.getTreeContext(), dstTree, rightV);
+        DiffImpl diff = mdiff.compute(dstTree, rightV);
 
         AbstractVersionedTree middle = mdiff.getMiddle();
 
@@ -77,7 +77,7 @@ public class GrayCodeReflectedTest {
         // System.out.print("" + (j==-1?" ":j) + " ");
         // }
         // System.out.println();
-        ReflectedConstrainedHelper<AbstractVersionedTree> combs = Combination.build(middle, (List) diff.getAtomicActions());
+        ReflectedConstrainedHelper<AbstractVersionedTree> combs = Combination.build(middle, (List) diff.getActions());
         Combination.CHANGE<Integer> next;
         int[] curr = Arrays.copyOf(combs.originalInit, combs.originalInit.length);
         for (int i = 0; i < curr.length; i++) {

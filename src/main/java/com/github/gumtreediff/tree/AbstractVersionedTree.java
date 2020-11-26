@@ -89,6 +89,21 @@ public abstract class AbstractVersionedTree implements ITree {
 
     protected int hash;
 
+    public boolean existsAt(Version version) {
+        if (this.insertVersion == null && this.removeVersion==null) {
+            return true;
+        } else if (version == null) {
+            return false;
+        } else if ((this.insertVersion==null || version.compareTo(this.insertVersion) >= 0)
+                && (this.removeVersion==null || version.compareTo(this.removeVersion) < 0)) {
+            // insertVersion <= version < removeVersion
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
     @Override
     public int getChildPosition(ITree child) {
         if (!(child instanceof AbstractVersionedTree))
@@ -101,12 +116,8 @@ public abstract class AbstractVersionedTree implements ITree {
         for (AbstractVersionedTree curr : children) {
             if (curr == child) {
                 return i;
-            } else if (curr.insertVersion == null) {
+            } else if (curr.existsAt(version)) {
                 ++i;
-            } else if (version == null) {
-            } else if (version.compareTo(curr.insertVersion) >= 0
-                    && version.compareTo(curr.removeVersion) < 0) {
-                        ++i;
             }
         }
         return -1;
@@ -131,23 +142,7 @@ public abstract class AbstractVersionedTree implements ITree {
     public List<AbstractVersionedTree> getChildren(Version wantedVersion) {
         List<AbstractVersionedTree> r = new ArrayList<>();
         for (AbstractVersionedTree curr : children) {
-            if (curr.removeVersion == null && curr.insertVersion == null) {
-                r.add(curr);
-            } else if (curr.removeVersion == null) {
-                if (wantedVersion == null) {
-                    r.add(curr);
-                } else if (wantedVersion.compareTo(curr.insertVersion) >= 0) {
-                    r.add(curr);
-                }
-            } else if (curr.insertVersion == null) {
-                if (wantedVersion == null) {
-                    r.add(curr);
-                } else if (wantedVersion.compareTo(curr.removeVersion) < 0) {
-                    r.add(curr);
-                }
-            } else if (wantedVersion == null) {
-            } else if (wantedVersion.compareTo(curr.insertVersion) >= 0
-                    && wantedVersion.compareTo(curr.removeVersion) < 0) {
+            if (curr.existsAt(wantedVersion)) {
                 r.add(curr);
             }
         }

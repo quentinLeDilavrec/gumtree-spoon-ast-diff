@@ -177,7 +177,7 @@ public class CtWrapper<L> extends CtElementImpl {
 		private static final long serialVersionUID = 1L;
 
 		public CtExeRefWrapper(CtAbstractInvocation parent) {
-			super(parent.getExecutable(), parent, CtRole.NAME);
+			super(parent.getExecutable(), parent, CtRole.EXECUTABLE_REF);
 		}
 
 		@Override

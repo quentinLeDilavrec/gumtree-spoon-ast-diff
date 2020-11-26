@@ -50,6 +50,13 @@ public class ApplyTest {
         }
 
         @Test
+        public void testSimpleApplyB() {
+                String contentsLeft = "public class X { String f(){return \"Hello World!\";}}";
+                String contentsRight = "public class X { String f(){return \"Hello!\";}}";
+                ApplyTestHelper.onChange(contentsLeft, contentsRight);
+        }
+
+        @Test
         public void testSimpleApplySuper2() {
                 ApplyTestHelper.onChange(
                                 new File("src/test/resources/examples/roots/test9/left_QuickNotepad_1.13.java"),
@@ -248,11 +255,14 @@ public class ApplyTest {
                                 new File("src/test/resources/examples/t_208618/left_PropPanelUseCase_1.39.java"),
                                 new File("src/test/resources/examples/919148/ReplicationRun/919148_ReplicationRun_0_t.java"));
         }
-
         @Test
         public void testSimpleApply18() {
                 ApplyTestHelper.onChange(new File("src/test/resources/examples/t_222894/right_Client_1.151.java"),
                                 new File("src/test/resources/examples/t_224766/right_SegmentTermEnum_1.2.java"));
+        }
+
+        @Test
+        public void testSimpleApply18Reversed() {
                 ApplyTestHelper.onChange(
                                 new File("src/test/resources/examples/t_224766/right_SegmentTermEnum_1.2.java"),
                                 new File("src/test/resources/examples/t_222894/right_Client_1.151.java"));
@@ -283,5 +293,35 @@ public class ApplyTest {
                 + "Object f = (int i) -> i > 0;"
                 + "}";
                 ApplyTestHelper.onChange(left, right);
+        }
+        @Test
+        public void testSimpleApply22() {
+                ApplyTestHelper.onChange(
+                                new File("src/test/resources/examples/test8/left.java"),
+                                new File("src/test/resources/examples/test8/right.java"));
+        }
+        @Test
+        public void testSimpleApply23() {
+                ApplyTestHelper.onChange(
+                                new File("src/test/resources/examples/test8/right.java"),
+                                new File("src/test/resources/examples/test8/left.java"));
+        }
+        @Test
+        public void testSimpleApply24() {
+                ApplyTestHelper.onChange(
+                                new File("src/test/resources/examples/test9/left.java"),
+                                new File("src/test/resources/examples/test9/right.java"));
+        }
+        @Test
+        public void testSimpleApply25() {
+                ApplyTestHelper.onChange(
+                                new File("src/test/resources/examples/test9/right.java"),
+                                new File("src/test/resources/examples/test9/left.java"));
+        }
+        @Test
+        public void testSimpleApply26() {
+                ApplyTestHelper.onChange(
+                                new File("src/test/resources/examples/t_224890/left_DateField_1.4.java"),
+                                new File("src/test/resources/examples/t_224890/right_DateField_1.5.java"));
         }
 }

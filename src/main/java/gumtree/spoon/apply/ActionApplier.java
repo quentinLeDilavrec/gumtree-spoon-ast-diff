@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.logging.Logger;
 
+import com.github.gumtreediff.actions.MyAction.MyDelete;
+import com.github.gumtreediff.actions.MyAction.MyInsert;
+import com.github.gumtreediff.actions.MyAction.MyUpdate;
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
 import com.github.gumtreediff.actions.model.Move;
@@ -32,7 +35,7 @@ public class ActionApplier {
 	static Environment env = new StandardEnvironment();
 	static spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
 
-	public static <T extends Insert & AAction<Insert>> void applyAInsert(Factory factory, TreeContext ctx, T action)
+	public static void applyMyInsert(Factory factory, TreeContext ctx, MyInsert action)
 			throws WrongAstContextException {
 		ITree source = action.getSource();
 		factory.createLocalVariableReference().getDeclaration();
@@ -281,8 +284,8 @@ public class ActionApplier {
 			case "RootPackage": {
 				CtPackage created = factory.getModel().getRootPackage();
 				CtElement sp = getSpoonEle(source);
-				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				// CtElement parent = getSpoonEleStrict(parentTarget);
+				// created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
@@ -759,7 +762,7 @@ public class ActionApplier {
 			}
 			case "If": {
 				CtIf created = factory.createIf();
-				CtElement sp = getSpoonEle(source);
+				CtIf sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
 				if (parent instanceof CtBodyHolder) {
@@ -769,6 +772,11 @@ public class ActionApplier {
 				} else if (parent instanceof CtSynchronized) {
 					addInBody(factory, target, created, (CtSynchronized) parent);
 				}
+				// if (sp.getThenStatement()!=null && sp.getThenStatement().isImplicit()) {
+				// 	CtBlock created2 = factory.createBlock();
+				// 	created2.setImplicit(sp.getThenStatement().isImplicit());
+				// 	created.setThenStatement(created2);
+				// }
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
 				break;
@@ -788,9 +796,9 @@ public class ActionApplier {
 				CtElement sp = getSpoonEle(source);
 				CtIf parent = getSpoonEleStrict(parentTarget);
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				// created.setImplicit(sp.isImplicit());
 				parent.setThenStatement(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
-				// created.setBody(factory.createBlock());
 				break;
 			}
 			case "Block": {
@@ -1492,9 +1500,9 @@ public class ActionApplier {
 		addInBody(factory, target, created, parent.getBlock());
 	}
 
-	public static <T extends Delete & AAction<Delete>> void applyADelete(Factory factory, TreeContext ctx, T action)
+	public static void applyMyDelete(Factory factory, TreeContext ctx, MyDelete action)
 			throws WrongAstContextException {
-		ITree source = action.getSource();
+		// ITree source = action.getSource();
 		AbstractVersionedTree target = action.getTarget();
 		AbstractVersionedTree parentTarget = target.getParent();
 		CtElement ele = (CtElement) target.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
@@ -1508,12 +1516,13 @@ public class ActionApplier {
 		}
 	}
 
-	public static <T extends Update & AAction<Update>> void applyAUpdate(Factory factory, TreeContext ctx, T action) {
-		ITree source = action.getSource();
-		factory.createLocalVariableReference().getDeclaration();
+	public static void applyMyUpdate(Factory factory, TreeContext ctx, MyUpdate action) {
 		AbstractVersionedTree target = action.getTarget();
 		AbstractVersionedTree parentTarget = target.getParent();
 		String targetType = (String) target.getMetadata("type");
+		// action.getEditScript().getRightVersion();
+		ITree source = action.getNode();
+		// ITree source = action.getSource();
 		switch (targetType) {
 			case "LABEL": {
 				CtElement parent = getSpoonEleStrict(parentTarget);
@@ -1525,10 +1534,10 @@ public class ActionApplier {
 				} else if (parent instanceof CtTypeReference) {
 					CtTypeReference sps = getSpoonEle(source.getParent());
 					CtTypeReference ref = factory.Type().createReference(sps.getQualifiedName());
+					((CtTypeReference<?>) ref).setSimpleName(target.getLabel());
 					if (parent.isParentInitialized()) {
 						((CtTypeReference<?>) parent).replace(ref);
 					}
-					((CtTypeReference<?>) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtBinaryOperator) {
 					((CtBinaryOperator<?>) parent).setKind(BinaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtUnaryOperator) {
@@ -1742,8 +1751,8 @@ public class ActionApplier {
 		}
 	}
 
-	public static <T extends Move & AAction<Move>> void applyAMove(Factory factory, TreeContext ctx, T action) {
-		throw new UnsupportedOperationException();
-	}
+	// public static <T extends Move & AAction<Move>> void applyMyMove(Factory factory, TreeContext ctx, T action) {
+	// 	throw new UnsupportedOperationException();
+	// }
 
 }

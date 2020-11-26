@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.github.gumtreediff.actions.model.Insert;
+import com.github.gumtreediff.tree.TreeContext;
 import com.github.gumtreediff.tree.Version;
 import com.github.gumtreediff.tree.Version.COMP_RES;
 import com.google.gson.Gson;
@@ -86,6 +87,11 @@ public class AstComparator {
 	 */
 	private boolean includeComments = false;
 
+	private TreeContext context;
+	public TreeContext getContext() {
+		return context;
+	}
+
 	public AstComparator() {
 		super();
 	}
@@ -134,7 +140,8 @@ public class AstComparator {
 	 * compares two AST nodes
 	 */
 	public Diff compare(CtElement left, CtElement right) {
-		final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
+		SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
+		this.context = scanner.getTreeContext();
 		final Version1 rightV = new Version1();
 		final Version leftV = new Version() {
 			@Override
@@ -145,7 +152,7 @@ public class AstComparator {
 		};
 		rightV.other = leftV;
 		MultiDiffImpl r = new MultiDiffImpl(scanner.getTree(left), leftV);
-		return r.compute(scanner.getTreeContext(), scanner.getTree(right), rightV);
+		return r.compute(scanner.getTree(right), rightV);
 	}
 
 	public Diff compare(CtElement... versions) {

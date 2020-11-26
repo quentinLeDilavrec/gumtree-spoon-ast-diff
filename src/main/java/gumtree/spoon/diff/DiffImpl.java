@@ -6,11 +6,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.github.gumtreediff.actions.ActionGenerator;
 import com.github.gumtreediff.actions.EditScript;
-import com.github.gumtreediff.actions.EditScriptGenerator;
+import com.github.gumtreediff.actions.VersionedEditScript;
+import com.github.gumtreediff.actions.VersionedEditScriptGenerator;
+import com.github.gumtreediff.actions.MyAction.AtomicAction;
+import com.github.gumtreediff.actions.MyAction.ComposedAction;
 import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
@@ -44,77 +48,66 @@ public class DiffImpl implements Diff {
 	/**
 	 * Actions over all tree nodes (CtElements)
 	 */
-	private final List<Operation> allOperations;
+	private List<Operation> allOperations;
 	/**
 	 * Actions over the changes roots.
 	 */
-	private final List<Operation> rootOperations;
+	private List<Operation> rootOperations;
 	/**
 	 * the mapping of this diff
 	 */
-	private final MappingStore _mappingsComp;
+	private MappingStore _mappingsComp;
 	/**
 	 * Context of the spoon diff.
 	 */
-	private final TreeContext context;
 	private List<Action> atomicActionsList;
 	private List<Action> composedActionsList;
+	private VersionedEditScript editScript;
 
-	public List<Action> getAtomicActions() {
-		return atomicActionsList;
+	public List<Action> getActions() {
+		return editScript.asList();
 	}
 
-	public List<Action> getComposedActions() {
-		return composedActionsList;
+	public <U extends Action & AtomicAction<AbstractVersionedTree>> List<U> getAtomic() {
+		return editScript.getAtomic();
 	}
 
-	DiffImpl(AbstractVersionedTree middle, MultiVersionMappingStore multiMappingsComp, TreeContext context,
-			ITree rootSpoonLeft, ITree rootSpoonRight, Version beforeVersion, Version afterVersion) {
-		if (context == null) {
-			throw new IllegalArgumentException();
-		}
+	public <U extends Action & ComposedAction<AbstractVersionedTree>> Set<U> getComposed() {
+		return editScript.getComposed();
+	}
+	
+	DiffImpl(VersionedEditScriptGenerator actionGenerator, ITree rootSpoonLeft, ITree rootSpoonRight,
+			Version beforeVersion, Version afterVersion) {
 		final MappingStore mappingsComp = new SingleVersionMappingStore<ITree, ITree>(rootSpoonLeft, rootSpoonRight);
-		this.context = context;
 
 		final Matcher matcher = new CompositeMatchers.ClassicGumtree(rootSpoonLeft, rootSpoonRight, mappingsComp);
 		matcher.match();
 
-		String b = System.getProperty("gumtree.ganularity"); // b != null && b.equals("true")
-		MyScriptGenerator.Granularity moveMod;
-		if (b != null && b.equals("splited")) {
-			moveMod = MyScriptGenerator.Granularity.SPLITED;
-		} else if (b != null && b.equals("atomic")) {
-			moveMod = MyScriptGenerator.Granularity.ATOMIC;
-		} else if (b != null && b.equals("compose")) {
-			moveMod = MyScriptGenerator.Granularity.COMPOSE;
-		} else {
-			moveMod = MyScriptGenerator.Granularity.SPLITED;
-		}
-		final EditScriptGenerator actionGenerator = new MyScriptGenerator(middle, multiMappingsComp, moveMod);
+		this.editScript = actionGenerator.computeActions(matcher, beforeVersion,
+				afterVersion);
 
-		EditScript actions = actionGenerator.computeActions(matcher,beforeVersion,afterVersion);
-		this.atomicActionsList = actions.asList();
-		this.composedActionsList = (List)actions.getComposed();
+		// this.atomicActionsList = actions.asList();
+		// this.composedActionsList = (List)actions.getComposed();
 
-		ActionClassifier actionClassifier = new ActionClassifier(multiMappingsComp.asSet(), atomicActionsList);
-		// Bugfix: the Action classifier must be executed *BEFORE* the convertToSpoon
-		// because it writes meta-data on the trees
-		this.rootOperations = wrapSpoon(actionClassifier.getRootActions());
-		this.allOperations = wrapSpoon(atomicActionsList);
+		// ActionClassifier actionClassifier = new ActionClassifier(multiMappingsComp.asSet(), atomicActionsList);
+		// // Bugfix: the Action classifier must be executed *BEFORE* the convertToSpoon
+		// // because it writes meta-data on the trees
+		// this.rootOperations = wrapSpoon(actionClassifier.getRootActions());
+		// this.allOperations = wrapSpoon(atomicActionsList);
 
-		this._mappingsComp = mappingsComp;
+		// this._mappingsComp = mappingsComp;
 
-		for (int i = 0; i < this.getAllOperations().size(); i++) {
-			Operation operation = this.getAllOperations().get(i);
-			if (operation instanceof MoveOperation) {
-				if (operation.getSrcNode() != null) {
-					operation.getSrcNode().putMetadata("isMoved", true);
-				}
-				if (operation.getDstNode() != null) {
-					operation.getDstNode().putMetadata("isMoved", true);
-				}
-			}
-		}
+		// for (int i = 0; i < this.getAllOperations().size(); i++) {
+		// 	Operation operation = this.getAllOperations().get(i);
+		// 	if (operation instanceof MoveOperation) {
+		// 		if (operation.getSrcNode() != null) {
+		// 			operation.getSrcNode().putMetadata("isMoved", true);
+		// 		}
+		// 		if (operation.getDstNode() != null) {
+		// 			operation.getDstNode().putMetadata("isMoved", true);
+		// 		}
+		// 	}
+		// }
 	}
 
 	private List<Operation> wrapSpoon(List<Action> actions) {
@@ -204,26 +197,26 @@ public class DiffImpl implements Diff {
 		throw new NoSuchElementException();
 	}
 
-	@Override
-	public boolean containsOperation(OperationKind kind, String nodeKind) {
-		return rootOperations.stream() //
-				.anyMatch(operation -> operation.getAction().getClass().getSimpleName().equals(kind.name()) //
-						&& context.getTypeLabel(operation.getAction().getNode()).equals(nodeKind));
-	}
+	// @Override
+	// public boolean containsOperation(OperationKind kind, String nodeKind) {
+	// 	return rootOperations.stream() //
+	// 			.anyMatch(operation -> operation.getAction().getClass().getSimpleName().equals(kind.name()) //
+	// 					&& context.getTypeLabel(operation.getAction().getNode()).equals(nodeKind));
+	// }
 
-	@Override
-	public boolean containsOperation(OperationKind kind, String nodeKind, String nodeLabel) {
-		return containsOperations(getRootOperations(), kind, nodeKind, nodeLabel);
-	}
+	// @Override
+	// public boolean containsOperation(OperationKind kind, String nodeKind, String nodeLabel) {
+	// 	return containsOperations(getRootOperations(), kind, nodeKind, nodeLabel);
+	// }
 
-	@Override
-	public boolean containsOperations(List<Operation> operations, OperationKind kind, String nodeKind,
-			String nodeLabel) {
-		return operations.stream()
-				.anyMatch(operation -> operation.getAction().getClass().getSimpleName().equals(kind.name()) //
-						&& context.getTypeLabel(operation.getAction().getNode()).equals(nodeKind)
-						&& operation.getAction().getNode().getLabel().equals(nodeLabel));
-	}
+	// @Override
+	// public boolean containsOperations(List<Operation> operations, OperationKind kind, String nodeKind,
+	// 		String nodeLabel) {
+	// 	return operations.stream()
+	// 			.anyMatch(operation -> operation.getAction().getClass().getSimpleName().equals(kind.name()) //
+	// 					&& context.getTypeLabel(operation.getAction().getNode()).equals(nodeKind)
+	// 					&& operation.getAction().getNode().getLabel().equals(nodeLabel));
+	// }
 
 	@Override
 	public boolean containsOperations(OperationKind kind, String nodeKind, String nodeLabel, String newLabel) {
@@ -237,36 +230,36 @@ public class DiffImpl implements Diff {
 		);
 	}
 
-	@Override
-	public void debugInformation() {
-		System.err.println(toDebugString());
-	}
+	// @Override
+	// public void debugInformation() {
+	// 	System.err.println(toDebugString());
+	// }
 
-	private String toDebugString() {
-		return toDebugString(rootOperations);
-	}
+	// private String toDebugString() {
+	// 	return toDebugString(rootOperations);
+	// }
 
-	private String toDebugString(List<Operation> ops) {
-		String result = "";
-		for (Operation operation : ops) {
-			ITree node = operation.getAction().getNode();
-			final CtElement nodeElement = operation.getSrcNode();
-			String nodeType = context.getTypeLabel(node.getType());
-			if (nodeElement != null) {
-				nodeType += "(" + nodeElement.getClass().getSimpleName() + ")";
-			}
-			result += "OperationKind." + operation.getAction().getClass().getSimpleName() + ", \"" + nodeType + "\", \""
-					+ node.getLabel() + "\"";
+	// private String toDebugString(List<Operation> ops) {
+	// 	String result = "";
+	// 	for (Operation operation : ops) {
+	// 		ITree node = operation.getAction().getNode();
+	// 		final CtElement nodeElement = operation.getSrcNode();
+	// 		String nodeType = context.getTypeLabel(node.getType());
+	// 		if (nodeElement != null) {
+	// 			nodeType += "(" + nodeElement.getClass().getSimpleName() + ")";
+	// 		}
+	// 		result += "OperationKind." + operation.getAction().getClass().getSimpleName() + ", \"" + nodeType + "\", \""
+	// 				+ node.getLabel() + "\"";
 
-			if (operation instanceof UpdateOperation) {
-				// adding the new value for update
-				result += ",  \"" + ((Update) operation.getAction()).getValue() + "\"";
-			}
+	// 		if (operation instanceof UpdateOperation) {
+	// 			// adding the new value for update
+	// 			result += ",  \"" + ((Update) operation.getAction()).getValue() + "\"";
+	// 		}
 
-			result += " (size: " + node.getDescendants().size() + ")" + node.toTreeString();
-		}
-		return result;
-	}
+	// 		result += " (size: " + node.getDescendants().size() + ")" + node.toTreeString();
+	// 	}
+	// 	return result;
+	// }
 
 	@Override
 	public String toString() {
@@ -287,11 +280,35 @@ public class DiffImpl implements Diff {
 		return stringBuilder.toString();
 	}
 
-	public TreeContext getContext() {
-		return context;
-	}
+	// public TreeContext getContext() {
+	// 	return context;
+	// }
 
 	public MappingStore getMappingsComp() {
 		return _mappingsComp;
+	}
+
+	@Override
+	public boolean containsOperation(OperationKind kind, String nodeKind) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean containsOperation(OperationKind kind, String nodeKind, String nodeLabel) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean containsOperations(List<Operation> operations, OperationKind kind, String nodeKind,
+			String nodeLabel) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void debugInformation() {
+		// TODO Auto-generated method stub
 	}
 }
