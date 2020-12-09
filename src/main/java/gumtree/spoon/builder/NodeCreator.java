@@ -88,6 +88,7 @@ public class NodeCreator extends CtInheritanceScanner {
 	public <T> void scanCtVariable(CtVariable<T> e) {
 		CtTypeReference<T> type = e.getType();
 		if (type != null) {
+			// TODO manage as standard CtTypeReference that have the role TYPE
 			ITree variableType = builder.createNode("VARIABLE_TYPE",
 					builder.getTypeName(type.getClass().getSimpleName()));
 			variableType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
@@ -102,6 +103,7 @@ public class NodeCreator extends CtInheritanceScanner {
 		// add the return type of the method
 		CtTypeReference<T> type = e.getType();
 		if (type != null) {
+			// TODO manage as standard CtTypeReference that have the role TYPE
 			ITree returnType = builder.createNode("RETURN_TYPE", builder.getTypeName(type.getClass().getSimpleName()));
 			returnType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
 			type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, returnType);

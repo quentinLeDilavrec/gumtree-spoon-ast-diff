@@ -169,8 +169,10 @@ public class ActionApplier {
 								: factory.Field().createReference(sps.getVariable().getType().getQualifiedName() + " "
 										+ sps.getVariable().getQualifiedName());
 						((CtFieldAccess<?>) parent).setVariable(field);
-						((CtFieldAccess<?>) parent)
-								.setTarget(factory.createTypeAccess(field.getDeclaringType(), false));
+						if (!field.getDeclaringType().getSimpleName().equals("<unknown>")) {
+							((CtFieldAccess<?>) parent)
+							.setTarget(factory.createTypeAccess(field.getDeclaringType(), false));	
+						}
 					} else {
 						((CtFieldAccess<?>) parent).setVariable(var.getReference());
 						if (parent.hasParent(var.getDeclaringType()) && !var.isStatic()) {
@@ -234,6 +236,9 @@ public class ActionApplier {
 					// ((CtAssignment) parent).setAssigned(w);
 
 					// ((CtAssignment) parent).setLabel(target.getLabel());
+				} else if (parent instanceof CtPackageReference) {
+					parent.replace(factory.Package().getOrCreate(target.getLabel()).getReference());
+					// ((CtPackageReference)parent).setSimpleName(target.getLabel());
 				} else {
 					throw new UnsupportedOperationException(parent.getClass() + " for label");
 				}
@@ -666,6 +671,8 @@ public class ActionApplier {
 					((CtArrayTypeReference) parent).setComponentType(created);
 				} else if (parent instanceof CtTypeReference) {
 					((CtTypeReference) parent).addActualTypeArgument(created);
+				} else if (parent instanceof CtTypeAccess) {
+					((CtTypeAccess) parent).setAccessedType(created);
 				} else {
 					throw new UnsupportedOperationException(
 							parent.getClass().toString() + " as a parent is no handled for role " + target.getLabel());
@@ -1288,6 +1295,27 @@ public class ActionApplier {
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
+			case "PackageReference": {
+				CtPackageReference created = factory.createPackageReference();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				// created.setSimpleName("placeHolder" + parent.getFields().size());
+				if (parent instanceof CtAnnotation) {
+					CtTypeReference aaa = ((CtAnnotation) parent).getAnnotationType();
+					aaa.setPackage(created);
+					created.setParent(aaa);
+					((CtAnnotation) parent).setAnnotationType(aaa);
+				} else if (parent instanceof CtTypeReference) {
+					((CtTypeReference) parent).setPackage(created);
+					created.setParent(parent);
+				} else {
+					throw new RuntimeException(parent.getClass().toString());
+				}
+
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				break;
+			}
 			default: {
 				LOGGER.warning(targetType + " is no handled");
 				throw new AssertionError(targetType + " is no handled");
@@ -1523,6 +1551,7 @@ public class ActionApplier {
 		// action.getEditScript().getRightVersion();
 		ITree source = action.getNode();
 		// ITree source = action.getSource();
+		// TODO find previously instanciated thing to uninstantiat it after instanciating target
 		switch (targetType) {
 			case "LABEL": {
 				CtElement parent = getSpoonEleStrict(parentTarget);
@@ -1709,6 +1738,8 @@ public class ActionApplier {
 					// ((CtAssignment) parent).setAssigned(w);
 
 					// ((CtAssignment) parent).setLabel(target.getLabel());
+				} else if (parent instanceof CtPackageReference) {
+					parent.replace(factory.Package().getOrCreate(target.getLabel()).getReference());
 				} else {
 					throw new UnsupportedOperationException(parent.getClass() + " for label");
 				}

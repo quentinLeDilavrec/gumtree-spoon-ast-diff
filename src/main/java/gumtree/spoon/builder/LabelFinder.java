@@ -28,6 +28,7 @@ import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.code.CtWhile;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.DeclarationSourcePosition;
+import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtNamedElement;
@@ -222,6 +223,6 @@ class LabelFinder extends CtInheritanceScanner {
 
 	@Override
 	public <A extends Annotation> void visitCtAnnotation(CtAnnotation<A> e) {
-		label = e.getAnnotationType().getQualifiedName();
+		label = e.getAnnotationType().getSimpleName();//getQualifiedName();
 	}
 }

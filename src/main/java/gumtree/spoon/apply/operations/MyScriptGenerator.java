@@ -312,9 +312,9 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
 
                 }
             }
-            // srcInOrder.add(w);
-            // dstInOrder.add(x);
-            // alignChildren(w, x);
+            srcInOrder.add(w);
+            dstInOrder.add(x);
+            alignChildren(w, x);
         }
     }
 

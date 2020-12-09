@@ -18,7 +18,8 @@ import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.Version;
 
 public interface MyAction<U> {
-    U getTarget();
+    public String getName();
+    public U getTarget();
 
     static List<Class> atomicActions = Arrays.asList(Insert.class, Delete.class, Update.class);
 
@@ -46,10 +47,6 @@ public interface MyAction<U> {
     }
 
     interface CompressibleAtomicAction<T extends ITree> extends AtomicAction<T> {
-        /**
-         * @return the node directly affected by the action
-         */
-        T getTarget();
 
         void setCompressed(List<AtomicAction<T>> compressed);
     }
@@ -57,7 +54,7 @@ public interface MyAction<U> {
     public interface ComposedAction<T extends ITree> extends MyAction<Set<T>> {
         default Set<T> getTarget() {
             Set<T> r = new HashSet<>();
-            for (Action x : composed()) {
+            for (MyAction x : composed()) {
                 if (x instanceof AtomicAction) {
                     r.add(((AtomicAction<T>) x).getTarget());
                 } else if (x instanceof ComposedAction) {
@@ -67,7 +64,7 @@ public interface MyAction<U> {
             return r;
         }
 
-        List<Action> composed();
+        List<? extends MyAction<?>> composed();
     }
 
     public static class MyMove extends Move
@@ -96,7 +93,7 @@ public interface MyAction<U> {
         }
 
         @Override
-        public List<Action> composed() {
+        public List<AtomicAction<AbstractVersionedTree>> composed() {
             return Arrays.asList(delete, insert);
         }
 

@@ -1,0 +1,474 @@
+package gumtree.spoon.apply;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import com.github.gumtreediff.actions.MyAction;
+import com.github.gumtreediff.actions.MyAction.AtomicAction;
+import com.github.gumtreediff.actions.MyAction.ComposedAction;
+import com.github.gumtreediff.tree.AbstractVersionedTree;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
+import gumtree.spoon.apply.operations.MyScriptGenerator;
+
+class Flattener {
+    private List<Cluster> result;
+    private Map<ComposedAction<AbstractVersionedTree>, Set<Integer>> composeToResIndex;
+    // private Map<AbstractVersionedTree, Integer> lastLabel;
+    private Set<AtomicAction<AbstractVersionedTree>> wanted;
+    private Map<AtomicAction<AbstractVersionedTree>, Set<ComposedAction<AbstractVersionedTree>>> composed;
+    private Set<ComposedAction<AbstractVersionedTree>> rcomposed;
+
+    public Flattener(Set<AtomicAction<AbstractVersionedTree>> wanted) {
+        this.wanted = wanted;
+        this.composed = new HashMap<>();
+    }
+
+    // public ComposedAction<AbstractVersionedTree> group(String name, Predicate<AbstractVersionedTree> p) {
+
+    // }
+
+    // private List<Result> getResults(ComposedAction<AbstractVersionedTree> ca) {
+    //     List<Result> res = new ArrayList<>();
+    //     for (Result r : result) {
+    //         if (r.virtuallyComposed.contains(ca)) {
+    //             res.add(r);
+    //         }
+    //     }
+    //     return res;
+    // }
+
+    private Set<ComposedAction<AbstractVersionedTree>> getComposed(AbstractVersionedTree node) {
+        Set<ComposedAction<AbstractVersionedTree>> r = new HashSet<>();
+        AtomicAction<AbstractVersionedTree> insertEvo = getInsert(node);
+        if (insertEvo != null) {
+            r.addAll(composed.get(insertEvo));
+        }
+        AtomicAction<AbstractVersionedTree> deleteEvo = getDelete(node);
+        if (deleteEvo != null) {
+            r.addAll(composed.get(deleteEvo));
+        }
+        return r;
+    }
+
+    private AtomicAction<AbstractVersionedTree> getDelete(AbstractVersionedTree node) {
+        return (AtomicAction<AbstractVersionedTree>) node.getMetadata(MyScriptGenerator.DELETE_ACTION);
+    }
+
+    private AtomicAction<AbstractVersionedTree> getInsert(AbstractVersionedTree node) {
+        return (AtomicAction<AbstractVersionedTree>) node.getMetadata(MyScriptGenerator.INSERT_ACTION);
+    }
+
+    public void compute(AbstractVersionedTree tree) {
+        result = new ArrayList<>();
+        rcomposed = new HashSet<>();
+        composeToResIndex = new HashMap<>();
+        Set<Integer> availableParents = new HashSet<>();
+        availableParents.add(-1);
+        computeAux(tree, null);
+    }
+
+    public List<ImmutablePair<Integer, AbstractVersionedTree>> getResult() {
+        // ASSUME that result tree is ordered breath first
+        List<ImmutablePair<Integer, AbstractVersionedTree>> r = new ArrayList<>();
+        for (Cluster res : result) {
+            List<AbstractVersionedTree> possibleRoots = aux(res);
+            int parentIndex = res.parentIndex;
+            while (parentIndex > -1 && r.get(parentIndex).right instanceof AbstractVersionedTree.FakeTree) {
+                parentIndex = r.get(parentIndex).left;
+            }
+            AbstractVersionedTree.FakeTree fake = new AbstractVersionedTree.FakeTree(res.nodes);
+            fake.setMetadata("VirtuallyComposed", res.virtuallyComposed);
+            if (parentIndex == -1 || possibleRoots.indexOf(r.get(parentIndex).right) > 0) {
+                fake.setParent(possibleRoots.get(possibleRoots.size() - 1));
+                // r.add(new ImmutablePair<>(res.parentIndex, possibleRoots.get(possibleRoots.size() - 1)));
+            } else {
+                fake.setParent(r.get(parentIndex).right);
+            }
+            r.add(new ImmutablePair<>(res.parentIndex, fake));
+        }
+        return r;
+    }
+
+    private List<AbstractVersionedTree> aux(Cluster x) {
+        List<AbstractVersionedTree> parents = computeLineage(x.rootNode);
+        for (AbstractVersionedTree node : x.nodes) {
+            List<AbstractVersionedTree> curr = computeLineage(node);
+            for (int i = 0; i < parents.size(); i++) {
+                if (i >= curr.size() || parents.get(i) != curr.get(i)) {
+                    parents = parents.subList(0, i);
+                    break;
+                }
+            }
+        }
+        return parents;
+    }
+
+    private List<AbstractVersionedTree> computeLineage(AbstractVersionedTree node) {
+        List<AbstractVersionedTree> r = new ArrayList<>();
+        List<AbstractVersionedTree> parents = (List) node.getParents();
+        for (int i = parents.size() - 1; i >= 0; i--) {
+            r.add(parents.get(i));
+        }
+        r.add(node);
+        return r;
+    }
+
+    Set<MyAction<?>> TMP = Collections.EMPTY_SET;
+
+    /**
+     * 
+     * @param node currently analyzed
+     * @param maybePresentParents allMaybePresent nodes in the parent hierachy of node
+     * @return
+     */
+    private void computeAux(AbstractVersionedTree node, Chain<AbstractVersionedTree> maybePresentParents) {
+        AtomicAction<AbstractVersionedTree> insertEvo = getInsert(node);
+        AtomicAction<AbstractVersionedTree> deleteEvo = getDelete(node);
+        System.out.println(maybePresentParents + "\t" + maybePresentParents + "\t" + node.toVersionedString());
+
+        boolean isInserted = insertEvo != null && wanted.contains(insertEvo);
+        boolean isDeleted = deleteEvo != null && wanted.contains(deleteEvo);
+        boolean isNeverPresent = insertEvo != null && !isInserted;
+        boolean isAlwaysPresent = insertEvo == null && !isDeleted;
+        boolean isMaybePresent = !isNeverPresent && !isAlwaysPresent;
+        if (isLabel(node)) {
+            // Set<MyAction<?>> composedUnion = new HashSet<>();
+            AbstractVersionedTree parent = node.getParent();
+            boolean isFirstLabel = node.getInsertVersion() == null
+                    || node.getInsertVersion().equals(parent.getInsertVersion());
+            if (isFirstLabel) {
+                parent.setMetadata("firstLABEL", node);
+            }
+            Set<AtomicAction<AbstractVersionedTree>> evoUnion = new HashSet<>();
+            Set<ComposedAction<AbstractVersionedTree>> composedIntersection = null;
+            if (isInserted) {
+                Integer j = null;
+                int prevCount = 0;
+                evoUnion.add(insertEvo);
+                composedIntersection = new HashSet<>(composed.getOrDefault(insertEvo, Collections.EMPTY_SET));
+                boolean isIntersEmpty = composedIntersection.isEmpty();
+                Set<Cluster> useful = new HashSet<>();
+                for (ComposedAction<AbstractVersionedTree> ca : composedIntersection) {
+                    useful.addAll(composeToResIndex.get(ca).stream().map(i -> result.get(i))
+                            .collect(Collectors.toList()));
+                }
+                for (Integer i : maybePresentParents) {
+                    if (i <= -1) {
+                        j = -1;
+                    } else {
+                        Cluster resParent = result.get(i);
+                        AbstractVersionedTree resParentNode = resParent.rootNode;
+                        boolean isParentNodeALabel = isLabel(resParentNode);
+                        boolean hasSameParent = node.getParent() == resParentNode.getParent();
+                        if (isParentNodeALabel && hasSameParent) {
+                            j = i;
+                            break;
+                        } else {
+                            int count = 0;
+                            for (ComposedAction<AbstractVersionedTree> vc : resParent.getVirtuallyComposed()) {
+                                if (vc != null && composedIntersection.contains(vc)) {
+                                    count++;
+                                }
+                            }
+                            if (j == null || prevCount < count) {
+                                j = i;
+                            }
+                        }
+                    }
+                }
+                if (j == null) {
+                    throw null;
+                }
+                if (isIntersEmpty) {
+                    // Integer j = lastLabel.get(parent);
+                    int newi = result.size();
+                    result.add(new Cluster(j, node));
+                    // lastLabel.put(parent, newi);
+                    maybePresentParents.add(newi);
+                } else if (j > -1) {
+                    Cluster parentRes = result.get(j);
+                    parentRes.nodes.add(node);
+                } else {
+                    Cluster r = new Cluster(j, node);
+                    result.add(r);
+                    r.virtuallyComposed.addAll(composedIntersection);
+                }
+            }
+            // } else if (isNeverPresent) {
+            //     return new ResultOld(null, Collections.EMPTY_SET);
+        } else {
+            Integer index = null;
+            Set<Integer> nexti = new HashSet<>();
+            Integer parentIndex = -1;
+            nexti.addAll(maybePresentParents);
+            Set<ComposedAction<AbstractVersionedTree>> composedNodeIntersection = null;
+            Set<AtomicAction<AbstractVersionedTree>> evoUnion = new HashSet<>();
+
+            if (isInserted) {
+                composedNodeIntersection = new HashSet<>(composed.getOrDefault(insertEvo, Collections.EMPTY_SET));
+                evoUnion.add(insertEvo);
+                if (isDeleted) {
+                    evoUnion.add(deleteEvo);
+                    composedNodeIntersection.retainAll(composed.getOrDefault(deleteEvo, Collections.EMPTY_SET));
+                }
+            } else if (isDeleted) {
+                evoUnion.add(deleteEvo);
+                composedNodeIntersection = new HashSet<>(composed.getOrDefault(deleteEvo, Collections.EMPTY_SET));
+            }
+            // Integer index = null;
+            if (isAlwaysPresent) {
+
+            } else if (!isNeverPresent) {
+                // } else if (composedNodeIntersection == null || composedNodeIntersection.size() <= 0) {
+                Set<ComposedAction<AbstractVersionedTree>> notUsed = new HashSet<>(composedNodeIntersection);
+                Set<Integer> doNotRm = new HashSet<>();
+                for (int i = 0; i < result.size(); i++) {
+                    boolean isParent = maybePresentParents.contains(i);
+                }
+                for (Integer i : maybePresentParents) {
+                    if (i <= -1) {
+                        parentIndex = -1;
+                    } else {
+                        Cluster resParent = result.get(i);
+                        int count = 0;
+                        for (ComposedAction<AbstractVersionedTree> vc : resParent.getVirtuallyComposed()) {
+                            if (vc != null && composedNodeIntersection.contains(vc)) {
+                                notUsed.remove(vc);
+                                count++;
+                            }
+                        }
+                        parentIndex = i;
+                        if (count > 0) {
+                            doNotRm.add(parentIndex);
+                            Cluster r = result.get(parentIndex);
+                            // nexti.remove(r.parentIndex);
+                            r.nodes.add(node);
+                        }
+
+                    }
+                }
+                if (parentIndex == null) {
+                    throw null;
+                }
+                if (notUsed.size() > 0) {
+                    if (parentIndex <= -1) {
+                        nexti.remove(parentIndex);
+                        index = result.size();
+                        nexti.add(result.size());
+                        Cluster r = new Cluster(parentIndex, node);
+                        r.virtuallyComposed.addAll(composedNodeIntersection);
+                        result.add(r);
+                    } else {
+                        // if (!doNotRm.contains(j)) {
+                        nexti.remove(parentIndex);
+                        // }
+                        index = result.size();
+                        nexti.add(result.size());
+                        Cluster r = new Cluster(parentIndex, node);
+                        r.virtuallyComposed.addAll(notUsed);
+                        result.add(r);
+                    }
+                }
+                // } else {
+                // is a component
+                // is it the root of a group?
+            }
+
+            Set<Integer> donedone = new HashSet<>();
+            Set<Integer> maybeToAdd = new HashSet<>();
+            Set<ComposedAction<AbstractVersionedTree>> composedIntersection = null;
+            Chain<AbstractVersionedTree> mppForChildren = maybePresentParents;
+            if (isMaybePresent) {
+                mppForChildren = new Chain<>(node, mppForChildren);
+            }
+            for (AbstractVersionedTree child : node.getAllChildren()) {
+                computeAux(child, mppForChildren);
+                // computeAux(child, nexti);
+                Set<Integer> donei = new HashSet<>();
+                for (Integer i : nexti) {
+                    if (i <= -1) {
+                        continue;
+                    }
+                    Cluster aaaaaa = result.get(i);
+                    int ns = aaaaaa.nodes.size();
+                    Set<ComposedAction<AbstractVersionedTree>> done = new HashSet<>();
+                    Set<ComposedAction<AbstractVersionedTree>> remaining = new HashSet<>();
+                    for (ComposedAction<AbstractVersionedTree> composedAction : aaaaaa.getVirtuallyComposed()) {
+                        if (ns < composedAction.getTarget().stream().filter(
+                                x -> !(x.getMetadata("type").equals("LABEL") && x.getInsertVersion() == null))
+                                .collect(Collectors.counting())) {
+                            maybeToAdd.add(i);
+                            remaining.add(composedAction);
+                        } else {
+                            // else nothing else to add to this result  
+                            done.add(composedAction);
+                        }
+                    }
+                    if (!done.isEmpty() && !remaining.isEmpty()) {
+                        Cluster r = new Cluster(aaaaaa.parentIndex, aaaaaa.rootNode);
+                        r.virtuallyComposed.addAll(done);
+                        if (aaaaaa.nodes.subList(1, aaaaaa.nodes.size()).stream()
+                                .anyMatch(x -> r.nodes.contains(x))) {
+                            System.err.println(aaaaaa.nodes);
+                        }
+                        r.nodes.addAll(aaaaaa.nodes.subList(1, aaaaaa.nodes.size()));
+                        result.add(r);
+                        aaaaaa.virtuallyComposed.removeAll(done);
+                        // TODO there is an inclusion here
+                    } else if (done.isEmpty() && !remaining.isEmpty()) {
+                        // not done
+                    } else if (!done.isEmpty() && remaining.isEmpty()) {
+                        // done
+                        donei.add(i);
+                    } else {
+                        throw null;
+                    }
+                }
+                // donedone.addAll(donei);
+                // donei.remove(index);
+                nexti.removeAll(donei);
+            }
+            // if (index == null) {
+            //     maybeToAdd.retainAll(nexti);
+            //     availableParents.addAll(maybeToAdd);
+            // } else {
+            // nexti.remove(index);
+            // System.out.println(nexti);
+            // maybeToAdd.retainAll(nexti);
+            maybePresentParents.addAll(nexti);
+            // availableParents.add(index);
+            maybePresentParents.removeAll(donedone);
+            // }
+            // System.out.println(nexti + "\t" + nexti.stream().map(x->x<0? -1:result.get(x).parentIndex).collect(Collectors.toList()) + "\t" + node.toVersionedString());
+        }
+    }
+
+    private boolean isLabel(AbstractVersionedTree node) {
+        return node.getMetadata("type") != null && node.getMetadata("type").equals("LABEL");
+    }
+
+    // private Map<Set<ComposedAction<AbstractVersionedTree>>, Set<T>> nest(
+    //         Map<Set<ComposedAction<AbstractVersionedTree>>, Set<T>> tmpCompo) {
+    //     TreeMap<Set<ComposedAction<AbstractVersionedTree>>, Set<T>> queue;
+    //     queue = new TreeMap<>((a, b) -> a.size() - b.size());
+    //     queue.putAll(tmpCompo);
+    //     boolean b = true;
+    //     while (b) {
+
+    //     }
+    //     queue.first();
+
+    //     return queue;
+    // }
+}
+
+class Cluster {
+    final Integer parentIndex;
+    private AbstractVersionedTree rootNode;
+    private AbstractVersionedTree maybePresentParent;
+
+    public AbstractVersionedTree getMaybePresentParent() {
+        return maybePresentParent;
+    }
+
+    public void setMaybePresentParent(AbstractVersionedTree maybePresentParent) {
+        assert maybePresentParent.getParents().contains(this.maybePresentParent);
+        this.maybePresentParent = maybePresentParent;
+    }
+
+    private final List<AbstractVersionedTree> nodes = new ArrayList<>();
+
+    public List<AbstractVersionedTree> getNodes() {
+        return Collections.unmodifiableList(nodes);
+    }
+
+    public void addNode(AbstractVersionedTree node) {
+        this.nodes.add(node);
+        for (ComposedAction<AbstractVersionedTree> ca : getComposed(node)) {
+            if (!virtuallyComposed.containsKey(ca)) {
+                virtuallyComposed.put(ca,
+                        ca.getTarget().stream().filter(
+                                x -> !(x.getMetadata("type").equals("LABEL") && x.getInsertVersion() == null))
+                                .count());
+            }
+        }
+    }
+
+    final Map<ComposedAction<AbstractVersionedTree>, Long> virtuallyComposed = new HashMap<>();
+
+    public Set<ComposedAction<AbstractVersionedTree>> getVirtuallyComposed() {
+        return virtuallyComposed.entrySet().stream().filter(x -> x.getValue() == 0).map(x -> x.getKey())
+                .collect(Collectors.toSet());
+    }
+
+    public Cluster(Integer parentIndex, AbstractVersionedTree node) {
+        this.parentIndex = parentIndex;
+        this.rootNode = node;
+        addNode(node);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder r = new StringBuilder();
+
+        r.append("Result: " + super.toString());
+        Set<AbstractVersionedTree> neededNodes = new HashSet<>();
+        getVirtuallyComposed().stream().forEach(x -> neededNodes.addAll(x.getTarget()));
+        neededNodes.removeIf(x -> x.getMetadata("type").equals("LABEL") && x.getInsertVersion() == null);
+        r.append("\n  0) parentIndex:" + parentIndex + " state: " + nodes.size() + "/" + neededNodes.size());
+        for (AbstractVersionedTree x : neededNodes) {
+            r.append("\n   ");
+            r.append(x.hashCode() + " " + x.toVersionedString());
+        }
+
+        r.append("\n  1) composes:");
+        for (ComposedAction<AbstractVersionedTree> node : getVirtuallyComposed()) {
+            for (String str : node.toString().split("\n")) {
+                r.append("\n\t");
+                r.append(str);
+            }
+            for (MyAction<?> a : node.composed()) {
+                if (a instanceof AtomicAction) {
+                    r.append("\n    ");
+                    r.append(a.getTarget().hashCode() + " "
+                            + ((AtomicAction<AbstractVersionedTree>) a).getTarget().toVersionedString());
+                } else {
+                    for (AbstractVersionedTree x : ((ComposedAction<AbstractVersionedTree>) a).getTarget()) {
+                        r.append("\n    ");
+                        r.append(x.hashCode() + " " + x.toVersionedString());
+                    }
+                }
+            }
+        }
+
+        r.append("\n  2) contains:");
+        for (AbstractVersionedTree node : nodes) {
+            // for (String str : node.toString().split("\n")) {
+            r.append("\n\t");
+            r.append(node.hashCode() + " " + node.getMetadata("type") + " " + node.getLabel());
+            if (node.getAllChildren().size() > 0) {
+                r.append(" " + node.getAllChildren().get(0).getLabel());
+            }
+            r.append(" ");
+            if (node.getInsertVersion() != null) {
+                r.append(node.getInsertVersion());
+            }
+            r.append("-");
+            if (node.getRemoveVersion() != null) {
+                r.append(node.getRemoveVersion());
+            }
+            // }
+        }
+        return r.toString();
+    }
+
+}

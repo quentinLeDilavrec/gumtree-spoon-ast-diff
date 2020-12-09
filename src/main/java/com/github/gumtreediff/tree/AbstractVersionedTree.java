@@ -425,29 +425,36 @@ public abstract class AbstractVersionedTree implements ITree {
 
     @Override
     public String toShortString() {
-        return String.format("%s%s%s", getType(), SEPARATE_SYMBOL, getLabel());
+        return String.format("%s%s%s", getMetadata("type"), SEPARATE_SYMBOL, getLabel());
+        // return String.format("%s%s%s", getType(), SEPARATE_SYMBOL, getLabel());
+    }
+
+    public String toVersionedString() {
+        StringBuilder b = new StringBuilder();
+        if (insertVersion != null) {
+            b.append(insertVersion);
+        }
+        if (insertVersion != null || removeVersion != null) {
+            b.append("-");
+        }
+        if (removeVersion != null) {
+            b.append(removeVersion);
+        }
+        if (insertVersion != null || removeVersion != null) {
+            b.append(" ");
+        }
+        b.append(toShortString());
+        return b.toString();
     }
 
     @Override
     public String toTreeString() {
         StringBuilder b = new StringBuilder();
-        for (ITree t : TreeUtils.preOrder(this)) {
-            AbstractVersionedTree tt = (AbstractVersionedTree) t;
-            b.append(indent(t));
-            if (tt.insertVersion != null) {
-                b.append(tt.insertVersion);
-            }
-            if (tt.insertVersion != null || tt.removeVersion != null) {
-                b.append("-");
-            }
-            if (tt.removeVersion != null) {
-                b.append(tt.removeVersion);
-            }
-            if (tt.insertVersion != null || tt.removeVersion != null) {
-                b.append(" ");
-            }
-            b.append(t.toShortString());
+        b.append(indent(this));
+        b.append(toVersionedString());
+        for (AbstractVersionedTree tt : getAllChildren()) {
             b.append("\n");
+            b.append(tt.toTreeString());
         }
         return b.toString();
     }
@@ -461,9 +468,13 @@ public abstract class AbstractVersionedTree implements ITree {
     }
 
     public static class FakeTree extends AbstractVersionedTree {
-        public FakeTree(ITree... trees) {
+        public FakeTree(AbstractVersionedTree... trees) {
+            this(Arrays.asList(trees));
+        }
+        
+        public FakeTree(Collection<AbstractVersionedTree> trees) {
             children = new LinkedList<>();
-            children.addAll((List) Arrays.asList(trees));
+            children.addAll(trees);
         }
 
         private RuntimeException unsupportedOperation() {
@@ -550,28 +561,55 @@ public abstract class AbstractVersionedTree implements ITree {
             return "FakeTree";
         }
 
-        /**
-         * fake nodes have no metadata
-         */
+        // /**
+        //  * fake nodes have no metadata
+        //  */
+        // @Override
+        // public Object getMetadata(String key) {
+        //     return null;
+        // }
+
+        // /**
+        //  * fake node store no metadata
+        //  */
+        // @Override
+        // public Object setMetadata(String key, Object value) {
+        //     return null;
+        // }
+
+        // /**
+        //  * Since they have no metadata they do not iterate on nothing
+        //  */
+        // @Override
+        // public Iterator<Map.Entry<String, Object>> getMetadata() {
+        //     return new EmptyEntryIterator();
+        // }
+        AssociationMap metadata;
         @Override
         public Object getMetadata(String key) {
-            return null;
+            if (metadata == null)
+                return null;
+            return metadata.get(key);
         }
 
-        /**
-         * fake node store no metadata
-         */
         @Override
         public Object setMetadata(String key, Object value) {
-            return null;
+            if (value == null) {
+                if (metadata == null)
+                    return null;
+                else
+                    return metadata.remove(key);
+            }
+            if (metadata == null)
+                metadata = new AssociationMap();
+            return metadata.set(key, value);
         }
 
-        /**
-         * Since they have no metadata they do not iterate on nothing
-         */
         @Override
         public Iterator<Map.Entry<String, Object>> getMetadata() {
-            return new EmptyEntryIterator();
+            if (metadata == null)
+                return new EmptyEntryIterator();
+            return metadata.iterator();
         }
     }
 

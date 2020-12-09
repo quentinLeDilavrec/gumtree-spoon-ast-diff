@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import com.github.gumtreediff.actions.ActionGenerator;
 import com.github.gumtreediff.actions.EditScript;
+import com.github.gumtreediff.actions.MyAction;
 import com.github.gumtreediff.actions.VersionedEditScript;
 import com.github.gumtreediff.actions.VersionedEditScriptGenerator;
 import com.github.gumtreediff.actions.MyAction.AtomicAction;
@@ -64,7 +65,7 @@ public class DiffImpl implements Diff {
 	private List<Action> composedActionsList;
 	private VersionedEditScript editScript;
 
-	public List<Action> getActions() {
+	public List<MyAction<?>> getActions() {
 		return editScript.asList();
 	}
 

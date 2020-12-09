@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,6 +21,8 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 
 import com.github.gumtreediff.actions.MyAction;
+import com.github.gumtreediff.actions.MyAction.AtomicAction;
+import com.github.gumtreediff.actions.MyAction.ComposedAction;
 import com.github.gumtreediff.actions.MyAction.MyDelete;
 import com.github.gumtreediff.actions.MyAction.MyInsert;
 import com.github.gumtreediff.actions.MyAction.MyMove;
@@ -36,6 +39,7 @@ import com.github.gumtreediff.tree.VersionedTree;
 
 import org.apache.commons.compress.utils.Iterators;
 import org.apache.commons.lang3.math.Fraction;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.eclipse.jetty.util.MultiMap;
 
 import gumtree.spoon.apply.ActionApplier;
@@ -276,9 +280,62 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
     }
 
     public Launcher applyEvolutions(Set<T> wantedEvos) {
+        Set<ComposedAction<AbstractVersionedTree>> virtComposed = new HashSet<>();
+        for (T evo : wantedEvos) {
+            Set<T> components = evoToEvo.get(evo);
+            ComposedAction<AbstractVersionedTree> composed = new ComposedAction<AbstractVersionedTree>() {
+                List<MyAction<AbstractVersionedTree>> compo = new ArrayList<>(extractActions(components));
+
+                @Override
+                public List<MyAction<AbstractVersionedTree>> composed() {
+                    return compo;
+                }
+
+                @Override
+                public String getName() {
+                    return null;
+                }
+
+                @Override
+                public String toString() {
+                    StringBuilder r = new StringBuilder();
+                    r.append("Virt composed action containing:");
+                    for (MyAction<AbstractVersionedTree> component : composed()) {
+                        r.append("\n\t-");
+                        r.append(component.toString());
+                    }
+                    return r.toString();
+                }
+
+            };
+            virtComposed.add(composed);
+        }
+        Collection<MyAction<?>> testSet = new HashSet<>();
+        Collection<MyAction<?>> appSet = new HashSet<>();
+        for (MyAction<?> a : virtComposed) {
+            popTopGroups(testSet, appSet, a);
+        }
+        return applyCombActions(virtComposed);
+    }
+
+    private void popTopGroups(Collection<MyAction<?>> testSet, Collection<MyAction<?>> appSet, MyAction<?> a) {
+        if (internalIsInTest(a)) {
+            testSet.add(a);
+        } else if (internalIsInApp(a)) {
+            appSet.add(a);
+        }
+        if (a instanceof ComposedAction) {
+            for (MyAction<?> ca : ((ComposedAction<AbstractVersionedTree>)a).composed()) {
+                popTopGroups(testSet, appSet, ca);
+            }
+        }
+    }
+
+    private Set<MyAction<AbstractVersionedTree>> extractActions(Set<T> wantedEvos) {
         Set<MyAction<AbstractVersionedTree>> acts = new HashSet<>();
         extractActions(wantedEvos, acts);
-        return applyCombActions(acts);
+        return acts;
+
     }
 
     private void extractActions(Set<T> wantedEvos, Set<MyAction<AbstractVersionedTree>> acts) {
@@ -300,14 +357,16 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         return applyCombActions(actions);
     }
 
-    private MyAction<AbstractVersionedTree> getAction(AbstractVersionedTree tree, boolean way) {
-        MyAction<AbstractVersionedTree> action;
+    private ComposedAction<AbstractVersionedTree> getCAction(AbstractVersionedTree tree, boolean way) {
+        return (ComposedAction<AbstractVersionedTree>) tree.getMetadata("VirtuallyComposed");
+    }
+
+    private AtomicAction<AbstractVersionedTree> getAAction(AbstractVersionedTree tree, boolean way) {
         if (way) {
-            action = (MyAction<AbstractVersionedTree>) tree.getMetadata(MyScriptGenerator.INSERT_ACTION);
+            return (AtomicAction<AbstractVersionedTree>) tree.getMetadata(MyScriptGenerator.INSERT_ACTION);
         } else {
-            action = (MyAction<AbstractVersionedTree>) tree.getMetadata(MyScriptGenerator.DELETE_ACTION);
+            return (AtomicAction<AbstractVersionedTree>) tree.getMetadata(MyScriptGenerator.DELETE_ACTION);
         }
-        return action;
     }
 
     private MyAction<AbstractVersionedTree> invertAction(MyAction<AbstractVersionedTree> action) {
@@ -324,42 +383,150 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         return r;
     }
 
-    private Launcher applyCombActions(Collection<MyAction<AbstractVersionedTree>> wantedActions) {
-        Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new HashMap<>();
-        Combination.CombinationHelper<AbstractVersionedTree> combs = Combination.build(middle, wantedActions);
-        int exp = combs.minExposant();
-        if (exp > leafsActionsLimit) {
-            logger.warning(exp + " leafs would make too much combinations");
-            return null;
+    private Launcher applyCombActions(Collection<? extends MyAction<?>> wantedActions) {
+        List<MyAction<?>> myactions = new ArrayList<>(wantedActions);
+        Flattener2 flat = Combination.flatten(myactions);
+        Set<Cluster2> toBreak = new HashSet<>();
+        LinkedList<Cluster2> tryToBreak = new LinkedList<>();
+        List<ImmutablePair<Integer, Cluster2>> constrainedTree = flat.getConstrainedTree(toBreak);
+        int j = 0;
+        int prevSize = 0;
+        for (int x : Combination.detectLeafs(constrainedTree)) {
+            prevSize += x == 0 ? 0 : 1;
         }
+        for (MyAction<?> a : myactions) {
+            if (a instanceof ComposedAction) {
+                tryToBreak.addAll(flat.getCluster((ComposedAction<AbstractVersionedTree>) a));
+            }
+        }
+        while (j < 10) {
+            Set<Cluster2> tmp = new HashSet<>();
+            tmp.addAll(toBreak);
+            if (tryToBreak.isEmpty()) {
+                break;
+            }
+            tmp.add(tryToBreak.poll());
+            List<ImmutablePair<Integer, Cluster2>> tmp2 = flat.getConstrainedTree(tmp);
+            int c = 0;
+            for (int x : Combination.detectLeafs(constrainedTree)) {
+                c += x == 0 ? 0 : 1;
+            }
+            if (c <= 7 && c>prevSize) {
+                prevSize = c;
+                toBreak = tmp;
+                constrainedTree = tmp2;
+            }
+            j++;
+        }
+        Combination.CombinationHelper<Cluster2> combs = Combination.build(constrainedTree);
+        // int exp = combs.minExposant();
+        // if (exp > leafsActionsLimit) {
+        //     logger.warning(exp + " leafs would make too much combinations");
+        //     StringBuilder infoBuilder = new StringBuilder();
+        //     for (AbstractVersionedTree t : combs.getLeafList()) {
+        //         infoBuilder.append("\n -");
+        //         Object a = t.getMetadata("VirtuallyComposed");
+        //         if (a != null) {
+        //             infoBuilder.append(a.toString());
+        //         } else {
+        //             a = t.getMetadata(MyScriptGenerator.INSERT_ACTION);
+        //             if (a != null) {
+        //                 infoBuilder.append(a.toString());
+        //             } else {
+        //                 a = t.getMetadata(MyScriptGenerator.DELETE_ACTION);
+        //                 infoBuilder.append(a.toString());
+        //             }
+        //         }
+        //     }
+        //     logger.info("Following set of actions would need too much combinations" + infoBuilder);
+        //     return null;
+        // }
+        Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new HashMap<>();
         do {
-            Combination.CHANGE<AbstractVersionedTree> change = combs.next();
-            try {
-                MyAction<AbstractVersionedTree> action = getAction(change.content, change.way);
-                boolean inverted = action == null;
-                action = inverted ? getAction(change.content, !change.way) : action;
-                boolean b = auxApply(scanner, this.factory, action, inverted);
-                for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
-                    try {
-                        MyAction<AbstractVersionedTree> action2 = getAction(node, waitingToBeApplied.get(node));
-                        boolean inverted2 = action2 == null;
-                        action2 = inverted2 ? getAction(node, !waitingToBeApplied.get(node)) : action2;
-                        auxApply(scanner, this.factory, action2, inverted2);
-                        waitingToBeApplied.remove(node);
-                    } catch (gumtree.spoon.apply.WrongAstContextException e) {
+            Combination.CHANGE<Cluster2> change = combs.next();
+            boolean b = false;
+            boolean clustDefPres = change.content.initiallyPresentNodes.contains(change.content.root);
+            for (AbstractVersionedTree n : change.content.nodes) {
+                boolean nDefPres = change.content.initiallyPresentNodes.contains(n);
+                boolean way = clustDefPres == nDefPres ? change.way: !change.way;
+                try {
+                    AtomicAction<AbstractVersionedTree> aaction = getAAction(n, way);
+                    boolean inverted = aaction == null;
+                    aaction = inverted ? getAAction(n, !way) : aaction;
+                    b |= auxApply(scanner, this.factory, aaction, inverted);
+                    waitingToBeApplied.remove(n);
+                    for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
+                        try {
+                            AtomicAction<AbstractVersionedTree> action2 = getAAction(node,
+                                    waitingToBeApplied.get(node));
+                            boolean inverted2 = action2 == null;
+                            action2 = inverted2 ? getAAction(node, !waitingToBeApplied.get(node)) : action2;
+                            auxApply(scanner, this.factory, action2, inverted2);
+                            waitingToBeApplied.remove(node);
+                        } catch (gumtree.spoon.apply.WrongAstContextException e) {
+                        }
                     }
+                    // // ComposedAction<AbstractVersionedTree> caction = getCAction(change.content, change.way);
+                    // if (caction != null) {
+                    //     for (MyAction<?> myAction : caction.composed()) {
+                    //         b |= applyCombActionsAux(waitingToBeApplied, change.way, myAction);
+                    //     }
+                    // } else {
+                    //     AtomicAction<AbstractVersionedTree> aaction = getAAction(change.content, change.way);
+                    //     boolean inverted = aaction == null;
+                    //     aaction = inverted ? getAAction(change.content, !change.way) : aaction;
+                    //     b |= auxApply(scanner, this.factory, aaction, inverted);
+                    //     for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
+                    //         try {
+                    //             AtomicAction<AbstractVersionedTree> action2 = getAAction(node,
+                    //                     waitingToBeApplied.get(node));
+                    //             boolean inverted2 = action2 == null;
+                    //             action2 = inverted2 ? getAAction(node, !waitingToBeApplied.get(node)) : action2;
+                    //             auxApply(scanner, this.factory, action2, inverted2);
+                    //             waitingToBeApplied.remove(node);
+                    //         } catch (gumtree.spoon.apply.WrongAstContextException e) {
+                    //         }
+                    //     }
+                    // }
+                    if (b)
+                        evoState.triggerCallback();
+                } catch (gumtree.spoon.apply.WrongAstContextException e) {
+                    waitingToBeApplied.put(n, change.way);
                 }
-                if (b)
-                    evoState.triggerCallback();
-            } catch (gumtree.spoon.apply.WrongAstContextException e) {
-                waitingToBeApplied.put(change.content, change.way);
             }
         } while (!combs.isInit());
         return launcher;
     }
 
-    public boolean auxApply(final SpoonGumTreeBuilder scanner, Factory facto, MyAction<AbstractVersionedTree> action,
-            boolean inverted) throws WrongAstContextException {
+    private boolean applyCombActionsAux(Map<AbstractVersionedTree, Boolean> waitingToBeApplied, boolean way,
+            MyAction<?> myAction2) throws WrongAstContextException {
+        boolean b = false;
+        if (myAction2 instanceof ComposedAction) {
+            for (MyAction<?> myAction : ((ComposedAction<AbstractVersionedTree>) myAction2).composed()) {
+                b |= applyCombActionsAux(waitingToBeApplied, way, myAction);
+            }
+        } else if (myAction2 instanceof AtomicAction) {
+            AtomicAction<AbstractVersionedTree> action = (AtomicAction<AbstractVersionedTree>) myAction2;
+            AtomicAction<AbstractVersionedTree> aaction = getAAction(action.getTarget(), way);
+            boolean inverted = aaction == null;
+            aaction = inverted ? getAAction(action.getTarget(), !way) : aaction;
+            b |= auxApply(scanner, this.factory, aaction, inverted);
+            for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
+                try {
+                    AtomicAction<AbstractVersionedTree> action2 = getAAction(node, waitingToBeApplied.get(node));
+                    boolean inverted2 = action2 == null;
+                    action2 = inverted2 ? getAAction(node, !waitingToBeApplied.get(node)) : action2;
+                    auxApply(scanner, this.factory, action2, inverted2);
+                    waitingToBeApplied.remove(node);
+                } catch (gumtree.spoon.apply.WrongAstContextException e) {
+                }
+            }
+        }
+        return b;
+    }
+
+    public boolean auxApply(final SpoonGumTreeBuilder scanner, Factory facto,
+            AtomicAction<AbstractVersionedTree> action, boolean inverted) throws WrongAstContextException {
         MyAction<AbstractVersionedTree> invertableAction = inverted ? invertAction(action) : action;
         if (invertableAction instanceof Insert) {
             ActionApplier.applyMyInsert(facto, scanner.getTreeContext(), (MyInsert) invertableAction);
@@ -373,11 +540,11 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                     watching.put(src, dst);
                 }
             }
-            for (MyAction<AbstractVersionedTree> compressed : ((MyInsert) action).getCompressed()) {
+            for (AtomicAction<AbstractVersionedTree> compressed : ((MyInsert) action).getCompressed()) {
                 auxApply(scanner, facto, compressed, inverted);
             }
         } else if (invertableAction instanceof Delete) {
-            for (MyAction<AbstractVersionedTree> compressed : ((MyDelete) action).getCompressed()) {
+            for (AtomicAction<AbstractVersionedTree> compressed : ((MyDelete) action).getCompressed()) {
                 auxApply(scanner, facto, compressed, inverted);
             }
             ActionApplier.applyMyDelete(facto, scanner.getTreeContext(), (MyDelete) invertableAction);
@@ -395,7 +562,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                     watching.put(src, target);
                 }
             }
-            for (MyAction<AbstractVersionedTree> compressed : ((MyUpdate) action).getCompressed()) {
+            for (AtomicAction<AbstractVersionedTree> compressed : ((MyUpdate) action).getCompressed()) {
                 auxApply(scanner, facto, compressed, inverted);
             }
         } else {
@@ -484,4 +651,100 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         return (T) r;
     }
 
+    protected abstract Boolean isInApp(CtElement element);
+    protected abstract Boolean isInTest(CtElement element);
+
+    private boolean internalIsInApp(MyAction<?> a) {
+        if (a instanceof AtomicAction) {
+            AbstractVersionedTree tree = ((AtomicAction<AbstractVersionedTree>) a).getTarget();
+            assert tree != null;
+            while (tree != null) {
+                CtElement ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+                if (ele == null) {
+                    tree = tree.getParent();
+                    continue;
+                }
+                Boolean tmp = isInApp(ele);
+                if (tmp==null) {
+                    tree = tree.getParent();
+                    continue;
+                }
+                return tmp;
+                // if (ele instanceof CtReference) {
+                //     tree = tree.getParent();
+                //     continue;
+                // }
+                // SourcePosition pos = ele.getPosition();
+                // if (pos == null) {
+                //     tree = tree.getParent();
+                //     continue;
+                // }
+                // CompilationUnit cu = pos.getCompilationUnit();
+                // if (cu == null) {
+                //     tree = tree.getParent();
+                //     continue;
+                // }
+                // Boolean isTest = (Boolean) cu.getMetadata("isTest");
+                // if (isTest != null && isTest) {
+                //     return false;
+                // } else {
+                //     return true;
+                // }
+            }
+        } else if (a instanceof ComposedAction) {
+            for (MyAction<?> aa : ((ComposedAction<AbstractVersionedTree>) a).composed()) {
+                if (!internalIsInApp(aa)) {
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean internalIsInTest(MyAction<?> a) {
+        if (a instanceof AtomicAction) {
+            AbstractVersionedTree tree = ((AtomicAction<AbstractVersionedTree>) a).getTarget();
+            assert tree != null;
+            while (tree != null) {
+                CtElement ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+                if (ele == null) {
+                    tree = tree.getParent();
+                    continue;
+                }
+                Boolean tmp = isInApp(ele);
+                if (tmp==null) {
+                    tree = tree.getParent();
+                    continue;
+                }
+                return tmp;
+                // if (ele instanceof CtReference) {
+                //     tree = tree.getParent();
+                //     continue;
+                // }
+                // SourcePosition pos = ele.getPosition();
+                // if (pos == null) {
+                //     tree = tree.getParent();
+                //     continue;
+                // }
+                // CompilationUnit cu = pos.getCompilationUnit();
+                // if (cu == null) {
+                //     tree = tree.getParent();
+                //     continue;
+                // }
+                // Boolean isTest = (Boolean) cu.getMetadata("isTest");
+                // if (isTest != null && isTest) {
+                //     return true;
+                // } else {
+                //     return false;
+                // }
+            }
+        } else if (a instanceof ComposedAction) {
+            for (MyAction<?> aa : ((ComposedAction<AbstractVersionedTree>) a).composed()) {
+                if (!internalIsInTest(aa)) {
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
 }

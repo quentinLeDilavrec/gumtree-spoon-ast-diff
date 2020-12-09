@@ -4,11 +4,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.github.gumtreediff.tree.AbstractTree.FakeTree;
+import com.github.gumtreediff.actions.MyAction;
+import com.github.gumtreediff.actions.MyAction.ComposedAction;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.Version;
@@ -77,30 +81,68 @@ public class GrayCodeReflectedTest {
         // System.out.print("" + (j==-1?" ":j) + " ");
         // }
         // System.out.println();
-        ReflectedConstrainedHelper<AbstractVersionedTree> combs = Combination.build(middle, (List) diff.getActions());
+        List<MyAction<?>> myactions = new ArrayList<>(diff.getActions());
+
+        // TODO add actions
+
+        Flattener2 flat = Combination.flatten(myactions);
+        Set<Cluster2> toBreak = new HashSet<>();
+        LinkedList<Cluster2> tryToBreak = new LinkedList<>();
+        List<ImmutablePair<Integer, Cluster2>> constrainedTree = flat.getConstrainedTree(toBreak);
+        int j = 0;
+        int prevSize = 0;
+        for (int x : Combination.detectLeafs(constrainedTree)) {
+            prevSize += x == 0 ? 0 : 1;
+        }
+        for (MyAction<?> a : myactions) {
+            if (a instanceof ComposedAction) {
+                tryToBreak.addAll(flat.getCluster((ComposedAction<AbstractVersionedTree>) a));
+            }
+        }
+        while (j < 10) {
+            Set<Cluster2> tmp = new HashSet<>();
+            tmp.addAll(toBreak);
+            if (tryToBreak.isEmpty()) {
+                break;
+            }
+            tmp.add(tryToBreak.poll());
+            List<ImmutablePair<Integer, Cluster2>> tmp2 = flat.getConstrainedTree(tmp);
+            int c = 0;
+            for (int x : Combination.detectLeafs(constrainedTree)) {
+                c += x == 0 ? 0 : 1;
+            }
+            if (c <= 7 && c>prevSize) {
+                prevSize = c;
+                toBreak = tmp;
+                constrainedTree = tmp2;
+            }
+            j++;
+        }
+        ReflectedConstrainedHelper<Cluster2> combs = Combination.build(constrainedTree);
         Combination.CHANGE<Integer> next;
         int[] curr = Arrays.copyOf(combs.originalInit, combs.originalInit.length);
         for (int i = 0; i < curr.length; i++) {
-            curr[i]=curr[i]>0?1:0;
+            curr[i] = curr[i] > 0 ? 1 : 0;
         }
         int[] ori = Arrays.copyOf(curr, curr.length);
-        Map<List<Integer>,Integer> counts = new HashMap<>();
-        counts.computeIfAbsent(Arrays.stream(curr).boxed().collect(Collectors.toList()), x->0);
-        counts.put(Arrays.stream(curr).boxed().collect(Collectors.toList()),counts.get(Arrays.stream(curr).boxed().collect(Collectors.toList()))+1);
+        Map<List<Integer>, Integer> counts = new HashMap<>();
+        counts.computeIfAbsent(Arrays.stream(curr).boxed().collect(Collectors.toList()), x -> 0);
+        counts.put(Arrays.stream(curr).boxed().collect(Collectors.toList()),
+                counts.get(Arrays.stream(curr).boxed().collect(Collectors.toList())) + 1);
         for (int i = 0; i < curr.length; i++) {
             System.out.print("" + i + " ");
         }
         System.out.println();
-        for (int j : combs.getLeafs()) {
-            System.out.print("" + j + " ");
+        for (int k : combs.getLeafs()) {
+            System.out.print("" + k + " ");
         }
         System.out.println();
-        for (int j : combs.getDeps()) {
-            System.out.print("" + (j==-1?" ":j) + " ");
+        for (int k : combs.getDeps()) {
+            System.out.print("" + (k == -1 ? " " : k) + " ");
         }
         System.out.println();
-        for (int j : curr) {
-            System.out.print("" + j + " ");
+        for (int k : curr) {
+            System.out.print("" + k + " ");
         }
         System.out.println();
         int count = 0;
@@ -108,24 +150,24 @@ public class GrayCodeReflectedTest {
             next = combs.nextIndex();
             curr[next.content] = next.way ? 1 : 0;
             List<Integer> tmp = Arrays.stream(curr).boxed().collect(Collectors.toList());
-            counts.computeIfAbsent(tmp, x->0);
-            counts.put(tmp,counts.get(tmp)+1);
-            for (int j : curr) {
-                System.out.print("" + j + " ");
+            counts.computeIfAbsent(tmp, x -> 0);
+            counts.put(tmp, counts.get(tmp) + 1);
+            for (int k : curr) {
+                System.out.print("" + k + " ");
             }
             System.out.println("     " + next.content + " " + next.way + " " + counts.get(tmp));
             count++;
         } while (!combs.isInit());
-        for (int j : ori) {
-            System.out.print("" + j + " ");
+        for (int k : ori) {
+            System.out.print("" + k + " ");
         }
         System.out.println();
-        for (int j : combs.prevKeyPoint) {
-            System.out.print("" + j + " ");
+        for (int k : combs.prevKeyPoint) {
+            System.out.print("" + k + " ");
         }
         System.out.println();
-        for (int j : combs.nextKeyPoint) {
-            System.out.print("" + j + " ");
+        for (int k : combs.nextKeyPoint) {
+            System.out.print("" + k + " ");
         }
         System.out.println();
         System.out.println(count);

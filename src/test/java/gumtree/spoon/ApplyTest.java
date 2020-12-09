@@ -11,12 +11,16 @@ import com.github.gumtreediff.tree.VersionInt;
 import org.junit.Before;
 import org.junit.Test;
 
+import gumtree.spoon.apply.MyUtils;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
 import spoon.MavenLauncher;
 import spoon.compiler.Environment;
+import spoon.reflect.cu.CompilationUnit;
+import spoon.reflect.factory.Factory;
 import spoon.support.StandardEnvironment;
+import spoon.support.compiler.VirtualFile;
 
 public class ApplyTest {
         @Before
@@ -57,10 +61,41 @@ public class ApplyTest {
         }
 
         @Test
+        public void testSimpleApplyC() {
+            String contentsLeft = "public class X { static void f(){} static void g(){}}";
+            String contentsLeftT = "public class XTest { @Test void fTest(){X.f();} @Test void gTest(){X.g();}}";
+            String contentsRight = "public class X { static void f(){} public static class Y {static void g(){} static void h(){}}}";
+            String contentsRightT = "public class XTest { @org.junit.Test void fTest(){X.f();} @Test void gTest(){X.Y.g();} @Test void hTest(){X.Y.h();}}";
+            Factory left = MyUtils.makeFactory(new VirtualFile(contentsLeft, "X.java")
+        //     ,new VirtualFile(contentsLeftT, "XTest.java")
+                    );
+            for (CompilationUnit cu : left.CompilationUnit().getMap().values()) {
+                if (cu.getFile().getName().contains("Test")) {
+                    cu.putMetadata("isTest", true);
+                }
+            }
+            Factory right = MyUtils.makeFactory(new VirtualFile(contentsRight, "X.java")
+        //     ,                    new VirtualFile(contentsRightT, "XTest.java")
+            );
+            for (CompilationUnit cu : right.CompilationUnit().getMap().values()) {
+                if (cu.getFile().getName().contains("Test")) {
+                    cu.putMetadata("isTest", true);
+                }
+            }
+            ApplyTestHelper.onChange(left.getModel().getRootPackage(), right.getModel().getRootPackage());
+        }
+        @Test
         public void testSimpleApplySuper2() {
                 ApplyTestHelper.onChange(
                                 new File("src/test/resources/examples/roots/test9/left_QuickNotepad_1.13.java"),
                                 new File("src/test/resources/examples/roots/test9/right_QuickNotepad_1.14.java"));
+        }
+
+        @Test
+        public void testSimpleApply00() {
+                ApplyTestHelper.onChange(
+                                new File("src/test/resources/examples/simple/after.java"),
+                                new File("src/test/resources/examples/simple/before.java"));
         }
 
         @Test

@@ -3,19 +3,27 @@ package gumtree.spoon.apply;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.logging.Logger;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.github.gumtreediff.actions.MyAction;
+import com.github.gumtreediff.actions.MyAction.AtomicAction;
+import com.github.gumtreediff.actions.MyAction.ComposedAction;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeUtils;
@@ -24,7 +32,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 
 import gumtree.spoon.apply.Combination.SIDE;
-import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.operations.Operation;
 
@@ -214,6 +221,18 @@ public class Combination {
 
             public int minExposant() {
                 return this.path.length;
+            }
+
+            @Override
+            public List<Integer> getLeafList() {
+                return Arrays.asList(pathToBinary(path)).stream().map(x -> {
+                    switch (x) {
+                        case O:
+                            return 0;
+                        default:
+                            return 1;
+                    }
+                }).collect(Collectors.toList());
             };
         }
 
@@ -259,8 +278,15 @@ public class Combination {
         private int onesDiff;
         private T[] nodeList;
 
-        public T[] getNodeList() {
-            return Arrays.copyOf(nodeList, nodeList.length);
+        @Override
+        public List<T> getLeafList() {
+            List<T> r = new ArrayList<>();
+            for (int i = 0; i < leafs.length; i++) {
+                if (leafs[i] != 0) {
+                    r.add(nodeList[i]);
+                }
+            }
+            return r;
         }
 
         protected int[] originalInit;
@@ -509,15 +535,60 @@ public class Combination {
         }
     }
 
-    public static <T> ReflectedConstrainedHelper<AbstractVersionedTree> build(AbstractVersionedTree middle,
-            Collection<T> wanted) {
-        List<ImmutablePair<Integer, AbstractVersionedTree>> l = Combination.flattenItreeToList2(middle,
-                new HashSet<>(wanted));
-        int[] init = Combination.initialState(l);
+    public static Flattener2 flatten(Collection<? extends MyAction<?>> wanted) {
+        Set<AtomicAction<AbstractVersionedTree>> wanted2 = new HashSet<>();
+        Map<AtomicAction<AbstractVersionedTree>, Set<ComposedAction<AbstractVersionedTree>>> composed = new HashMap<>();
+        for (MyAction<?> a : wanted) {
+            atomize(a, wanted2, composed);
+        }
+        Flattener2 flat = new Flattener2(wanted2);
+        flat.compute();
+        Set<ComposedAction<AbstractVersionedTree>> composed2 = new HashSet<>();
+        for (Set<ComposedAction<AbstractVersionedTree>> ca : composed.values()) {
+            composed2.addAll(ca);
+        }
+        for (ComposedAction<AbstractVersionedTree> ca : composed2) {
+            flat.clusterize(ca);
+        }
+        // flat.compute(middle);
+        // List<ImmutablePair<Integer, Cluster2>> l = flat.getConstrainedTree();//flat.getResult();
+        return flat;
+    }
+
+    public static ReflectedConstrainedHelper<Cluster2> build(List<ImmutablePair<Integer, Cluster2>> l) {
+        int[] init = l.stream().map(x->x.right.initiallyPresentNodes.contains(x.right.root)?1:0).mapToInt(Integer::intValue).toArray();//Combination.initialState(l);
         int[] leafs = Combination.detectLeafs(l);
-        AbstractVersionedTree[] nodes = l.stream().map(ImmutablePair::getRight).toArray(AbstractVersionedTree[]::new);
+        Cluster2[] nodes = l.stream().map(ImmutablePair::getRight).toArray(Cluster2[]::new);
         int[] deps = l.stream().map(ImmutablePair::getLeft).mapToInt(Integer::intValue).toArray();
-        return new ReflectedConstrainedHelper<AbstractVersionedTree>(init, leafs, deps, nodes);
+        return new ReflectedConstrainedHelper<Cluster2>(init, leafs, deps, nodes);
+    }
+
+    // TODO expose non composed top level by "composing" them
+    static Set<AtomicAction<AbstractVersionedTree>> atomize(MyAction<?> action,
+            Set<AtomicAction<AbstractVersionedTree>> wanted2,
+            Map<AtomicAction<AbstractVersionedTree>, Set<ComposedAction<AbstractVersionedTree>>> composed) {
+        if (action instanceof AtomicAction) {
+            wanted2.add((AtomicAction<AbstractVersionedTree>) action);
+            Set<AtomicAction<AbstractVersionedTree>> r = new HashSet<>();
+            r.add((AtomicAction<AbstractVersionedTree>) action);
+            // for (AtomicAction<AbstractVersionedTree> a : ((AtomicAction<AbstractVersionedTree>) action)
+            //         .getCompressed()) {
+            //     r.addAll(atomize(a, wanted2, composed));
+            // }
+            return r;
+        } else if (action instanceof ComposedAction) {
+            Set<AtomicAction<AbstractVersionedTree>> atomicComponents = new HashSet<>();
+            for (MyAction<?> myAction : ((ComposedAction<AbstractVersionedTree>) action).composed()) {
+                atomicComponents.addAll(atomize(myAction, wanted2, composed));
+            }
+            for (AtomicAction<AbstractVersionedTree> atomicAction : atomicComponents) {
+                composed.putIfAbsent(atomicAction, new HashSet<>());
+                composed.get(atomicAction).add((ComposedAction<AbstractVersionedTree>) action);
+            }
+            return atomicComponents;
+        } else {
+            throw null;
+        }
     }
 
     private static int[] filterInitLeafs(int[] init, int[] leafs) {
@@ -566,6 +637,8 @@ public class Combination {
         abstract boolean isInit();
 
         abstract int minExposant();
+
+        abstract List<T> getLeafList();
     }
 
     public static class Monotonic {
@@ -935,96 +1008,10 @@ public class Combination {
         return curr;
     }
 
-    public static <T> List<ImmutableTriple<Integer, T, Integer>> flattenItreeToList(ITree node) {
-        List<ImmutableTriple<Integer, T, Integer>> r = new ArrayList<>();
-        flattenAux(r, node, null);
-        return r;
-    }
-
-    public static <T> List<ImmutablePair<Integer, AbstractVersionedTree>> flattenItreeToList2(AbstractVersionedTree node,
-            Set<T> wanted) {
-        List<ImmutablePair<Integer, AbstractVersionedTree>> r = new ArrayList<>();
-        flattenAux2(r, node, -1, wanted, new HashMap<>());
-        return r;
-    }
-
-    // CAN MATERIALIZE List with null elements for evolutions not applicable
-    // directly
-    private static final String CONSTRAINING_EVOLUTIONS = "CONSTRAINING_EVOLUTIONS";
-    private static final String NON_CONSTRAINING_EVOLUTIONS = "NON_CONSTRAINING_EVOLUTIONS";
-    private static final String RANKS = "RANKS";
-
-    static <T> void flattenAux(List<ImmutableTriple<Integer, T, Integer>> r, ITree node, Integer i) {
-        List<T> constrEvos = (List) node.getMetadata(CONSTRAINING_EVOLUTIONS);
-        List<Integer> ranks = (List) node.getMetadata(RANKS);
-        Integer[] sortedIndexByRank = ranks == null ? null : null;// computeSortIndex(ranks);
-        List<T> nonConstrEvos = (List) node.getMetadata(NON_CONSTRAINING_EVOLUTIONS);
-        if (constrEvos != null && constrEvos.size() > 0) {
-            for (int jj = 0; jj < constrEvos.size(); jj++) {
-                int j = ranks == null ? 0 : sortedIndexByRank[jj];
-                T op = constrEvos.get(j);
-                int newi = r.size();
-                r.add(new ImmutableTriple<Integer, T, Integer>(i, op,
-                        ranks != null && j < ranks.size() ? ranks.get(j) : 0));
-                for (ITree child : node.getChildren()) {
-                    flattenAux(r, child, newi);
-                }
-                if (nonConstrEvos != null)
-                    for (T op2 : nonConstrEvos) {
-                        r.add(new ImmutableTriple<Integer, T, Integer>(newi, op2, 0));
-                    }
-            }
-        } else if (nonConstrEvos != null && nonConstrEvos.size() > 0) {
-            for (T op2 : nonConstrEvos) {
-                r.add(new ImmutableTriple<Integer, T, Integer>(i, op2, 0));
-            }
-            for (ITree child : node.getChildren()) {
-                flattenAux(r, child, i);
-            }
-        } else {
-            for (ITree child : node.getChildren()) {
-                flattenAux(r, child, i);
-            }
-        }
-    }
-
-    static <T> void flattenAux2(List<ImmutablePair<Integer, AbstractVersionedTree>> r, AbstractVersionedTree node,
-            Integer i, Set<T> wanted, Map<AbstractVersionedTree, Integer> lastLabel) {
-        T insertEvo = (T) node.getMetadata(MyScriptGenerator.INSERT_ACTION);
-        T deleteEvo = (T) node.getMetadata(MyScriptGenerator.DELETE_ACTION);
-
-        boolean isInserted = insertEvo != null && wanted.contains(insertEvo);
-        boolean isDeleted = deleteEvo != null && wanted.contains(deleteEvo);
-        boolean isAlwaysPresent = insertEvo == null && !isDeleted;
-        if (node.getMetadata("type") != null && node.getMetadata("type").equals("LABEL")) {
-            AbstractVersionedTree parent = node.getParent();
-            if (node.getInsertVersion()==null || node.getInsertVersion().equals(parent.getInsertVersion())) {
-                parent.setMetadata("firstLABEL", node);
-                lastLabel.put(parent, i);
-            } else if (!isAlwaysPresent) {
-                Integer j = lastLabel.get(parent);
-                int newi = r.size();
-                r.add(new ImmutablePair<Integer, AbstractVersionedTree>(j, (AbstractVersionedTree) node));
-                lastLabel.put(parent, newi);
-            }
-        } else if (isAlwaysPresent) {
-            // node does not constrain anything
-            for (AbstractVersionedTree child : node.getAllChildren()) {
-                flattenAux2(r, child, i, wanted, lastLabel);
-            }
-        } else {
-            int newi = r.size();
-            r.add(new ImmutablePair<Integer, AbstractVersionedTree>(i, (AbstractVersionedTree) node));
-            for (AbstractVersionedTree child : node.getAllChildren()) {
-                flattenAux2(r, child, newi, wanted, lastLabel);
-            }
-        }
-    }
-
-    public static int[] detectLeafs(List<ImmutablePair<Integer, AbstractVersionedTree>> list) {
+    public static <T> int[] detectLeafs(List<ImmutablePair<Integer, T>> list) {
         int[] r = new int[list.size()];
         int i = 0;
-        for (ImmutablePair<Integer, AbstractVersionedTree> p : list) {
+        for (ImmutablePair<Integer, ?> p : list) {
             r[i] = 1;
             if (p.left == null || p.left >= 0) {
                 r[p.left] = 0;

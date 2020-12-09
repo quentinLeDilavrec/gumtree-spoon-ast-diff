@@ -53,19 +53,21 @@ import java.util.stream.Collectors;
  *
  * @see Action
  */
-public class EditScript<T extends ITree> implements Iterable<Action> {
+public class EditScript<T extends ITree> implements Iterable<MyAction<?>> {
 
-    private class Intern<AA extends Action & AtomicAction<T>, CA extends Action & ComposedAction<T>> {
+    private class Intern<AA extends Action & AtomicAction<T>> {
         private Map<T, AA> tree2AtomicAction = new HashMap<>();
         private Map<T, List<AA>> atomicsUniformWaitingForParent = new HashMap<>();
-        private Map<Action, CA> component2ComposedAction = new HashMap<>();
+        private Map<MyAction<?>, ComposedAction<T>> component2ComposedAction = new HashMap<>();
         private Map<AA, Integer> actionChildNotSeenUniform = new HashMap<>();
-        private Map<CA, Integer> actionComponentNotSeenUniform = new HashMap<>();
+        private Map<ComposedAction<T>, Integer> actionComponentNotSeenUniform = new HashMap<>();
         private Set<AA> possiblyAtomicUniform = new HashSet<>();
         private Set<AA> summarizedAtomics = new HashSet<>();
-        private Set<CA> summarizedComposed = new HashSet<>();
+        private Set<MyAction<?>> summarizedButComposed = new HashSet<>();
+        private Set<ComposedAction<T>> summarizedComposed = new HashSet<>();
+        private Set<MyAction<?>> waitingComposition = new HashSet<>();
 
-        private void addAux(Action action) {
+        private void addAux(MyAction<?> action) {
             if (action instanceof AtomicAction) {
                 T target = ((AtomicAction<T>) action).getTarget();
                 AtomicAction<T> old = tree2AtomicAction.put(target, (AA) action);
@@ -77,12 +79,13 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
                     assert old == action;
                 }
             } else if (action instanceof ComposedAction) {
-                actionComponentNotSeenUniform.putIfAbsent((CA) action, 0);
-                for (Action component : ((ComposedAction<T>) action).composed()) {
+                actionComponentNotSeenUniform.putIfAbsent((ComposedAction<T>) action, 0);
+                for (MyAction<?> component : ((ComposedAction<T>) action).composed()) {
                     boolean nw = parOfThisScript(component);
-                    Action old = component2ComposedAction.put(component, (CA) action);
+                    MyAction<?> old = component2ComposedAction.put(component, (ComposedAction<T>) action);
                     assert old == null;
-                    actionComponentNotSeenUniform.put((CA) action, actionComponentNotSeenUniform.get(action) + 1);
+                    actionComponentNotSeenUniform.put((ComposedAction<T>) action,
+                            actionComponentNotSeenUniform.get(action) + 1);
                     // addAux(component);
                 }
             }
@@ -107,12 +110,12 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
             } else if (parentAction == null) {
                 if (action != null && possiblyAtomicUniform.contains(action)) {
                     if (action instanceof CompressibleAtomicAction) {
-                        ((CompressibleAtomicAction<T>) action)
-                                .setCompressed((List) atomicsUniformWaitingForParent
-                                        .getOrDefault(target, new ArrayList<>()));
+                        ((CompressibleAtomicAction<T>) action).setCompressed(
+                                (List) atomicsUniformWaitingForParent.getOrDefault(target, new ArrayList<>()));
                     }
                     summarizedAtomics.add(action);
                 }
+                extracted(action);
             } else if (action == null) {
                 // parentAction cannot be uniform
                 boolean removed = possiblyAtomicUniform.remove(parentAction);
@@ -130,17 +133,19 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
                         atomicsUniformWaitingForParent.putIfAbsent(parent, new ArrayList<>());
                         atomicsUniformWaitingForParent.get(parent).add(action);
                         if (action instanceof CompressibleAtomicAction) {
-                            ((CompressibleAtomicAction<T>) action)
-                                    .setCompressed((List) atomicsUniformWaitingForParent
-                                            .getOrDefault(target, new ArrayList<>()));
+                            ((CompressibleAtomicAction<T>) action).setCompressed(
+                                    (List) atomicsUniformWaitingForParent.getOrDefault(target, new ArrayList<>()));
+                        }
+                        ComposedAction<T> composedAction = component2ComposedAction.get(action);
+                        if (composedAction != null) {
+                            waitingComposition.add(action);
                         }
                     }
                 } else if (possiblyAtomicUniform.contains(action)) {
                     summarizedAtomics.add(action);
                     if (action instanceof CompressibleAtomicAction) {
-                        ((CompressibleAtomicAction<T>) action)
-                                .setCompressed((List) atomicsUniformWaitingForParent
-                                        .getOrDefault(target, new ArrayList<>()));
+                        ((CompressibleAtomicAction<T>) action).setCompressed(
+                                (List) atomicsUniformWaitingForParent.getOrDefault(target, new ArrayList<>()));
                     }
                     // possiblyAtomicUniform.remove(action);
                 }
@@ -168,32 +173,38 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
         }
 
         private void extracted(AA action) {
-            CA composedAction = component2ComposedAction.get(action);
+            ComposedAction<T> composedAction = component2ComposedAction.get(action);
             if (composedAction != null) {
                 Integer val = actionComponentNotSeenUniform.merge(composedAction, -1, Integer::sum);
                 if (val == 0) {
-                    summarizedComposed.add(composedAction);
-                    actionComponentNotSeenUniform.remove(composedAction);
-                    for (Action a : composedAction.composed()) {
-                        if (a instanceof ComposedAction) {
-                            summarizedComposed.remove(a);
-                        } else if (a instanceof AtomicAction) {
-                            summarizedAtomics.remove(a);
-                        }
-                    }
+                    promoteComposedAction(composedAction);
                 }
             }
         }
 
-        private void compressAux(CA action) {
+        private void promoteComposedAction(ComposedAction<T> composedAction) {
+            summarizedComposed.add(composedAction);
+            actionComponentNotSeenUniform.remove(composedAction);
+            for (MyAction a : composedAction.composed()) {
+                if (a instanceof ComposedAction) {
+                    summarizedAtomics.remove(a);
+                } else if (a instanceof AtomicAction) {
+                    summarizedAtomics.remove(a);
+                }
+                summarizedButComposed.add(a);
+            }
+        }
+
+        private void compressAux(ComposedAction<T> action) {
             if (action instanceof MyMove) {
-                List<Action> composeds = ((MyMove) action).composed();
-                for (Action component : composeds) {
+                List<AtomicAction<AbstractVersionedTree>> composeds = ((MyMove) action).composed();
+                for (AtomicAction<AbstractVersionedTree> component : composeds) {
                     if (component instanceof AtomicAction) {
-                        for(AtomicAction<T> compressed : ((AtomicAction<T>)component).getCompressed()) {
-                            CA ca = this.component2ComposedAction.get(compressed);
-                            if (ca==null) {
-                                summarizedAtomics.add((AA)compressed);
+                        for (AtomicAction<AbstractVersionedTree> compressed : ((AtomicAction<AbstractVersionedTree>) component)
+                                .getCompressed()) {
+                            ComposedAction<T> ca = this.component2ComposedAction.get(compressed);
+                            if (ca == null) {
+                                summarizedAtomics.add((AA) compressed);
                             } else {
                                 compressAux(ca);
                             }
@@ -204,17 +215,75 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
         }
 
         public void compressComposed() {
-            for (Action action : addedActions) {
+            for (MyAction<?> action : addedActions) {
                 if (summarizedComposed.contains(action)) {
-                    compressAux((CA) action);
+                    compressAux((ComposedAction<T>) action);
+                } else if (summarizedAtomics.contains(action)) {
+                    ComposedAction<T> composedAction = component2ComposedAction.get(action);
+                    if (composedAction != null) {
+                        int c = 0;
+                        for (MyAction<?> a : composedAction.composed()) {
+                            c--;
+                            if (summarizedAtomics.contains(a)) {
+                                c++;
+                            } else if (waitingComposition.contains(a)) {
+                                c++;
+                            }
+                        }
+                        if (c != 0) {
+                            continue;
+                        }
+                        int others = 0;
+                        int thisone = 0;
+                        int othersC = 0;
+                        int thisoneC = 1;
+                        for (MyAction<?> a : composedAction.composed()) {
+                            // TODO composed action made of some composed actions
+                            if (a instanceof AtomicAction) {
+                                thisone += 1;
+                                for (AtomicAction<T> myAction : ((AtomicAction<T>) a).getCompressed()) {
+                                    thisone += countValue(myAction);
+                                }
+                                ITree parent = ((AtomicAction<T>) a).getTarget().getParent();
+                                AtomicAction<T> ap = tree2AtomicAction.get(parent);
+                                while (ap != null) {
+                                    if (summarizedAtomics.contains(ap)) {
+                                        others += 1;
+                                        othersC += 1;
+                                        for (AtomicAction<T> myAction : ap.getCompressed()) {
+                                            others += countValue(myAction);
+                                        }
+                                        break;
+                                    } else {
+                                        parent = parent.getParent();
+                                        ap = tree2AtomicAction.get(parent);
+                                    }
+                                }
+                            }
+                        }
+                        if ((thisoneC >= othersC && composedAction instanceof MyMove) || others < thisone) {
+                            promoteComposedAction(composedAction);
+                        }
+                    }
                 }
             }
         }
+
+        private int countValue(AtomicAction<T> a) {
+            int r = 0;
+            if (!summarizedAtomics.contains((AA) a)) {
+                r += 1;
+                for (AtomicAction<T> aa : a.getCompressed()) {
+                    r += countValue(aa);
+                }
+            }
+            return r;
+        }
     }
 
-    private EditScript<T>.Intern<?, ?> INTERN = new Intern<>();
+    private final EditScript<T>.Intern<?> INTERN = new Intern<>();
 
-    private List<Action> addedActions = new ArrayList<>();
+    private List<MyAction<?>> addedActions = new ArrayList<>();
     // private Set<Action> notTopLevelComposed = new HashSet<>();
     // private Set<Action> topLevelUniformComposed = new HashSet<>();
     private boolean compressed = false;
@@ -225,7 +294,7 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
     /**
      * @return summarized actions, nonetheless complete
      */
-    public Iterator<Action> iterator() {
+    public Iterator<MyAction<?>> iterator() {
         assert compressed;
         // return Iterators2.createChainIterable(Arrays.asList(topLevelUniformComposed, topLevelNotComposed)).iterator();
         return addedActions.iterator();
@@ -237,7 +306,7 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
         return addedActions.size();
     }
 
-    void add(Action action) {
+    void add(MyAction<?> action) {
         boolean nw = parOfThisScript(action);
         addedActions.add(action);
         INTERN.addAux(action);
@@ -255,7 +324,7 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
 
     // }
 
-    private boolean parOfThisScript(Action action) {
+    private boolean parOfThisScript(MyAction<?> action) {
         if (action instanceof Scriptable) {
             if (((Scriptable<EditScript<T>>) action).getEditScript() == null) {
                 ((Scriptable<EditScript<T>>) action).setEditScript(this);
@@ -280,11 +349,11 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
     //     return actions().remove(index);
     // }
 
-    public List<Action> asList() {
-        List<Action> r = new ArrayList<>();
-        addedActions.stream().forEach(new Consumer<Action>() {
+    public List<MyAction<?>> asList() {
+        List<MyAction<?>> r = new ArrayList<>();
+        addedActions.stream().forEach(new Consumer<MyAction<?>>() {
             @Override
-            public void accept(Action x) {
+            public void accept(MyAction<?> x) {
                 if (x instanceof AtomicAction) {
                     if (INTERN.summarizedAtomics.contains(x)) {
                         r.add(x);
@@ -293,7 +362,7 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
                     if (INTERN.summarizedComposed.contains(x)) {
                         r.add(x);
                     } else {
-                        for (Action y : ((ComposedAction<T>) x).composed()) {
+                        for (MyAction<?> y : ((ComposedAction<T>) x).composed()) {
                             accept(y);
                         }
                     }
@@ -306,18 +375,19 @@ public class EditScript<T extends ITree> implements Iterable<Action> {
     }
 
     public <U extends Action & ComposedAction<T>> Set<U> getComposed() {
-        return INTERN.summarizedComposed.stream()
-            .map(x -> (U) x)
-            .collect(Collectors.toUnmodifiableSet());
+        return INTERN.summarizedComposed.stream().map(x -> (U) x).collect(Collectors.toUnmodifiableSet());
     }
 
     public <U extends Action & AtomicAction<T>> List<U> getAtomic() {
         List<U> r = new ArrayList<>();
-        addedActions.stream().forEach(new Consumer<Action>() {
+        addedActions.stream().forEach(new Consumer<MyAction<?>>() {
             @Override
-            public void accept(Action x) {
+            public void accept(MyAction<?> x) {
                 if (x instanceof AtomicAction) {
                     if (INTERN.summarizedAtomics.contains(x)) {
+                        r.add((U) x);
+                    }
+                    if (INTERN.summarizedButComposed.contains(x)) {
                         r.add((U) x);
                     }
                 }

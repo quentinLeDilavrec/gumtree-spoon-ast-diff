@@ -48,24 +48,24 @@ public abstract class VersionedEditScriptGenerator {
     }
 
     protected final Action addInsert(ITree x, AbstractVersionedTree w){
-        Action a = new MyAction.MyInsert(x, w);
+        MyAction.MyInsert a = new MyAction.MyInsert(x, w);
         actions.add(a);
         return a;
     }
 
     protected final Action addDelete(AbstractVersionedTree w){
-        Action a = new MyAction.MyDelete(w);
+        MyAction.MyDelete a = new MyAction.MyDelete(w);
         actions.add(a);
         return a;
     }
 
 
-    protected final void add(Action a){
+    protected final void add(MyAction<?> a){
         actions.add(a);
     }
 
     protected final Action addUpdate(AbstractVersionedTree w, AbstractVersionedTree newTree){
-        Action a = new MyAction.MyUpdate(w, newTree);
+        MyAction.MyUpdate a = new MyAction.MyUpdate(w, newTree);
         actions.add(a);
         return a;
     }

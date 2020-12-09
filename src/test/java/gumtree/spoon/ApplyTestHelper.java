@@ -7,7 +7,9 @@ import static org.junit.Assume.assumeNoException;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -15,6 +17,7 @@ import java.util.Random;
 import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import com.github.gumtreediff.actions.MyAction;
 import com.github.gumtreediff.actions.MyAction.AtomicAction;
 import com.github.gumtreediff.actions.MyAction.MyDelete;
 import com.github.gumtreediff.actions.MyAction.MyInsert;
@@ -173,6 +176,8 @@ public class ApplyTestHelper {
             System.err.println("*" + p.right.getQualifiedName() + "*");
             try {
                 System.err.println(pp.prettyprint(p.left));
+            System.err.println("--------------->>");
+            System.err.println(pp.prettyprint(p.right));
             } catch (Exception e) {
                 assumeNoException(e);
             }
@@ -262,14 +267,15 @@ public class ApplyTestHelper {
         ITree dstTree = scanner.getTree(right);
         DiffImpl diff = mdiff.compute(dstTree, rightV);
 
-        ITree middle = mdiff.getMiddle();
-        System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
+        AbstractVersionedTree middle = mdiff.getMiddle();
+        // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
         // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
-        // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), middle));
+        System.out.println(middle.toTreeString());
         CtElement middleE = ((Factory)middle.getMetadata("Factory")).getModel().getRootPackage();
         check1(left, pp, middleE);
-        for (Action action : diff.getAtomic()) {
-            applyAux(scanner, middle, action);
+        List<Action> wanted = (List)diff.getAtomic();
+        for (Action action : wanted) {
+            applyAux(scanner, middle, action, new HashSet<>((Collection)wanted));
         }
         middleE = ((Factory)middle.getMetadata("Factory")).getModel().getRootPackage();
         // Queue<ITree> tmp = new LinkedBlockingDeque<>();
@@ -310,17 +316,21 @@ public class ApplyTestHelper {
     }
     
 
-    public static void applyAux(final SpoonGumTreeBuilder scanner, ITree middle, Action action) {
+    public static void applyAux(final SpoonGumTreeBuilder scanner, ITree middle, Action action, Collection<MyAction<?>> wanted) {
         try {
             if (action instanceof MyInsert) {
                 ActionApplier.applyMyInsert((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
                         (MyInsert) action);
                 for (AtomicAction<AbstractVersionedTree> a : ((MyInsert) action).getCompressed()) {
-                    applyAux(scanner, middle, (Action)a);
+                    if (!wanted.contains(a)) {
+                        applyAux(scanner, middle, (Action)a, wanted);
+                    }
                 }
             } else if (action instanceof MyDelete) {
                 for (AtomicAction<AbstractVersionedTree> a : ((MyDelete) action).getCompressed()) {
-                    applyAux(scanner, middle, (Action)a);
+                    if (!wanted.contains(a)) {
+                        applyAux(scanner, middle, (Action)a, wanted);
+                    }
                 }
                 ActionApplier.applyMyDelete((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
                         (MyDelete) action);
@@ -328,7 +338,9 @@ public class ApplyTestHelper {
                 ActionApplier.applyMyUpdate((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
                         (MyUpdate) action);
                 for (AtomicAction<AbstractVersionedTree> a : ((MyUpdate) action).getCompressed()) {
-                    applyAux(scanner, middle, (Action)a);
+                    if (!wanted.contains(a)) {
+                        applyAux(scanner, middle, (Action)a, wanted);
+                    }
                 }
                 // } else if (action instanceof MyMove) {
                 //     ActionApplier.applyMyMove((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
