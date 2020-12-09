@@ -88,7 +88,38 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
     protected MultiDiffImpl mdiff;
     protected int leafsActionsLimit;
 
-    protected class EvoStateMaintainer {
+    private final class VirtComposedAction implements ComposedAction<AbstractVersionedTree> {
+		private final Set<T> components;
+		List<MyAction<AbstractVersionedTree>> compo;
+
+		private VirtComposedAction(Set<T> components) {
+			this.compo = new ArrayList<>(extractActions(components));
+			this.components = components;
+		}
+
+		@Override
+		public List<MyAction<AbstractVersionedTree>> composed() {
+		    return compo;
+		}
+
+		@Override
+		public String getName() {
+		    return null;
+		}
+
+		@Override
+		public String toString() {
+		    StringBuilder r = new StringBuilder();
+		    r.append("Virt composed action containing:");
+		    for (MyAction<AbstractVersionedTree> component : composed()) {
+		        r.append("\n\t-");
+		        r.append(component.toString());
+		    }
+		    return r.toString();
+		}
+	}
+
+	protected class EvoStateMaintainer {
         protected Map<T, Integer> evoState = new HashMap<>();
         protected Map<T, Integer> evoReqSize = new HashMap<>();
         // protected Map<T, Set<MyAction<AbstractVersionedTree>>> evoToTree = new HashMap<>();
@@ -286,31 +317,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
             if (components == null) {
                 continue;
             }
-            ComposedAction<AbstractVersionedTree> composed = new ComposedAction<AbstractVersionedTree>() {
-                List<MyAction<AbstractVersionedTree>> compo = new ArrayList<>(extractActions(components));
-
-                @Override
-                public List<MyAction<AbstractVersionedTree>> composed() {
-                    return compo;
-                }
-
-                @Override
-                public String getName() {
-                    return null;
-                }
-
-                @Override
-                public String toString() {
-                    StringBuilder r = new StringBuilder();
-                    r.append("Virt composed action containing:");
-                    for (MyAction<AbstractVersionedTree> component : composed()) {
-                        r.append("\n\t-");
-                        r.append(component.toString());
-                    }
-                    return r.toString();
-                }
-
-            };
+            ComposedAction<AbstractVersionedTree> composed = new VirtComposedAction(components);
             virtComposed.add(composed);
         }
         Collection<MyAction<?>> testSet = new HashSet<>();
@@ -318,6 +325,36 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         for (MyAction<?> a : virtComposed) {
             popTopGroups(testSet, appSet, a);
         }
+        
+        virtComposed.add(new ComposedAction<AbstractVersionedTree>() {
+
+            private ArrayList<MyAction<?>> components = new ArrayList<>(testSet);
+
+            @Override
+            public String getName() {
+                return "Virt Group of Tests";
+            }
+
+            @Override
+            public List<? extends MyAction<?>> composed() {
+                return Collections.unmodifiableList(components);
+            }
+        });
+        
+        virtComposed.add(new ComposedAction<AbstractVersionedTree>() {
+            private ArrayList<MyAction<?>> components = new ArrayList<>(appSet);
+
+            @Override
+            public String getName() {
+                return "Virt Group of App";
+            }
+
+            @Override
+            public List<? extends MyAction<?>> composed() {
+                return Collections.unmodifiableList(components);
+            }
+            
+        });
         return applyCombActions(virtComposed);
     }
 
@@ -414,7 +451,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
             for (int x : Combination.detectLeafs(constrainedTree)) {
                 c += x == 0 ? 0 : 1;
             }
-            if (c <= 7 && c>prevSize) {
+            if (c <= leafsActionsLimit && c>prevSize) {
                 prevSize = c;
                 toBreak = tmp;
                 constrainedTree = tmp2;
