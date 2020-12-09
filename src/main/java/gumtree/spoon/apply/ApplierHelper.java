@@ -283,6 +283,9 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         Set<ComposedAction<AbstractVersionedTree>> virtComposed = new HashSet<>();
         for (T evo : wantedEvos) {
             Set<T> components = evoToEvo.get(evo);
+            if (components == null) {
+                continue;
+            }
             ComposedAction<AbstractVersionedTree> composed = new ComposedAction<AbstractVersionedTree>() {
                 List<MyAction<AbstractVersionedTree>> compo = new ArrayList<>(extractActions(components));
 
