@@ -223,12 +223,12 @@ public class Flattener2 {
             }
             composedActions.get(aa).add(ca);
             Set<Cluster2> tmp = this.maybePresentNodes.get(aa.getTarget());
+            tmp.removeIf(x -> !targets.containsAll(x.nodes));
             if (candidates == null) {
                 candidates = new HashSet<>(tmp);
             } else {
                 candidates.retainAll(tmp);
             }
-            tmp.removeIf(x -> !x.nodes.stream().allMatch(y -> targets.contains(y)));
             mergeCandidates.addAll(tmp);
         }
         Cluster2 composed;
