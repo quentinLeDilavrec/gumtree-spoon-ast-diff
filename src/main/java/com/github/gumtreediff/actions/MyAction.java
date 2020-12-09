@@ -186,11 +186,7 @@ public interface MyAction<U> {
         public AbstractVersionedTree getNode() {
             return (AbstractVersionedTree) super.getNode();
         }
-
-        /**
-         * Optional, if in the intermediate tree insert can be seen as a sort of duplicate
-         * @return can be null
-         */
+        
         public ITree getSource() {
             return left;
         }
@@ -275,7 +271,7 @@ public interface MyAction<U> {
     }
 
     public static MyInsert invert(MyDelete action) {
-        return invert(action, null);
+        return invert(action, action.getTarget());
     }
 
     public static MyInsert invert(MyDelete action, AbstractVersionedTree source) {
