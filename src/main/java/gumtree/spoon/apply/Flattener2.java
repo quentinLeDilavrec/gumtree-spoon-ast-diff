@@ -215,6 +215,7 @@ public class Flattener2 {
             }
         }
         Set<Cluster2> mergeCandidates = new HashSet<>();
+        Set<Cluster2> candidates = null;
         for (AtomicAction<AbstractVersionedTree> aa : aas) {
             assert wanted.contains(aa);
             if (composedActions.get(aa).contains(ca)) {
@@ -222,11 +223,18 @@ public class Flattener2 {
             }
             composedActions.get(aa).add(ca);
             Set<Cluster2> tmp = this.maybePresentNodes.get(aa.getTarget());
+            if (candidates == null) {
+                candidates = new HashSet<>(tmp);
+            } else {
+                candidates.retainAll(tmp);
+            }
             tmp.removeIf(x -> !x.nodes.stream().allMatch(y -> targets.contains(y)));
             mergeCandidates.addAll(tmp);
         }
         Cluster2 composed;
-        if (mergeCandidates.size() == 2) {
+        if(candidates.size()>0){
+            return aas;
+        }else if (mergeCandidates.size() == 2) {
             Iterator<Cluster2> it = mergeCandidates.iterator();
             composed = compose(it.next(), it.next());
         } else {
@@ -241,7 +249,7 @@ public class Flattener2 {
     }
 
     public Set<Cluster2> getCluster(ComposedAction<AbstractVersionedTree> ca) {
-        Set<Cluster2> toBreak = new HashSet<>();
+        Set<Cluster2> r = new HashSet<>();
         Set<AbstractVersionedTree> targets = ca.getTarget();
         Set<Cluster2> candidates = null;
         for (AbstractVersionedTree n : targets) {
@@ -252,9 +260,9 @@ public class Flattener2 {
             }
         }
         if (candidates != null) {
-            toBreak.addAll(candidates);
+            r.addAll(candidates);
         }
-        return toBreak;
+        return r;
     }
 
     /**
