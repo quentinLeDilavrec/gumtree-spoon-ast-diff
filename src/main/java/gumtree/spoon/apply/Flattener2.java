@@ -69,7 +69,7 @@ public class Flattener2 {
             maybePresentNodes.put(aa.getTarget(), value);
         }
     }
-    
+
     private Set<AbstractVersionedTree> initiallyPresentNodes;
     private Set<Cluster2> clusters;
     private Map<AbstractVersionedTree, Set<Cluster2>> maybePresentNodes;
@@ -122,7 +122,9 @@ public class Flattener2 {
             if (pc1 == pc2) {
                 // same constraining parent
                 r = new Cluster2();
-                r.root = new AbstractVersionedTree.FakeTree(c1.root, c2.root);
+                r.root = c1.root;// new AbstractVersionedTree.FakeTree(c1.root, c2.root);
+                // maybePresentNodes.putIfAbsent(r.root, new HashSet<>());
+                // maybePresentNodes.get(r.root).add(r);
                 r.maybePresentParent = c1.maybePresentParent;
                 r.nodes.addAll(c1.nodes);
                 r.nodes.addAll(c2.nodes);
@@ -235,9 +237,9 @@ public class Flattener2 {
             mergeCandidates.addAll(tmp);
         }
         Cluster2 composed;
-        if(candidates.size()>0){
+        if (candidates.size() > 0) {
             return aas;
-        }else if (mergeCandidates.size() == 2) {
+        } else if (mergeCandidates.size() == 2) {
             Iterator<Cluster2> it = mergeCandidates.iterator();
             composed = compose(it.next(), it.next());
         } else {
@@ -385,9 +387,9 @@ public class Flattener2 {
         }
     }
 
-	public boolean isInitiallyPresent(AbstractVersionedTree root) {
-		return false;
-	}
+    public boolean isInitiallyPresent(AbstractVersionedTree root) {
+        return false;
+    }
 }
 
 class Cluster2 {

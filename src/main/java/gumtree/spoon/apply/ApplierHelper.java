@@ -512,7 +512,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                             } catch (gumtree.spoon.apply.WrongAstContextException e) {
                             }
                         }
-                    }while (waitingHasbeApplied);
+                    } while (waitingHasbeApplied);
                     // // ComposedAction<AbstractVersionedTree> caction = getCAction(change.content, change.way);
                     // if (caction != null) {
                     //     for (MyAction<?> myAction : caction.composed()) {
