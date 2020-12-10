@@ -555,8 +555,8 @@ public class Combination {
         return flat;
     }
 
-    public static ReflectedConstrainedHelper<Cluster2> build(List<ImmutablePair<Integer, Cluster2>> l) {
-        int[] init = l.stream().map(x->x.right.initiallyPresentNodes.contains(x.right.root)?1:0).mapToInt(Integer::intValue).toArray();//Combination.initialState(l);
+    public static ReflectedConstrainedHelper<Cluster2> build(Flattener2 flat, List<ImmutablePair<Integer, Cluster2>> l) {
+        int[] init = l.stream().map(x->flat.isInitiallyPresent(x.right.root)?1:0).mapToInt(Integer::intValue).toArray();//Combination.initialState(l);
         int[] leafs = Combination.detectLeafs(l);
         Cluster2[] nodes = l.stream().map(ImmutablePair::getRight).toArray(Cluster2[]::new);
         int[] deps = l.stream().map(ImmutablePair::getLeft).mapToInt(Integer::intValue).toArray();

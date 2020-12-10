@@ -257,7 +257,7 @@ public class CombinationTest {
         projectWide.stream().forEach(x->projectWide2.addAll(flat.getCluster(x)));
         List<ImmutablePair<Integer, Cluster2>> l = flat.getConstrainedTree(
             projectWide2);
-        int[] init = l.stream().map(x->x.right.initiallyPresentNodes.contains(x.right.root)?1:0).mapToInt(Integer::intValue).toArray();//Combination.initialState(l);
+        int[] init = l.stream().map(x->flat.isInitiallyPresent(x.right.root)?1:0).mapToInt(Integer::intValue).toArray();//Combination.initialState(l);
         int[] leafs = Combination.detectLeafs(l);
         Cluster2[] nodes = l.stream().map(ImmutablePair::getRight).toArray(Cluster2[]::new);
         int[] deps = l.stream().map(ImmutablePair::getLeft).mapToInt(Integer::intValue).toArray();

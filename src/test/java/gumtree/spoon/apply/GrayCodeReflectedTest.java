@@ -118,7 +118,7 @@ public class GrayCodeReflectedTest {
             }
             j++;
         }
-        ReflectedConstrainedHelper<Cluster2> combs = Combination.build(constrainedTree);
+        ReflectedConstrainedHelper<Cluster2> combs = Combination.build(flat,constrainedTree);
         Combination.CHANGE<Integer> next;
         int[] curr = Arrays.copyOf(combs.originalInit, combs.originalInit.length);
         for (int i = 0; i < curr.length; i++) {

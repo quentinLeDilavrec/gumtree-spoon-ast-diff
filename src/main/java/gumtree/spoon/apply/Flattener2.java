@@ -47,6 +47,7 @@ public class Flattener2 {
     public void compute() {
         clusters = new HashSet<>();
         maybePresentNodes = new HashMap<>();
+        initiallyPresentNodes = new HashSet<>();
         prepareClusters();
         childClusters = new HashMap<>();
         prepareChildH();
@@ -58,7 +59,8 @@ public class Flattener2 {
             c.root = aa.getTarget();
             c.nodes.add(aa.getTarget());
             if (aa.getTarget().getMetadata(MyScriptGenerator.DELETE_ACTION) == aa) {
-                c.initiallyPresentNodes.add(aa.getTarget());
+                initiallyPresentNodes.add(aa.getTarget());
+                // c.initiallyPresentNodes.add(aa.getTarget());
             }
             clusters.add(c);
             assert !maybePresentNodes.containsKey(aa.getTarget()) : aa;
@@ -67,7 +69,8 @@ public class Flattener2 {
             maybePresentNodes.put(aa.getTarget(), value);
         }
     }
-
+    
+    private Set<AbstractVersionedTree> initiallyPresentNodes;
     private Set<Cluster2> clusters;
     private Map<AbstractVersionedTree, Set<Cluster2>> maybePresentNodes;
 
@@ -144,8 +147,8 @@ public class Flattener2 {
                 return null;
             }
         }
-        r.initiallyPresentNodes.addAll(c1.initiallyPresentNodes);
-        r.initiallyPresentNodes.addAll(c2.initiallyPresentNodes);
+        // r.initiallyPresentNodes.addAll(c1.initiallyPresentNodes);
+        // r.initiallyPresentNodes.addAll(c2.initiallyPresentNodes);
         return r;
 
     }
@@ -381,11 +384,15 @@ public class Flattener2 {
             }
         }
     }
+
+	public boolean isInitiallyPresent(AbstractVersionedTree root) {
+		return false;
+	}
 }
 
 class Cluster2 {
     AbstractVersionedTree root;
     AbstractVersionedTree maybePresentParent;
     LinkedHashSet<AbstractVersionedTree> nodes = new LinkedHashSet<>();
-    Set<AbstractVersionedTree> initiallyPresentNodes = new HashSet<>();
+    // Set<AbstractVersionedTree> initiallyPresentNodes = new HashSet<>(); // might be useful in case of nodes partially shared with other clusters but it goes against one constrain per node?
 }
