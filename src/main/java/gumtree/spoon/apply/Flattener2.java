@@ -230,20 +230,19 @@ public class Flattener2 {
             tmp.removeIf(x -> !targets.containsAll(x.nodes));
             mergeCandidates.addAll(tmp);
         }
-        if (mergeCandidates.stream().anyMatch(x-> x.nodes.containsAll(targets))) {
-            return aas;
-        }
         Cluster2 composed;
-        if (mergeCandidates.size() == 2) {
-            Iterator<Cluster2> it = mergeCandidates.iterator();
-            composed = compose(it.next(), it.next());
-        } else {
-            composed = compose(mergeCandidates);
-        }
-        this.clusters.add(composed);
-        this.composedClusters.put(composed, mergeCandidates);
-        for (AbstractVersionedTree n : composed.nodes) {
-            this.maybePresentNodes.get(n).add(composed);
+        if (mergeCandidates.size() > 1 && !mergeCandidates.stream().anyMatch(x-> x.nodes.containsAll(targets))) {
+            if (mergeCandidates.size() == 2) {
+                Iterator<Cluster2> it = mergeCandidates.iterator();
+                composed = compose(it.next(), it.next());
+            } else {
+                composed = compose(mergeCandidates);
+            }
+            this.clusters.add(composed);
+            this.composedClusters.put(composed, mergeCandidates);
+            for (AbstractVersionedTree n : composed.nodes) {
+                this.maybePresentNodes.get(n).add(composed);
+            }
         }
         return aas;
     }
