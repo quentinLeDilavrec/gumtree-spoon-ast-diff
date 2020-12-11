@@ -220,7 +220,6 @@ public class Flattener2 {
             }
         }
         Set<Cluster2> mergeCandidates = new HashSet<>();
-        Set<Cluster2> candidates = null;
         for (AtomicAction<AbstractVersionedTree> aa : aas) {
             assert wanted.contains(aa);
             if (composedActions.get(aa).contains(ca)) {
@@ -229,17 +228,13 @@ public class Flattener2 {
             composedActions.get(aa).add(ca);
             Set<Cluster2> tmp = this.maybePresentNodes.get(aa.getTarget());
             tmp.removeIf(x -> !targets.containsAll(x.nodes));
-            if (candidates == null) {
-                candidates = new HashSet<>(tmp);
-            } else {
-                candidates.retainAll(tmp);
-            }
             mergeCandidates.addAll(tmp);
         }
-        Cluster2 composed;
-        if (candidates.size() > 0) {
+        if (mergeCandidates.stream().anyMatch(x-> x.nodes.containsAll(targets))) {
             return aas;
-        } else if (mergeCandidates.size() == 2) {
+        }
+        Cluster2 composed;
+        if (mergeCandidates.size() == 2) {
             Iterator<Cluster2> it = mergeCandidates.iterator();
             composed = compose(it.next(), it.next());
         } else {
