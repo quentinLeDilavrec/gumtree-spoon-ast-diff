@@ -426,6 +426,12 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
     private Launcher applyCombActions(Collection<? extends MyAction<?>> wantedActions) {
         Set<AtomicAction<AbstractVersionedTree>> wantedAA = new HashSet<>();
         Flattener2 flat = Combination.flatten(wantedActions);
+        flat.compute();
+        for (MyAction<?> ca : wantedActions) {
+            if (ca instanceof ComposedAction) {
+                flat.clusterize((ComposedAction<AbstractVersionedTree>)ca);
+            }
+        }
         Set<Cluster2> toBreak = new HashSet<>();
         LinkedList<Cluster2> tryToBreak = new LinkedList<>();
         List<ImmutablePair<Integer, Cluster2>> constrainedTree = flat.getConstrainedTree(toBreak);
