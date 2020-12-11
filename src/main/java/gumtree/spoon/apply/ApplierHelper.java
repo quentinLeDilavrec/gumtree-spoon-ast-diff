@@ -440,6 +440,8 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                 tryToBreak.addAll(flat.getCluster((ComposedAction<AbstractVersionedTree>) a));
             }
         }
+        tryToBreak.removeIf(x->x.nodes.size()<=1);
+        tryToBreak.sort((a,b)->b.nodes.size()-a.nodes.size());
         while (j < 10) {
             Set<Cluster2> tmp = new HashSet<>();
             tmp.addAll(toBreak);
@@ -456,6 +458,12 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                 prevSize = c;
                 toBreak = tmp;
                 constrainedTree = tmp2;
+                tryToBreak.clear();
+                for (ImmutablePair<Integer,Cluster2> pair : tmp2) {
+                    tryToBreak.add(pair.right);
+                }
+                tryToBreak.removeIf(x->x.nodes.size()<=1);
+                tryToBreak.sort((a,b)->b.nodes.size()-a.nodes.size());
             }
             j++;
         }
