@@ -135,11 +135,11 @@ public class TreeScanner extends CtScanner {
 						return true;
 					if (!ele.isParentInitialized())
 						break;
-					if (ele.getRoleInParent().equals(CtRole.TYPE))
+					if (ele.getRoleInParent()!=null && ele.getRoleInParent().equals(CtRole.TYPE))
 						t = true;
-					if (ele.getRoleInParent().equals(CtRole.DECLARING_TYPE))
+					if (ele.getRoleInParent()!=null && ele.getRoleInParent().equals(CtRole.DECLARING_TYPE))
 						t = true;
-					if (ele.getRoleInParent().equals(CtRole.TARGET))
+					if (ele.getRoleInParent()!=null && ele.getRoleInParent().equals(CtRole.TARGET))
 						b = false;
 					if (ele instanceof CtAnnotation)
 						return false;
