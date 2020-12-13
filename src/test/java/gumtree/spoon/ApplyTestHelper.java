@@ -213,7 +213,11 @@ public class ApplyTestHelper {
                 m2.put(t.getQualifiedName(), new MutablePair(t, null));
             }
             for (CtPackage t : ((CtPackage) middle).getPackages()) {
-                m2.get(t.getQualifiedName()).setRight(t);
+                if (m2.containsKey(t.getQualifiedName())) {
+                    m2.get(t.getQualifiedName()).setRight(t);
+                } else {
+                    // m2.put(t.getQualifiedName(), new MutablePair(null, t));
+                }
             }
             for (MutablePair<CtPackage, CtPackage> p : m2.values()) {
                 assertNotNull(p.left);

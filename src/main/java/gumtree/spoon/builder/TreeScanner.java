@@ -8,10 +8,15 @@ import com.github.gumtreediff.tree.TreeContext;
 import spoon.reflect.code.CtAbstractInvocation;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtCase;
+import spoon.reflect.code.CtCatchVariable;
+import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtExpression;
+import spoon.reflect.code.CtForEach;
+import spoon.reflect.code.CtIf;
 import spoon.reflect.code.CtInvocation;
 import spoon.reflect.code.CtLiteral;
 import spoon.reflect.code.CtNewArray;
+import spoon.reflect.code.CtNewClass;
 import spoon.reflect.code.CtOperatorAssignment;
 import spoon.reflect.code.CtStatement;
 import spoon.reflect.code.CtStatementList;
@@ -19,10 +24,13 @@ import spoon.reflect.code.CtSuperAccess;
 import spoon.reflect.code.CtTargetedExpression;
 import spoon.reflect.code.CtThisAccess;
 import spoon.reflect.code.CtTypeAccess;
+import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtEnum;
 import spoon.reflect.declaration.CtExecutable;
 import spoon.reflect.declaration.CtNamedElement;
+import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypeMember;
 import spoon.reflect.declaration.CtVariable;
@@ -33,6 +41,7 @@ import spoon.reflect.reference.CtPackageReference;
 import spoon.reflect.reference.CtParameterReference;
 import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.reference.CtVariableReference;
 import spoon.reflect.reference.CtWildcardReference;
 import spoon.reflect.visitor.CtScanner;
 
@@ -70,7 +79,12 @@ public class TreeScanner extends CtScanner {
 		if (nodifiedLabel) {
 			LabelFinder lf = new LabelFinder();
 			lf.scan(element);
-			if (lf.label != null && lf.label.length() > 0 && !(element instanceof CtSuperAccess) && !(element instanceof CtTypeAccess)
+			if (lf.label != null && lf.label.length() > 0 
+			 && !(element instanceof CtSuperAccess)
+			 && !(element instanceof CtTypeAccess)
+			 && !(element instanceof CtAbstractInvocation)
+			 && !(element instanceof CtAnnotation)
+			 && !(element instanceof CtVariableAccess)
 					&& (element instanceof CtNamedElement || element instanceof CtExpression
 							|| (element instanceof CtReference && !(element instanceof CtWildcardReference)))) {
 				this.addSiblingNode(lf.labEle==null?createNode("LABEL", lf.label):createNode("LABEL", lf.labEle, lf.label));
@@ -97,99 +111,47 @@ public class TreeScanner extends CtScanner {
 			}
 			return true;
 		}
+		return isToIgnoreAux(element);
+	}
 
-		if (element instanceof CtReference) {
-			if (element.getRoleInParent() == CtRole.SUPER_TYPE || element.getRoleInParent() == CtRole.INTERFACE) {
-				return false;
-			} else if ((element.getRoleInParent() == CtRole.SUPER_TYPE
-					|| element.getRoleInParent() == CtRole.INTERFACE)) {
-				return false;
-			} else if (element.getRoleInParent().equals(CtRole.CAST)) {
-				return false;
-			} else if (element.getParent() instanceof CtNewArray) {
-				return false;
-			} else if (((CtReference)element).getSimpleName().length()==0) {
+	private boolean isToIgnoreAux(CtElement element) {
+		if (element.isImplicit() && !(element.getRoleInParent() == CtRole.ELSE || element.getRoleInParent() == CtRole.THEN)) {//((CtForEach)element).getVariable()
+			return true;
+		}else if (!element.isParentInitialized()) {
+			return false;
+		}
+		if (element.getRoleInParent() != null){
+			if (element.getRoleInParent().equals(CtRole.TYPE) 
+			&& element.getParent() instanceof CtReference 
+			&& (!element.getParent().isParentInitialized()
+			|| (!(element.getParent().getParent() instanceof CtNewArray)
+			&& !(element.getParent().getParent() instanceof CtVariable)
+			&& !(element.getParent().getParent() instanceof CtConstructorCall)))) {
 				return true;
-			} else if (element instanceof CtExecutableReference) {
+			}
+			if (element.getRoleInParent().equals(CtRole.EXECUTABLE_REF) && element.getParent() instanceof CtType) {
 				return true;
-			// } else if (element instanceof CtTypeReference && (element.getParent() instanceof CtAbstractInvocation || element.getParent() instanceof CtExecutableReference)) {
-			// 	return true;
-			// } else if (element.getRoleInParent().equals(CtRole.DECLARING_TYPE) && (element.getParent() instanceof CtAbstractInvocation)) {
-			// 	return true;
-			} else if ((element.getParent() instanceof CtTypeAccess || element.getParent() instanceof CtTypeReference)) {
-				// System.err.println(element.isImplicit());
-				CtElement ele = element;
-				boolean b = true;
-				boolean t = false;
-				while (ele != null) { // TODO look at parser 'cause an implicite this should not contain a non implicit target
-					System.out.println(ele.getClass());
-					System.out.println(ele.getRoleInParent());
-					System.out.println(ele.isImplicit()); 
-					if (ele instanceof CtExecutableReference)
-						return true; 
-					if (ele.getRoleInParent()!=null && ele.getRoleInParent().equals(CtRole.ANNOTATION_TYPE))
-						return true; 
-					if (ele.isImplicit())
-						return true;
-					if (ele instanceof CtParameterReference)
-						return true;
-					if (!ele.isParentInitialized())
-						break;
-					if (ele.getRoleInParent()!=null && ele.getRoleInParent().equals(CtRole.TYPE))
-						t = true;
-					if (ele.getRoleInParent()!=null && ele.getRoleInParent().equals(CtRole.DECLARING_TYPE))
-						t = true;
-					if (ele.getRoleInParent()!=null && ele.getRoleInParent().equals(CtRole.TARGET))
-						b = false;
-					if (ele instanceof CtAnnotation)
-						return false;
-					if (ele instanceof CtTargetedExpression)
-						return b;
-					if (ele instanceof CtTypeMember)
-						return b && t;
-					if (ele instanceof CtBlock)
-						return true;
-					if (ele instanceof CtNewArray)
-						return true;
-					ele = ele.getParent();
-					// else if (ele instanceof CtExpression)
-					// 	return b;
-					// else if (ele instanceof CtStatement)
-					// 	return b;
-					// else if (ele instanceof CtType)
-					// 	return b;
-				}
+			}
+			if (element.getRoleInParent().equals(CtRole.TYPE) && element.getParent() instanceof CtExpression) {
 				return true;
-			} else if (element.getRoleInParent().equals(CtRole.TYPE)) {
+			}
+			if (element.getRoleInParent().equals(CtRole.TARGET) && element.getParent() instanceof CtThisAccess) {
 				return true;
-			// } else if (element.getRoleInParent().equals(CtRole.TYPE) && (element.getParent() instanceof CtExecutable || element.getParent() instanceof CtVariable || element.getParent() instanceof CtAbstractInvocation || element.getParent() instanceof CtVariable || element.getParent() instanceof CtAnnotation)) {
-			// 	return true;
-			} else {
+			}
+			if (element.getRoleInParent().equals(CtRole.TARGET) && element.getParent() instanceof CtSuperAccess) {
 				return true;
-				// System.err.println(element.isImplicit());
-				// return element.isImplicit();
+			}
+			if (element.getRoleInParent().equals(CtRole.DECLARING_TYPE) && element.getParent() instanceof CtExecutableReference) {
+				return true;
+			}
+			if (element.getRoleInParent().equals(CtRole.DECLARING_TYPE) && element.getParent() instanceof CtVariableReference) {
+				return true;
+			}
+			if (element.getRoleInParent().equals(CtRole.ARGUMENT_TYPE)) {
+				return true;
 			}
 		}
-		CtElement ele = element;
-		// boolean b = element instanceof CtReference;
-		while (ele != null) { // TODO look at parser 'cause an implicite this should not contain a non implicit target 
-			if (ele.isImplicit())
-				return true;
-			if (!ele.isParentInitialized())
-				break;
-			ele = ele.getParent();
-			if (ele instanceof CtBlock)
-				break;
-			if (ele instanceof CtNewArray)
-				return false;
-			// else if (element instanceof CtExpression)
-			// 	return b;
-			// else if (element instanceof CtStatement)
-			// 	return b;
-			// else if (element instanceof CtType)
-			// 	return b;
-		}
-		return false;
+		return isToIgnoreAux(element.getParent());
 	}
 
 	@Override

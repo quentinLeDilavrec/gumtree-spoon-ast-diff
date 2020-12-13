@@ -175,7 +175,7 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
             AbstractVersionedTree z = cpyMappings.getSrc(y);
             boolean already = alreadyAna.contains(x);
             if (already) {
-                continue;
+                // continue; // not sure if I hould skip
             }
             if (!cpyMappings.hasDst(x)) {
                 int k = findPos2(x, y);//y.getChildPosition(x);
@@ -441,7 +441,7 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
                         int k = findPos2(b, x);//x.getChildPosition(b);
                         AbstractVersionedTree newTree = new VersionedTree(b, this.afterVersion);
                         newTree.setParent(w);
-                        w.insertChild(newTree, k);
+                        w.insertChild(newTree, Math.min(w.getChildren().size(),k));
                         cpyMappings.link(newTree, b);
                         // // copyToOrig.put((AbstractVersionedTree) a, x);
                         // copyToOrig.put(newTree, x);

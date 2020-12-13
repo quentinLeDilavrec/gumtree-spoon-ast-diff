@@ -264,6 +264,64 @@ public class ApplyTest {
         }
 
         @Test
+        public void testSimpleApply13b() {
+                String left = "class X {" +
+                "}";
+
+                // 1- Field@@TYPE_MEMBER
+                // 1- LABEL@@tmp
+                // 1- VARIABLE_TYPE@@TypeReference
+                //         1- LABEL@@ArrayDeque
+                // 1- NewClass@@DEFAULT_EXPRESSION
+
+                String right = "import spoon.reflect.declaration.CtElement;import java.util.ArrayDeque;import java.util.Collection;import java.util.Iterator;" + 
+                "class X {" + 
+                "  java.util.ArrayDeque<spoon.reflect.declaration.CtClass> tmp = new java.util.ArrayDeque<spoon.reflect.declaration.CtClass>() {"+
+                "      @java.lang.Override"+
+                "      public boolean addAll(Collection c) {"+
+                "          for (Object aC : c) {"+
+                "              this.addFirst((spoon.reflect.declaration.CtClass) (aC));"+
+                "          }"+
+                "          return !c.isEmpty();"+
+                "      }"+
+                "  };" + 
+                "}";
+
+                ApplyTestHelper.onChange(left, right);
+        }
+
+        
+
+        @Test
+        public void testSimpleApply14b() {
+                // 1- Field@@TYPE_MEMBER
+                // 1- LABEL@@deque
+                // 1- VARIABLE_TYPE@@TypeReference
+                //         1- LABEL@@ArrayDeque
+                //         1- TypeReference@@TypeReference
+                //                 1- LABEL@@CtElement
+                // 1- MODIFIER@@private
+                // 1- NewClass@@DEFAULT_EXPRESSION
+                ApplyTestHelper.onChange(new File("src/test/resources/examples/simple2/before.java"),
+                                new File("src/test/resources/examples/simple2/after.java"));
+        }
+
+        @Test
+        public void testSimpleApply14c() {
+                // 1- Field@@TYPE_MEMBER
+                // 1- LABEL@@deque
+                // 1- VARIABLE_TYPE@@TypeReference
+                //         1- LABEL@@ArrayDeque
+                //         1- TypeReference@@TypeReference
+                //                 1- LABEL@@CtElement
+                // 1- MODIFIER@@private
+                // 1- NewClass@@DEFAULT_EXPRESSION
+                ApplyTestHelper.onChange(new File("src/test/resources/examples/simple3/before.java"),
+                                new File("src/test/resources/examples/simple3/after.java"));
+        }
+        
+
+        @Test
         public void testSimpleApply14() {
                 ApplyTestHelper.onChange(new File("src/test/resources/examples/more/right_Server_1.228.java"),
                                 new File("src/test/resources/examples/more/left_Server_1.187.java"));
@@ -321,6 +379,16 @@ public class ApplyTest {
                 ApplyTestHelper.onChange(left, right);
         }
         @Test
+        public void testSimpleApply20b() {
+                String left = "enum Y {"
+                + "}";
+                String right = "enum Y {"
+                + "AAA,"
+                + "BBB();"
+                + "Y(){}}";
+                ApplyTestHelper.onChange(left, right);
+        }
+        @Test
         public void testSimpleApply21() {
                 String left = "class X {"
                 + "}";
@@ -358,5 +426,21 @@ public class ApplyTest {
                 ApplyTestHelper.onChange(
                                 new File("src/test/resources/examples/t_224890/left_DateField_1.4.java"),
                                 new File("src/test/resources/examples/t_224890/right_DateField_1.5.java"));
+        }
+
+        @Test
+        public void testSimpleApply27() {
+                String left = "class Y {}";
+                String right = "class Y { public Y() {} void f() throws java.lang.Exception {} }";
+                ApplyTestHelper.onChange(left, right);
+        }
+        
+        @Test
+        public void testSimpleApply28() {
+                String left = "public class X {"
+                + "} class Y {}";
+                String right = "public class X extends Y.Z {"
+                + "} class Y { public class Z {} }";
+                ApplyTestHelper.onChange(left, right);
         }
 }

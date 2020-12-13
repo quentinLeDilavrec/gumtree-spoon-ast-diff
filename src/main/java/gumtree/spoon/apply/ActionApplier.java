@@ -57,10 +57,19 @@ public class ActionApplier {
 				} else if (parent instanceof CtTypeReference) {
 					CtTypeReference sps = getSpoonEle(source.getParent());
 					CtTypeReference ref = factory.Type().createReference(sps.getQualifiedName());
-					if (parent.isParentInitialized()) {
-						((CtTypeReference<?>) parent).replace(ref);
+					CtPackageReference pack = ref.getPackage();
+					if (((CtTypeReference<?>) parent).getPackage()==null && pack != null) {
+						((CtTypeReference<?>) parent).setPackage(pack);
+						pack.setImplicit(true);
+						pack.setParent(parent);
 					}
 					((CtTypeReference<?>) parent).setSimpleName(target.getLabel());
+					// if (parent.isParentInitialized()) {
+					// 	CtElement parentparent = parent.getParent();
+					// 	if (parentparent instanceof CtAnnotation) {
+					// 		((CtAnnotation) parentparent).setType((CtTypeReference) parent);
+					// 	}
+					// }
 				} else if (parent instanceof CtBinaryOperator) {
 					((CtBinaryOperator<?>) parent).setKind(BinaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtUnaryOperator) {
@@ -171,7 +180,7 @@ public class ActionApplier {
 						((CtFieldAccess<?>) parent).setVariable(field);
 						if (!field.getDeclaringType().getSimpleName().equals("<unknown>")) {
 							((CtFieldAccess<?>) parent)
-							.setTarget(factory.createTypeAccess(field.getDeclaringType(), false));	
+									.setTarget(factory.createTypeAccess(field.getDeclaringType(), false));
 						}
 					} else {
 						((CtFieldAccess<?>) parent).setVariable(var.getReference());
@@ -237,8 +246,18 @@ public class ActionApplier {
 
 					// ((CtAssignment) parent).setLabel(target.getLabel());
 				} else if (parent instanceof CtPackageReference) {
-					parent.replace(factory.Package().getOrCreate(target.getLabel()).getReference());
-					// ((CtPackageReference)parent).setSimpleName(target.getLabel());
+					// parent.replace(factory.Package().getOrCreate(target.getLabel()).getReference());
+					((CtPackageReference) parent).setSimpleName(target.getLabel());
+				} else if (parent instanceof CtExecutableReference) {
+					((CtExecutableReference) parent).setSimpleName(target.getLabel());
+				} else if (parent instanceof CtParameterReference) {
+					((CtParameterReference) parent).setSimpleName(target.getLabel());
+				} else if (parent instanceof CtLocalVariableReference) {
+					((CtLocalVariableReference) parent).setSimpleName(target.getLabel());
+				} else if (parent instanceof CtFieldReference) {
+					((CtFieldReference) parent).setSimpleName(target.getLabel());
+				} else if (parent instanceof CtCatchVariableReference) {
+					((CtCatchVariableReference) parent).setSimpleName(target.getLabel());
 				} else {
 					throw new UnsupportedOperationException(parent.getClass() + " for label");
 				}
@@ -248,7 +267,7 @@ public class ActionApplier {
 				CtInterface<?> created = factory.createInterface();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent == null) {
 					factory.getModel().getRootPackage().addType(created);
 				} else if (parent instanceof CtPackage) {
@@ -263,8 +282,8 @@ public class ActionApplier {
 			case "Class": {
 				CtClass<?> created = factory.createClass();
 				CtElement sp = getSpoonEle(source);
-				CtElement parent = getSpoonEleStrict(parentTarget);				
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				// TODO eval if should add this new type to cu
 				if (parent == null) {
 					factory.getModel().getRootPackage().addType(created);
@@ -305,7 +324,7 @@ public class ActionApplier {
 					String name = "placeholderpack" + ((CtPackage) parent).getPackages().size();
 					created = factory.createPackage((CtPackage) parent, name);
 				}
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
@@ -313,7 +332,7 @@ public class ActionApplier {
 				CtMethod<Object> created = factory.createMethod();
 				CtElement sp = getSpoonEle(source);
 				CtType<?> parent = (CtType<?>) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setDefaultMethod(((CtMethod) sp).isDefaultMethod());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				parent.addMethod(created);
@@ -331,7 +350,7 @@ public class ActionApplier {
 				CtTypeReference created = factory.createTypeReference();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				((CtTypedElement<?>) parent).setType(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -354,7 +373,7 @@ public class ActionApplier {
 				CtField<?> created = factory.createField();
 				CtElement sp = getSpoonEle(source);
 				CtType<?> parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				created.setSimpleName("placeHolder" + parent.getFields().size());
 				parent.addField(created);
@@ -364,7 +383,7 @@ public class ActionApplier {
 				CtTypeReference created = factory.createTypeReference();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				((CtTypedElement<?>) parent).setType(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -373,7 +392,7 @@ public class ActionApplier {
 				CtLiteral created = factory.createLiteral();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
@@ -382,7 +401,7 @@ public class ActionApplier {
 				CtBinaryOperator created = factory.createBinaryOperator();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				addExpressionToParent(parent, created, target.getLabel());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -391,7 +410,7 @@ public class ActionApplier {
 				CtUnaryOperator created = factory.createUnaryOperator();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
@@ -422,7 +441,7 @@ public class ActionApplier {
 				CtFieldRead created = factory.createFieldRead();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
@@ -431,7 +450,7 @@ public class ActionApplier {
 				CtVariableRead created = factory.createVariableRead();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
@@ -442,7 +461,7 @@ public class ActionApplier {
 				// .map(new PotentialVariableDeclarationFunction("simpleName")).first();
 				CtFieldWrite created = factory.createFieldWrite();
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				created.setTarget(factory.createThisAccess(parent.getParent(CtType.class).getReference(), true));
 				addExpressionToParent(parent, created, target.getLabel());
@@ -459,7 +478,7 @@ public class ActionApplier {
 				CtTypeAccess created = factory.createTypeAccess();
 				CtElement parent = getSpoonEleStrict(parentTarget);
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setImplicit(((CtTypeAccess) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
@@ -469,7 +488,7 @@ public class ActionApplier {
 				CtAnonymousExecutable created = factory.createAnonymousExecutable();
 				CtElement sp = getSpoonEle(source);
 				CtClass<?> parent = (CtClass<?>) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				parent.addAnonymousExecutable(created);
 				break;
@@ -478,7 +497,7 @@ public class ActionApplier {
 				CtAssignment created = factory.createAssignment();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
 				} else if (parent instanceof CtBodyHolder) {
@@ -505,7 +524,7 @@ public class ActionApplier {
 				CtOperatorAssignment created = factory.createOperatorAssignment();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setKind(BinaryOperatorKind.MINUS);
 
 				if (parent instanceof CtBodyHolder) {
@@ -538,7 +557,7 @@ public class ActionApplier {
 				CtReturn created = factory.createReturn();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -553,7 +572,7 @@ public class ActionApplier {
 				CtInvocation created = factory.createInvocation();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				// CtReturn<?> parent = (CtReturn<?>)
 				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				CtType parent2 = parent.getParent(CtType.class);
@@ -597,7 +616,7 @@ public class ActionApplier {
 				CtInvocation created = factory.createInvocation();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				CtExecutableReference er = factory.createExecutableReference();
 				er.setDeclaringType(parent.getParent(CtType.class).getReference());
 				er.setSimpleName("<init>");
@@ -618,7 +637,7 @@ public class ActionApplier {
 				CtInvocation created = factory.createInvocation();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				// CtReturn<?> parent = (CtReturn<?>)
 				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 
@@ -642,7 +661,7 @@ public class ActionApplier {
 				CtElement parent = getSpoonEleStrict(parentTarget);
 				CtThisAccess created = factory.createThisAccess(parent.getParent(CtType.class).getReference(), true);
 				CtElement sp = getSpoonEle(source);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setImplicit(((CtThisAccess) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
@@ -652,7 +671,7 @@ public class ActionApplier {
 				CtParameter<?> created = factory.createParameter();
 				CtElement sp = getSpoonEle(source);
 				CtExecutable<?> parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				parent.addParameter(created);
 				break;
@@ -667,12 +686,31 @@ public class ActionApplier {
 				} else if (target.getLabel().equals(CtRole.INTERFACE.name())) {
 					created.setSimpleName("PlaceHolder" + ((CtType) parent).getSuperInterfaces().size());
 					((CtType) parent).addSuperInterface(created);
+				} else if (target.getLabel().equals(CtRole.THROWN.name())) {
+					((CtExecutable) parent).addThrownType(created);
+				} else if (target.getLabel().equals(CtRole.DECLARING_TYPE.name())) {
+					((CtTypeReference) parent).setDeclaringType(created);
 				} else if (parent instanceof CtArrayTypeReference) {
 					((CtArrayTypeReference) parent).setComponentType(created);
 				} else if (parent instanceof CtTypeReference) {
+					assert target.getLabel().equals(CtRole.TYPE_ARGUMENT.name());
 					((CtTypeReference) parent).addActualTypeArgument(created);
 				} else if (parent instanceof CtTypeAccess) {
 					((CtTypeAccess) parent).setAccessedType(created);
+				} else if (parent instanceof CtField) {
+					((CtField) parent).setType(created);
+				} else if (parent instanceof CtExecutableReference) {
+					((CtExecutableReference) parent).setType(created);
+				} else if (parent instanceof CtAnnotation) {
+					((CtAnnotation) parent).setAnnotationType(created);
+				} else if (parent instanceof CtMethod) {
+					((CtMethod) parent).setType(created);
+				} else if (parent instanceof CtParameter) {
+					((CtParameter) parent).setType(created);
+				} else if (parent instanceof CtLocalVariable) {
+					((CtLocalVariable) parent).setType(created);
+				} else if (parent instanceof CtFieldReference) {
+					((CtField) parent).setType(created);
 				} else {
 					throw new UnsupportedOperationException(
 							parent.getClass().toString() + " as a parent is no handled for role " + target.getLabel());
@@ -716,7 +754,7 @@ public class ActionApplier {
 				CtConstructorCall created = factory.createConstructorCall();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				// CtReturn<?> parent = (CtReturn<?>)
 				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				if (parent instanceof CtBodyHolder) {
@@ -743,7 +781,7 @@ public class ActionApplier {
 				CtTry created = factory.createTry();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -761,7 +799,7 @@ public class ActionApplier {
 				CtCatch created = factory.createCatch();
 				CtElement sp = getSpoonEle(source);
 				CtTry parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				parent.addCatcher(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				created.setBody(factory.createBlock());
@@ -771,7 +809,7 @@ public class ActionApplier {
 				CtIf created = factory.createIf();
 				CtIf sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -792,7 +830,7 @@ public class ActionApplier {
 				CtCase created = factory.createCase();
 				CtElement sp = getSpoonEle(source);
 				CtSwitch parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				parent.addCase(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -802,7 +840,7 @@ public class ActionApplier {
 				CtBlock created = factory.createBlock();
 				CtElement sp = getSpoonEle(source);
 				CtIf parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				// created.setImplicit(sp.isImplicit());
 				parent.setThenStatement(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
@@ -812,15 +850,15 @@ public class ActionApplier {
 				CtBlock created = factory.createBlock();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setImplicit(sp.isImplicit());
 				switch (target.getLabel()) {
 					case "THEN": {
-						((CtIf)parent).setThenStatement(created);
+						((CtIf) parent).setThenStatement(created);
 						break;
 					}
 					case "ELSE": {
-						((CtIf)parent).setElseStatement(created);
+						((CtIf) parent).setElseStatement(created);
 						break;
 					}
 					case "STATEMENT": {
@@ -844,7 +882,7 @@ public class ActionApplier {
 				CtBlock created = factory.createBlock();
 				CtElement sp = getSpoonEle(source);
 				CtIf parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				parent.setElseStatement(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -854,7 +892,7 @@ public class ActionApplier {
 				CtConditional created = factory.createConditional();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				addExpressionToParent(parent, created, target.getLabel());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -864,7 +902,7 @@ public class ActionApplier {
 				CtSwitch created = factory.createSwitch();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -880,7 +918,7 @@ public class ActionApplier {
 				CtWhile created = factory.createWhile();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -896,7 +934,7 @@ public class ActionApplier {
 				CtFor created = factory.createFor();
 				CtFor sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
@@ -917,7 +955,7 @@ public class ActionApplier {
 				CtForEach created = factory.createForEach();
 				CtForEach sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
@@ -938,7 +976,7 @@ public class ActionApplier {
 				CtLocalVariable<?> created = factory.createLocalVariable();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					created.setSimpleName("placeHolder" + (((CtBodyHolder) parent).getBody() == null ? 0
 							: ((CtBlock) ((CtBodyHolder) parent).getBody()).getStatements().size()));
@@ -959,7 +997,7 @@ public class ActionApplier {
 				CtNewArray created = factory.createNewArray();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				// CtReturn<?> parent = (CtReturn<?>)
 				// parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 				addExpressionToParent(parent, created, target.getLabel());
@@ -970,7 +1008,7 @@ public class ActionApplier {
 				CtArrayRead created = factory.createArrayRead();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
@@ -979,7 +1017,7 @@ public class ActionApplier {
 				CtArrayWrite created = factory.createArrayWrite();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
@@ -988,7 +1026,7 @@ public class ActionApplier {
 				CtVariableWrite created = factory.createVariableWrite();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
@@ -997,7 +1035,7 @@ public class ActionApplier {
 				CtNewClass created = factory.createNewClass();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				addExpressionToParent(parent, created, target.getLabel());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
@@ -1006,7 +1044,7 @@ public class ActionApplier {
 				CtCatchVariable created = factory.createCatchVariable();
 				CtElement sp = getSpoonEle(source);
 				CtCatch parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				parent.setParameter(created);
 				break;
@@ -1015,7 +1053,7 @@ public class ActionApplier {
 				CtBreak created = factory.createBreak();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
 				} else if (parent instanceof CtBodyHolder) {
@@ -1031,7 +1069,7 @@ public class ActionApplier {
 				CtContinue created = factory.createContinue();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -1060,7 +1098,7 @@ public class ActionApplier {
 				CtThrow created = factory.createThrow();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -1076,7 +1114,7 @@ public class ActionApplier {
 				CtAssert created = factory.createAssert();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -1092,7 +1130,7 @@ public class ActionApplier {
 				CtDo created = factory.createDo();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -1108,7 +1146,7 @@ public class ActionApplier {
 				CtTypeReference created = factory.createTypeReference();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				((CtMethod) parent).addThrownType(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				// created.setBody(factory.createBlock());
@@ -1118,7 +1156,7 @@ public class ActionApplier {
 				CtSuperAccess created = factory.createSuperAccess();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setTarget(factory.createTypeAccess(parent.getParent(CtType.class).getSuperclass()));
 				// created.setVariable(factory.createConstructorCall(parent.getParent(CtType.class).getSuperclass()));
 				created.setImplicit(((CtSuperAccess) sp).isImplicit());
@@ -1130,7 +1168,7 @@ public class ActionApplier {
 				CtAnnotation created = factory.createAnnotation();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setImplicit(((CtAnnotation) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				if (parent instanceof CtBodyHolder) {
@@ -1154,7 +1192,7 @@ public class ActionApplier {
 				CtSynchronized created = factory.createSynchronized();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setImplicit(((CtSynchronized) sp).isImplicit());
 				if (parent instanceof CtStatementList) {
 					addInBody(factory, target, created, (CtStatementList) parent);
@@ -1173,7 +1211,7 @@ public class ActionApplier {
 				CtWildcardReference created = factory.createWildcardReference();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setImplicit(((CtWildcardReference) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				if (parent instanceof CtTypeParameterReference) {
@@ -1189,7 +1227,7 @@ public class ActionApplier {
 				CtTypeParameter created = factory.createTypeParameter();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setImplicit(((CtTypeParameter) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				if (parent instanceof CtType) {
@@ -1205,7 +1243,7 @@ public class ActionApplier {
 				CtLambda created = factory.createLambda();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
@@ -1241,7 +1279,7 @@ public class ActionApplier {
 				CtEnum created = factory.createEnum();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parent == null) {
 					factory.getModel().getRootPackage().addType(created);
 				} else if (parent instanceof CtPackage) {
@@ -1265,18 +1303,18 @@ public class ActionApplier {
 			case "EnumValue": {
 				CtEnumValue created = factory.createEnumValue();
 				CtElement sp = getSpoonEle(source);
-				CtType<?> parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				CtEnum<?> parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				created.setSimpleName("placeHolder" + parent.getFields().size());
-				parent.addField(created);
+				parent.addEnumValue(created);
 				break;
 			}
 			case "IntersectionTypeReference": {
 				CtIntersectionTypeReference created = factory.createIntersectionTypeReference();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (target.getLabel().equals(CtRole.CAST.name())) {
 					((CtExpression) parent).addTypeCast(created);
 				} else if (target.getLabel().equals(CtRole.SUPER_TYPE.name())) {
@@ -1299,7 +1337,7 @@ public class ActionApplier {
 				CtPackageReference created = factory.createPackageReference();
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(),parent));
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				// created.setSimpleName("placeHolder" + parent.getFields().size());
 				if (parent instanceof CtAnnotation) {
 					CtTypeReference aaa = ((CtAnnotation) parent).getAnnotationType();
@@ -1309,6 +1347,97 @@ public class ActionApplier {
 				} else if (parent instanceof CtTypeReference) {
 					((CtTypeReference) parent).setPackage(created);
 					created.setParent(parent);
+					CtElement parentparent = parent.getParent();
+					if (parent.getRoleInParent().equals(CtRole.THROWN)) {
+						((CtExecutable) parentparent).addThrownType((CtTypeReference) parent);
+					} else if (parentparent instanceof CtTypedElement) {// CtField
+						((CtTypedElement) parentparent).setType((CtTypeReference) parent);
+					} else if (parentparent instanceof CtTypeReference) {
+						parentparent.isImplicit();
+						// ((CtTypeReference)parentparent).setAType((CtTypeReference)parent);
+					} else if (parentparent instanceof CtExecutableReference) {
+						((CtExecutableReference) parentparent).setType((CtTypeReference) parent);
+					} else if (parentparent instanceof CtTypeParameter) {
+						if (parent.getRoleInParent().equals(CtRole.SUPER_TYPE)) {
+							((CtTypeParameter) parentparent).setSuperclass((CtTypeReference) parent);
+						} else {
+							throw new RuntimeException(parentparent.getClass().toString());
+						}
+					} else {
+						throw new RuntimeException(parentparent.getClass().toString());
+					}
+				} else {
+					throw new RuntimeException(parent.getClass().toString());
+				}
+
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				break;
+			}
+			case "ExecutableReference": {
+				CtExecutableReference created = factory.createExecutableReference();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				if (parent instanceof CtNewClass) {
+					((CtNewClass) parent).setExecutable(created);
+				} else if (parent instanceof CtAbstractInvocation) {
+					((CtAbstractInvocation) parent).setExecutable(created);
+				} else {
+					throw new RuntimeException(parent.getClass().toString());
+				}
+
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				break;
+			}
+			case "ParameterReference": {
+				CtParameterReference created = factory.createParameterReference();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				if (parent instanceof CtVariableAccess) {
+					((CtVariableAccess) parent).setVariable(created);
+				} else {
+					throw new RuntimeException(parent.getClass().toString());
+				}
+
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				break;
+			}
+			case "LocalVariableReference": {
+				CtLocalVariableReference created = factory.createLocalVariableReference();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				if (parent instanceof CtVariableAccess) {
+					((CtVariableAccess) parent).setVariable(created);
+				} else {
+					throw new RuntimeException(parent.getClass().toString());
+				}
+
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				break;
+			}
+			case "FieldReference": {
+				CtFieldReference created = factory.createFieldReference();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				if (parent instanceof CtVariableAccess) {
+					((CtVariableAccess) parent).setVariable(created);
+				} else {
+					throw new RuntimeException(parent.getClass().toString());
+				}
+
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				break;
+			}
+			case "CatchVariableReference": {
+				CtCatchVariableReference created = factory.createCatchVariableReference();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				if (parent instanceof CtVariableAccess) {
+					((CtVariableAccess) parent).setVariable(created);
 				} else {
 					throw new RuntimeException(parent.getClass().toString());
 				}
@@ -1437,6 +1566,9 @@ public class ActionApplier {
 		if (target.getLabel().equals(CtRole.FOR_INIT.name())) {
 			((CtFor) parent).addForInit(created);
 			return;
+		} else if (target.getLabel().equals(CtRole.FOREACH_VARIABLE.name())) {
+			((CtForEach) parent).setVariable((CtLocalVariable) created);
+			return;
 		} else if (target.getLabel().equals(CtRole.FOR_UPDATE.name())) {
 			((CtFor) parent).addForUpdate(created);
 			return;
@@ -1490,12 +1622,14 @@ public class ActionApplier {
 				|| (aaa.getMetadata("type").equals("THROWS")) || (aaa.getMetadata("type").equals("TypeParameter"))
 				|| (aaa.getMetadata("type").equals("Catch")) || (aaa.getMetadata("type").equals("LABEL"))
 				|| (aaa.getMetadata("type").equals("Parameter")) || (aaa.getMetadata("type").equals("Annotation"))
-				|| (aaa.getLabel().equals("EXPRESSION"));
+				|| (aaa.getLabel().equals("EXPRESSION") || (aaa.getMetadata("type").equals("TypeReference"))
+				|| (aaa.getLabel().equals("TYPE")));
 	}
 
 	private static boolean shouldIgnore2(CtBodyHolder parent, AbstractVersionedTree aaa) {
 		return (parent instanceof CtCatch && aaa.getLabel().equals(CtRole.PARAMETER.name()))
 				|| (parent instanceof CtFor && aaa.getLabel().equals(CtRole.FOR_UPDATE.name()))
+				|| (parent instanceof CtForEach && aaa.getLabel().equals(CtRole.FOREACH_VARIABLE.name()))
 				|| (parent instanceof CtFor && aaa.getLabel().equals(CtRole.FOR_INIT.name()))
 				|| (parent instanceof CtFor && aaa.getLabel().equals(CtRole.EXPRESSION.name()))
 				|| (parent instanceof CtWhile && aaa.getLabel().equals(CtRole.EXPRESSION.name()))
@@ -1740,6 +1874,10 @@ public class ActionApplier {
 					// ((CtAssignment) parent).setLabel(target.getLabel());
 				} else if (parent instanceof CtPackageReference) {
 					parent.replace(factory.Package().getOrCreate(target.getLabel()).getReference());
+				} else if (parent instanceof CtExecutableReference) {
+					((CtExecutableReference)parent).setSimpleName(target.getLabel());
+				} else if (parent instanceof CtVariableReference) {
+					((CtVariableReference)parent).setSimpleName(target.getLabel());
 				} else {
 					throw new UnsupportedOperationException(parent.getClass() + " for label");
 				}

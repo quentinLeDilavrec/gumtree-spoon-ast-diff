@@ -68,6 +68,9 @@ public class NodeCreator extends CtInheritanceScanner {
 		modifiers1.addAll(m.getExtendedModifiers());
 
 		for (CtExtendedModifier mod : modifiers1) {
+			if (mod.isImplicit()) {
+				continue;
+			}
 			ITree modifier = builder.createNode("MODIFIER", mod.getKind().toString());
 			// modifiers.addChild(modifier);
 			// We wrap the modifier (which is not a ctelement)
@@ -84,43 +87,43 @@ public class NodeCreator extends CtInheritanceScanner {
 		return simpleName.replace("Ct", "").replace("Impl", "");
 	}
 
-	@Override
-	public <T> void scanCtVariable(CtVariable<T> e) {
-		CtTypeReference<T> type = e.getType();
-		if (type != null) {
-			// TODO manage as standard CtTypeReference that have the role TYPE
-			ITree variableType = builder.createNode("VARIABLE_TYPE",
-					builder.getTypeName(type.getClass().getSimpleName()));
-			variableType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
-			type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, variableType);
-			genericTransfo(type, variableType);
-			builder.addSiblingNode(variableType);
-		}
-	}
+	// @Override
+	// public <T> void scanCtVariable(CtVariable<T> e) {
+	// 	CtTypeReference<T> type = e.getType();
+	// 	if (type != null) {
+	// 		// TODO manage as standard CtTypeReference that have the role TYPE
+	// 		ITree variableType = builder.createNode("VARIABLE_TYPE",
+	// 				builder.getTypeName(type.getClass().getSimpleName()));
+	// 		variableType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
+	// 		type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, variableType);
+	// 		genericTransfo(type, variableType);
+	// 		builder.addSiblingNode(variableType);
+	// 	}
+	// }
 
-	@Override
-	public <T> void visitCtMethod(CtMethod<T> e) {
-		// add the return type of the method
-		CtTypeReference<T> type = e.getType();
-		if (type != null) {
-			// TODO manage as standard CtTypeReference that have the role TYPE
-			ITree returnType = builder.createNode("RETURN_TYPE", builder.getTypeName(type.getClass().getSimpleName()));
-			returnType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
-			type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, returnType);
-			genericTransfo(type, returnType);
-			builder.addSiblingNode(returnType);
-		}
+	// @Override
+	// public <T> void visitCtMethod(CtMethod<T> e) {
+	// 	// add the return type of the method
+	// 	CtTypeReference<T> type = e.getType();
+	// 	if (type != null) {
+	// 		// TODO manage as standard CtTypeReference that have the role TYPE
+	// 		ITree returnType = builder.createNode("RETURN_TYPE", builder.getTypeName(type.getClass().getSimpleName()));
+	// 		returnType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
+	// 		type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, returnType);
+	// 		genericTransfo(type, returnType);
+	// 		builder.addSiblingNode(returnType);
+	// 	}
 
-		for (CtTypeReference<?> thrown : e.getThrownTypes()) {
-			ITree thrownType = builder.createNode("THROWS", builder.getTypeName(thrown.getClass().getSimpleName()));
-			thrownType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, thrown);
-			type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, thrownType);
-			genericTransfo(thrown, thrownType);
-			builder.addSiblingNode(thrownType);
-		}
+	// 	for (CtTypeReference<?> thrown : e.getThrownTypes()) {
+	// 		ITree thrownType = builder.createNode("THROWS", builder.getTypeName(thrown.getClass().getSimpleName()));
+	// 		thrownType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, thrown);
+	// 		type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, thrownType);
+	// 		genericTransfo(thrown, thrownType);
+	// 		builder.addSiblingNode(thrownType);
+	// 	}
 
-		super.visitCtMethod(e);
-	}
+	// 	super.visitCtMethod(e);
+	// }
 
 	private <T> void genericTransfo(CtTypeReference<T> parametrizedType, ITree parametrizedTypeTree) {
 		ITree label = builder.createNode("LABEL", extracted(parametrizedType));//.replace("$", ".")); 
@@ -157,32 +160,32 @@ public class NodeCreator extends CtInheritanceScanner {
 	// 	// }
 	// }
 
-	@Override
-	public void scanCtReference(CtReference reference) {
-		if (!builder.nodifiedLabel) {
-			if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.SUPER_TYPE) {
-				ITree superType = builder.createNode("SUPER_CLASS",
-						builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
-				// CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent()); // TODO ckeck why
-				// superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
-				superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, reference);
-				reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
-				genericTransfo((CtTypeReference<?>) reference, superType);
-				builder.addSiblingNode(superType);
-			} else if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.INTERFACE) {
-				ITree superType = builder.createNode("INTERFACE",
-						builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
-				// CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent());
-				// superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
-				superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, reference);
-				reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
-				genericTransfo((CtTypeReference<?>) reference, superType);
-				builder.addSiblingNode(superType);
-			} else {
-				super.scanCtReference(reference);
-			}
-		}
-	}
+	// @Override
+	// public void scanCtReference(CtReference reference) {
+	// 	if (!builder.nodifiedLabel) {
+	// 		if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.SUPER_TYPE) {
+	// 			ITree superType = builder.createNode("SUPER_CLASS",
+	// 					builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
+	// 			// CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent()); // TODO ckeck why
+	// 			// superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
+	// 			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, reference);
+	// 			reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
+	// 			genericTransfo((CtTypeReference<?>) reference, superType);
+	// 			builder.addSiblingNode(superType);
+	// 		} else if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.INTERFACE) {
+	// 			ITree superType = builder.createNode("INTERFACE",
+	// 					builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
+	// 			// CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent());
+	// 			// superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
+	// 			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, reference);
+	// 			reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
+	// 			genericTransfo((CtTypeReference<?>) reference, superType);
+	// 			builder.addSiblingNode(superType);
+	// 		} else {
+	// 			super.scanCtReference(reference);
+	// 		}
+	// 	}
+	// }
 
 	// @Override
 	// public <T> void scanCtTypedElement(CtTypedElement<T> typedElement) {
