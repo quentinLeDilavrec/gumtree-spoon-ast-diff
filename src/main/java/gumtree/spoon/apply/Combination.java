@@ -570,6 +570,7 @@ public class Combination {
         log.append("\ndeps=");
         log.append(Arrays.toString(deps));
         logger.info(log.toString());
+        assert init.length > 0 && init.length == leafs.length && init.length == deps.length : init;
         return new ReflectedConstrainedHelper<Cluster2>(init, leafs, deps, nodes);
     }
 

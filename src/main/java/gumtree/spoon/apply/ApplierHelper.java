@@ -311,22 +311,30 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
     }
 
     public Launcher applyEvolutions(Set<T> wantedEvos) {
-        Set<ComposedAction<AbstractVersionedTree>> virtComposed = new HashSet<>();
+        Set<MyAction<?>> actions = new HashSet<>();
         for (T evo : wantedEvos) {
-            Set<T> components = evoToEvo.get(evo);
-            if (components == null) {
-                continue;
+            Object ori = getOriginal(evo);
+            if (ori instanceof MyAction) {
+                actions.add((MyAction)ori);
+            } else {
+                Set<T> components = new HashSet<>();
+                Set<T> tmp = evoToEvo.get(evo);
+                if (tmp != null) {
+                    components.addAll(tmp);
+                }
+                ComposedAction<AbstractVersionedTree> composed = new VirtComposedAction(components);
+                if (composed.composed().size()>0) {
+                    actions.add(composed);
+                }
             }
-            ComposedAction<AbstractVersionedTree> composed = new VirtComposedAction(components);
-            virtComposed.add(composed);
         }
         Collection<MyAction<?>> testSet = new HashSet<>();
         Collection<MyAction<?>> appSet = new HashSet<>();
-        for (MyAction<?> a : virtComposed) {
+        for (MyAction<?> a : actions) {
             popTopGroups(testSet, appSet, a);
         }
 
-        virtComposed.add(new ComposedAction<AbstractVersionedTree>() {
+        actions.add(new ComposedAction<AbstractVersionedTree>() {
 
             private ArrayList<MyAction<?>> components = new ArrayList<>(testSet);
 
@@ -341,7 +349,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
             }
         });
 
-        virtComposed.add(new ComposedAction<AbstractVersionedTree>() {
+        actions.add(new ComposedAction<AbstractVersionedTree>() {
             private ArrayList<MyAction<?>> components = new ArrayList<>(appSet);
 
             @Override
@@ -355,7 +363,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
             }
 
         });
-        return applyCombActions(virtComposed);
+        return applyCombActions(actions);
     }
 
     private void popTopGroups(Collection<MyAction<?>> testSet, Collection<MyAction<?>> appSet, MyAction<?> a) {
@@ -381,7 +389,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
     private void extractActions(Set<T> wantedEvos, Set<MyAction<AbstractVersionedTree>> acts) {
         for (T evolution : wantedEvos) {
             Object original = getOriginal(evolution);
-            if (original instanceof Action) {
+            if (original instanceof MyAction) {
                 acts.add((MyAction<AbstractVersionedTree>) /* ((Operation) */ original/* ).getAction() */);
             }
             Set<T> others = evoState.evoToEvo.get(evolution);
