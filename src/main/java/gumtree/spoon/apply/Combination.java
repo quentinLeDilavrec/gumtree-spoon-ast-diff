@@ -36,6 +36,7 @@ import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.operations.Operation;
 
 public class Combination {
+    static Logger logger = Logger.getLogger(Combination.class.getName());
 
     public static int[] rotateRight(int[] x, int n) {
         int[] result = new int[x.length];
@@ -560,6 +561,15 @@ public class Combination {
         int[] leafs = Combination.detectLeafs(l);
         Cluster2[] nodes = l.stream().map(ImmutablePair::getRight).toArray(Cluster2[]::new);
         int[] deps = l.stream().map(ImmutablePair::getLeft).mapToInt(Integer::intValue).toArray();
+        StringBuilder log = new StringBuilder();
+        log.append("Build constrained tree with:");
+        log.append("\ninit=");
+        log.append(Arrays.toString(init));
+        log.append("\nleafs=");
+        log.append(Arrays.toString(leafs));
+        log.append("\ndeps=");
+        log.append(Arrays.toString(deps));
+        logger.info(log.toString());
         return new ReflectedConstrainedHelper<Cluster2>(init, leafs, deps, nodes);
     }
 
