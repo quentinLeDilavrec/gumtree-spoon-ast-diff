@@ -124,7 +124,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         protected Map<T, Integer> evoReqSize = new HashMap<>();
         // protected Map<T, Set<MyAction<AbstractVersionedTree>>> evoToTree = new HashMap<>();
         protected final Map<T, Set<T>> evoToEvo = ApplierHelper.this.evoToEvo;
-        protected Map<MyAction<AbstractVersionedTree>, Set<T>> presentMap = new HashMap<>();
+        protected Map<AtomicAction<AbstractVersionedTree>, Set<T>> presentMap = new HashMap<>();
         // protected Map<Object, Set<T>> absentMap = new HashMap<>();
         protected Map<MyAction<AbstractVersionedTree>, Boolean> reqState = new HashMap<>(); // false by default
         protected Set<T> validable = new HashSet<>();
@@ -219,11 +219,8 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
 
         private void markRequirements(Chain<T> evos) {
             Object original = getOriginal(evos.curr);
-            if (original instanceof Action) {
-                Action action = (Action) original;// ((Operation) original).getAction();
-                // evoToTree.putIfAbsent(evos.curr, new HashSet<>());
-                // evoToTree.get(evos.curr).add((MyAction<AbstractVersionedTree>) action);
-                markRequirements((MyAction<AbstractVersionedTree>) action, evos);
+            if (original instanceof AtomicAction) {
+                markRequirements((AtomicAction<AbstractVersionedTree>) original, evos);
             }
             Set<T> compo = evoToEvo.get(evos.curr);
             if (compo != null) {
@@ -234,9 +231,35 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
             }
         }
 
-        private void markRequirements(MyAction<AbstractVersionedTree> a, Collection<T> e) {
+        private void coarseDecompose(Set<MyAction<?>> r, MyAction<?> a) {
+            if (a instanceof AtomicAction) {
+                r.add(a);
+            } else {
+                for (MyAction<?> ca : ((ComposedAction<AbstractVersionedTree>) a).composed()) {
+                    r.add(ca);
+                    coarseDecompose(r, ca);
+                }
+            }
+        }
+
+        private void markRequirements(AtomicAction<AbstractVersionedTree> a, Collection<T> e) {
             presentMap.putIfAbsent(a, new HashSet<>());
-            presentMap.get(a).addAll(e);
+            for (T ee : e) {
+                Object original = getOriginal(ee);
+                if (a == original) {
+                    // DO NOTHING
+                } else if (original instanceof AtomicAction) {
+                    // DO NOTHING
+                } else if (original instanceof ComposedAction) {
+                    Set<MyAction<?>> decomposed = new HashSet<>();
+                    coarseDecompose(decomposed, (ComposedAction<AbstractVersionedTree>)original);
+                    if (decomposed.contains(a)) {
+                        presentMap.get(a).add(ee);
+                    }
+                } else {
+                    presentMap.get(a).add(ee);
+                }
+            }
             // if (a instanceof Delete) {
             // // markDeleteRequirements(a, e);
             // // } else if (a instanceof Move) {
