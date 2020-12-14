@@ -505,6 +505,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
             j++;
         }
         Combination.CombinationHelper<Cluster2> combs = Combination.build(flat, constrainedTree);
+        logger.info("On track for at least 2^"+combs.minExposant()+" cases");
         // int exp = combs.minExposant();
         // if (exp > leafsActionsLimit) {
         //     logger.warning(exp + " leafs would make too much combinations");
