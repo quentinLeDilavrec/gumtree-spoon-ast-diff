@@ -179,9 +179,9 @@ public class Flattener2 {
         }
         return r;
     }
-
+    // x must not be null
     private boolean isInLineage(AbstractVersionedTree x, AbstractVersionedTree n, Set<AbstractVersionedTree> cache) {
-        if (cache.contains(n)) {
+        if (n == null || cache.contains(n)) {
             return false;
         }
         for (Cluster2 c : maybePresentNodes.get(n)) {
