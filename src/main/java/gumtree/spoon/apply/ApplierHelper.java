@@ -225,8 +225,10 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
             Set<T> compo = evoToEvo.get(evos.curr);
             if (compo != null) {
                 for (T e : compo) {
-                    Chain<T> newe = new Chain<>(e, evos);
-                    markRequirements(newe);
+                    if(!evos.contains(e)){
+                        Chain<T> newe = new Chain<>(e, evos);
+                        markRequirements(newe);
+                    }
                 }
             }
         }
