@@ -2,6 +2,7 @@ package gumtree.spoon.builder;
 
 import java.util.logging.Logger;
 
+import gumtree.spoon.CloneVisitorNewFactory;
 import spoon.reflect.code.CtAbstractInvocation;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtVariableAccess;
@@ -55,7 +56,9 @@ public class CtWrapper<L> extends CtElementImpl {
 
 	@Override
 	public void accept(CtVisitor visitor) {
-
+		if (visitor instanceof CloneVisitorNewFactory) {
+			((CloneVisitorNewFactory)visitor).visitCtWrapper(this);
+		}
 	}
 
 	@Override

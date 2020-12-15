@@ -2,7 +2,10 @@ package gumtree.spoon.apply;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import com.github.gumtreediff.actions.MyAction.MyDelete;
 import com.github.gumtreediff.actions.MyAction.MyInsert;
@@ -58,7 +61,7 @@ public class ActionApplier {
 					CtTypeReference sps = getSpoonEle(source.getParent());
 					CtTypeReference ref = factory.Type().createReference(sps.getQualifiedName());
 					CtPackageReference pack = ref.getPackage();
-					if (((CtTypeReference<?>) parent).getPackage()==null && pack != null) {
+					if (((CtTypeReference<?>) parent).getPackage() == null && pack != null) {
 						((CtTypeReference<?>) parent).setPackage(pack);
 						pack.setImplicit(true);
 						pack.setParent(parent);
@@ -356,11 +359,20 @@ public class ActionApplier {
 				break;
 			}
 			case "MODIFIER": {
-				CtWrapper<CtExtendedModifier> sp = getSpoonEle(source);
+				// CtWrapper<CtExtendedModifier> sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				if (!sp.getValue().isImplicit())
-					((CtModifiable) parent).addModifier(sp.getValue().getKind());
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, sp.getValue().getKind());
+				
+				// if (!sp.getValue().getKind().toString().equals(target.getLabel())) {
+				// 	throw new RuntimeException("wrong modifier");
+				// }
+				ModifierKind tmodk = ModifierKind.valueOf(target.getLabel().toUpperCase());
+				// if (!sp.getValue().isImplicit())
+				((CtModifiable) parent).addModifier(tmodk);
+
+				CtExtendedModifier newV = ((CtModifiable) parent).getExtendedModifiers().stream()
+						.filter(x -> x.getKind().equals(tmodk)).findAny().orElse(null);
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new CtWrapper.CtModifierWrapper(newV, parent));
+
 				if (parent instanceof CtMethod && ((CtMethod) parent).isStatic()
 						&& ((CtMethod) parent).getBody() == null)
 					((CtMethod) parent).setBody(factory.createBlock());
@@ -711,6 +723,8 @@ public class ActionApplier {
 					((CtLocalVariable) parent).setType(created);
 				} else if (parent instanceof CtFieldReference) {
 					((CtField) parent).setType(created);
+				} else if (parent instanceof CtCatchVariable) {
+					((CtCatchVariable) parent).setType(created);
 				} else {
 					throw new UnsupportedOperationException(
 							parent.getClass().toString() + " as a parent is no handled for role " + target.getLabel());
@@ -1671,7 +1685,13 @@ public class ActionApplier {
 		if (ele != null) {
 			try {
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
-				ele.delete();
+				if (ele instanceof CtWrapper && ((CtWrapper)ele).getValue() instanceof CtExtendedModifier) {
+					CtModifiable parent = getSpoonEleStrict(parentTarget);
+					parent.removeModifier(((CtWrapper<CtExtendedModifier>)ele).getValue().getKind());
+					// TODO maybe better to correctly impl CtWrapper.delete()
+				} else {
+					ele.delete();
+				}
 			} catch (Exception e) {
 				throw new WrongAstContextException("while deleting", e);
 			}
@@ -1884,20 +1904,32 @@ public class ActionApplier {
 				break;
 			}
 			case "MODIFIER": {
-				ModifierKind current = (ModifierKind) target.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				CtModifiable parent = (CtModifiable) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				ModifierKind tmp = (ModifierKind) source.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-				if (tmp == null) {
-					tmp = ((CtWrapper<CtExtendedModifier>) source.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT))
-							.getValue().getKind();
-				}
-				ModifierKind smod = tmp;
-				if (!((CtModifiable) getSpoonEle(source.getParent())).getExtendedModifiers().stream()
-						.filter(x -> x.getKind().equals(smod)).findFirst().get().isImplicit()) {
-					parent.removeModifier(current);
-					parent.addModifier(smod);
-				}
-				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, smod);
+
+				CtWrapper<CtExtendedModifier> smod = getSpoonEle(source);
+				ModifierKind smodk = ModifierKind.valueOf(source.getLabel().toUpperCase());
+				CtWrapper<CtExtendedModifier> tmod = getSpoonEle(target);
+				ModifierKind tmodk = ModifierKind.valueOf(target.getLabel().toUpperCase());
+				CtModifiable parent = getSpoonEleStrict(parentTarget);
+				// if (!tmod.getValue().getKind().toString().equals(target.getLabel())) {
+				// 	throw new RuntimeException("wrong modifier");
+				// }
+				// CtExtendedModifier actualSmod = ((CtModifiable) getSpoonEle(target.getParent())).getExtendedModifiers().stream()
+				// 		.filter(x -> x.getKind().equals(smodk)).findFirst().orElse(null);
+				// CtExtendedModifier actualTmod = ((CtModifiable) getSpoonEle(target.getParent())).getExtendedModifiers().stream()
+				// 		.filter(x -> x.getKind().equals(tmodk)).findFirst().orElse(null);
+
+				
+				parent.removeModifier(smodk);
+				parent.addModifier(tmodk);
+
+				// if (actualTmod == null) {
+				// } else {
+				// 	actualTmod.setImplicit(false);
+				// }
+				source.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
+				CtExtendedModifier newV = ((CtModifiable) parent).getExtendedModifiers().stream()
+						.filter(x -> x.getKind().equals(tmodk)).findAny().orElse(null);
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, newV);
 				break;
 			}
 			case "VariableRead":

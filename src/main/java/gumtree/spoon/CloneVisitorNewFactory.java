@@ -1,8 +1,15 @@
 package gumtree.spoon;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+import com.github.gumtreediff.tree.ITree;
+
+import gumtree.spoon.builder.CtWrapper;
+import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.code.*;
 import spoon.reflect.cu.CompilationUnit;
@@ -11,6 +18,7 @@ import spoon.reflect.cu.position.BodyHolderSourcePosition;
 import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.*;
 import spoon.reflect.factory.Factory;
+import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.*;
 import spoon.reflect.visitor.CtInheritanceScanner;
 import spoon.reflect.visitor.CtScanner;
@@ -114,7 +122,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtAnonymousExecutable aCtAnonymousExecutable = this.factory.Core().createAnonymousExecutable();
 		aCtAnonymousExecutable.setPosition(clonePosition(anonymousExec.getPosition()));
 		this.builder.copy(anonymousExec, aCtAnonymousExecutable);
-		copyModVisibility(anonymousExec, aCtAnonymousExecutable);
+		aCtAnonymousExecutable.setExtendedModifiers(cloneModifiers(anonymousExec,aCtAnonymousExecutable));
 		aCtAnonymousExecutable.setAnnotations(this.cloneHelper.clone(anonymousExec.getAnnotations()));
 		aCtAnonymousExecutable.setBody(this.cloneHelper.clone(anonymousExec.getBody()));
 		aCtAnonymousExecutable.setComments(this.cloneHelper.clone(anonymousExec.getComments()));
@@ -254,7 +262,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtClass<T> aCtClass = this.factory.Core().createClass();
 		aCtClass.setPosition(clonePosition(ctClass.getPosition()));
 		this.builder.copy(ctClass, aCtClass);
-		copyModVisibility(ctClass, aCtClass);
+		aCtClass.setExtendedModifiers(cloneModifiers(ctClass,aCtClass));
 		aCtClass.setAnnotations(this.cloneHelper.clone(ctClass.getAnnotations()));
 		aCtClass.setSuperclass(this.cloneHelper.clone(ctClass.getSuperclass()));
 		aCtClass.setSuperInterfaces(this.cloneHelper.clone(ctClass.getSuperInterfaces()));
@@ -299,7 +307,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtConstructor<T> aCtConstructor = this.factory.Core().createConstructor();
 		aCtConstructor.setPosition(clonePosition(c.getPosition()));
 		this.builder.copy(c, aCtConstructor);
-		copyModVisibility(c, aCtConstructor);
+		aCtConstructor.setExtendedModifiers(cloneModifiers(c,aCtConstructor));
 		aCtConstructor.setAnnotations(this.cloneHelper.clone(c.getAnnotations()));
 		aCtConstructor.setParameters(this.cloneHelper.clone(c.getParameters()));
 		aCtConstructor.setThrownTypes(this.cloneHelper.clone(c.getThrownTypes()));
@@ -366,7 +374,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtField<T> aCtField = this.factory.Core().createField();
 		aCtField.setPosition(clonePosition(f.getPosition()));
 		this.builder.copy(f, aCtField);
-		copyModVisibility(f, aCtField);
+		aCtField.setExtendedModifiers(cloneModifiers(f,aCtField));
 		aCtField.setAnnotations(this.cloneHelper.clone(f.getAnnotations()));
 		aCtField.setType(this.cloneHelper.clone(f.getType()));
 		aCtField.setDefaultExpression(this.cloneHelper.clone(f.getDefaultExpression()));
@@ -482,7 +490,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtInterface<T> aCtInterface = this.factory.Core().createInterface();
 		aCtInterface.setPosition(clonePosition(intrface.getPosition()));
 		this.builder.copy(intrface, aCtInterface);
-		copyModVisibility(intrface, aCtInterface);
+		aCtInterface.setExtendedModifiers(cloneModifiers(intrface,aCtInterface));
 		aCtInterface.setAnnotations(this.cloneHelper.clone(intrface.getAnnotations()));
 		aCtInterface.setSuperInterfaces(this.cloneHelper.clone(intrface.getSuperInterfaces()));
 		aCtInterface.setFormalCtTypeParameters(this.cloneHelper.clone(intrface.getFormalCtTypeParameters()));
@@ -525,7 +533,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtLocalVariable<T> aCtLocalVariable = this.factory.Core().createLocalVariable();
 		aCtLocalVariable.setPosition(clonePosition(localVariable.getPosition()));
 		this.builder.copy(localVariable, aCtLocalVariable);
-		copyModVisibility(localVariable, aCtLocalVariable);
+		aCtLocalVariable.setExtendedModifiers(cloneModifiers(localVariable,aCtLocalVariable));
 		aCtLocalVariable.setAnnotations(this.cloneHelper.clone(localVariable.getAnnotations()));
 		aCtLocalVariable.setType(this.cloneHelper.clone(localVariable.getType()));
 		aCtLocalVariable.setDefaultExpression(this.cloneHelper.clone(localVariable.getDefaultExpression()));
@@ -548,7 +556,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtCatchVariable<T> aCtCatchVariable = this.factory.Core().createCatchVariable();
 		aCtCatchVariable.setPosition(clonePosition(catchVariable.getPosition()));
 		this.builder.copy(catchVariable, aCtCatchVariable);
-		copyModVisibility(catchVariable, aCtCatchVariable);
+		aCtCatchVariable.setExtendedModifiers(cloneModifiers(catchVariable,aCtCatchVariable));
 		aCtCatchVariable.setComments(this.cloneHelper.clone(catchVariable.getComments()));
 		aCtCatchVariable.setAnnotations(this.cloneHelper.clone(catchVariable.getAnnotations()));
 		aCtCatchVariable.setMultiTypes(this.cloneHelper.clone(catchVariable.getMultiTypes()));
@@ -570,7 +578,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtMethod<T> aCtMethod = this.factory.Core().createMethod();
 		aCtMethod.setPosition(clonePosition(m.getPosition()));
 		this.builder.copy(m, aCtMethod);
-		copyModVisibility(m, aCtMethod);
+		aCtMethod.setExtendedModifiers(cloneModifiers(m,aCtMethod));
 		aCtMethod.setAnnotations(this.cloneHelper.clone(m.getAnnotations()));
 		aCtMethod.setFormalCtTypeParameters(this.cloneHelper.clone(m.getFormalCtTypeParameters()));
 		aCtMethod.setType(this.cloneHelper.clone(m.getType()));
@@ -582,13 +590,37 @@ public class CloneVisitorNewFactory extends CtScanner {
 		this.other = aCtMethod;
 	}
 
-	private <T> void copyModVisibility(final CtModifiable orig, CtModifiable copy) {
-		Map<ModifierKind,Boolean> modifiers = new HashMap<>();
-		for (CtExtendedModifier mod : orig.getExtendedModifiers()) {
-			modifiers.put(mod.getKind(), mod.isImplicit());
-		}
-		for (CtExtendedModifier mod : copy.getExtendedModifiers()) {
-			mod.setImplicit(modifiers.getOrDefault(mod.getKind(), true));
+	private <T extends CtModifiable> Set<CtExtendedModifier> cloneModifiers(final T m, T aCtMethod) {
+		return this.cloneHelper.clone(m.getExtendedModifiers().stream()
+				.map(x -> {
+					ITree aaa = (ITree)m.getMetadata(SpoonGumTreeBuilder.GUMTREE_NODE);
+					if (aaa!=null) {
+						for (ITree y : aaa.getChildren()) {
+							Object yy = (Object)y.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+							if (yy instanceof CtWrapper && ((CtWrapper)yy).getValue()==x) {
+								CtWrapper<CtExtendedModifier> r = (CtWrapper) yy;
+								r.putMetadata("clone", aCtMethod);
+								return r;
+							}
+						}
+					}
+					CtWrapper<CtExtendedModifier> r = new CtWrapper<>(x, m, CtRole.MODIFIER);
+					r.putMetadata("clone", aCtMethod);
+					return r;
+				}).collect(Collectors.toList())).stream()
+				.map(x -> x.getValue()).collect(Collectors.toSet());
+	}
+	
+	// aCtMethod.setExtendedModifiers(cloneModaifiers(m, aCtMethod));
+	//aCtMethod.setExtendedModifiers(cloneModaifiers(m.getExtendedModifiers()));
+	public <T> void visitCtWrapper(CtWrapper<T> orig) {
+		
+		if (orig.getValue() instanceof CtExtendedModifier) {
+			CtExtendedModifier v = ((CtWrapper<CtExtendedModifier>)orig).getValue();
+			CtExtendedModifier wrapped = new CtExtendedModifier(v.getKind(), v.isImplicit());
+			this.other = new CtWrapper<CtExtendedModifier>(wrapped,(CtElement)orig.getMetadata("clone"),CtRole.MODIFIER);
+			this.other.setAllMetadata(orig.getAllMetadata());
+			this.other.setPosition(clonePosition(orig.getPosition()));
 		}
 	}
 
@@ -723,7 +755,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtParameter<T> aCtParameter = this.factory.Core().createParameter();
 		aCtParameter.setPosition(clonePosition(parameter.getPosition()));
 		this.builder.copy(parameter, aCtParameter);
-		copyModVisibility(parameter, aCtParameter);
+		aCtParameter.setExtendedModifiers(cloneModifiers(parameter,aCtParameter));
 		aCtParameter.setAnnotations(this.cloneHelper.clone(parameter.getAnnotations()));
 		aCtParameter.setType(this.cloneHelper.clone(parameter.getType()));
 		aCtParameter.setComments(this.cloneHelper.clone(parameter.getComments()));
