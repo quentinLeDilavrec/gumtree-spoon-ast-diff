@@ -249,16 +249,19 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
             for (T ee : e) {
                 Object original = getOriginal(ee);
                 if (a == original) {
-                    // DO NOTHING
+                    // needed to refere to atomic action in the db
+                    presentMap.get(a).add(ee);
                 } else if (original instanceof AtomicAction) {
-                    // DO NOTHING
+                    // here we do nothing, to keep AtomicActions precise
                 } else if (original instanceof ComposedAction) {
+                    // here we only point from atomic actions exactly part of the composed one
                     Set<MyAction<?>> decomposed = new HashSet<>();
                     coarseDecompose(decomposed, (ComposedAction<AbstractVersionedTree>)original);
                     if (decomposed.contains(a)) {
                         presentMap.get(a).add(ee);
                     }
                 } else {
+                    // other source of evolutions
                     presentMap.get(a).add(ee);
                 }
             }
