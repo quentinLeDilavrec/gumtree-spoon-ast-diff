@@ -827,7 +827,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                     tree = tree.getParent();
                     continue;
                 }
-                Boolean tmp = isInApp(ele);
+                Boolean tmp = isInTest(ele);
                 if (tmp == null) {
                     tree = tree.getParent();
                     continue;
