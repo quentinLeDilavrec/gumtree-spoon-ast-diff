@@ -409,20 +409,20 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
 
     private Set<MyAction<AbstractVersionedTree>> extractActions(Set<T> wantedEvos) {
         Set<MyAction<AbstractVersionedTree>> acts = new HashSet<>();
-        extractActions(wantedEvos, acts);
+        extractActions(wantedEvos, null, acts);
         return acts;
 
     }
 
-    private void extractActions(Set<T> wantedEvos, Set<MyAction<AbstractVersionedTree>> acts) {
+    private void extractActions(Set<T> wantedEvos, Chain<T> path, Set<MyAction<AbstractVersionedTree>> acts) {
         for (T evolution : wantedEvos) {
             Object original = getOriginal(evolution);
             if (original instanceof MyAction) {
                 acts.add((MyAction<AbstractVersionedTree>) /* ((Operation) */ original/* ).getAction() */);
             }
             Set<T> others = evoState.evoToEvo.get(evolution);
-            if (others != null) {
-                extractActions(others, acts);
+            if (others != null && (path==null||!path.contains(evolution))) {
+                extractActions(others, path==null ? new Chain<>(evolution) : new Chain<>(evolution, path) , acts);
             }
         }
     }
