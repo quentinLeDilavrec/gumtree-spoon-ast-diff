@@ -2,6 +2,7 @@ package gumtree.spoon.apply;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -29,6 +30,7 @@ import spoon.reflect.declaration.*;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.*;
+import spoon.reflect.visitor.Filter;
 import spoon.reflect.visitor.filter.PotentialVariableDeclarationFunction;
 import spoon.support.StandardEnvironment;
 import spoon.support.reflect.CtExtendedModifier;
@@ -361,7 +363,7 @@ public class ActionApplier {
 			case "MODIFIER": {
 				// CtWrapper<CtExtendedModifier> sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				
+
 				// if (!sp.getValue().getKind().toString().equals(target.getLabel())) {
 				// 	throw new RuntimeException("wrong modifier");
 				// }
@@ -454,6 +456,11 @@ public class ActionApplier {
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				CtTypeReference t = factory.Type().createReference(parent.getParent(CtClass.class));
+				CtTypeAccess ta = factory.createTypeAccess(t);
+				t.setParent(ta);
+				created.setTarget(ta);
+				ta.setParent(created);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				addExpressionToParent(parent, created, target.getLabel());
 				break;
@@ -475,7 +482,11 @@ public class ActionApplier {
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
-				created.setTarget(factory.createThisAccess(parent.getParent(CtType.class).getReference(), true));
+				CtTypeReference topClassRef = factory.Type().createReference(parent.getParent(CtType.class).getTopLevelType());
+				CtTypeAccess typeAcc = factory.createTypeAccess(topClassRef);
+				topClassRef.setParent(typeAcc);
+				created.setTarget(typeAcc);
+				typeAcc.setParent(created);
 				addExpressionToParent(parent, created, target.getLabel());
 				// factory.createTypeAcc
 				// CtTypeReference auxRef = factory.createTypeReference();
@@ -592,26 +603,40 @@ public class ActionApplier {
 				if (superclassRef == null) {
 					superclassRef = factory.Type().OBJECT;
 				}
-				CtClass superclass;
-				try {
-					superclass = (CtClass) factory.Class().get(superclassRef.getQualifiedName());
-				} catch (Exception e) {
-					throw new WrongAstContextException("cannot get the super Class", e);
-				}
-				if (superclass == null) {
-					CtPackage parentPack = parent.getParent(CtPackage.class);
-					superclass = factory.createClass(parentPack, superclassRef.getSimpleName());
-					superclass.setShadow(true);
-				}
-				CtConstructor constructor = superclass.getConstructor();
-				if (constructor == null) {
-					constructor = factory.createConstructor(superclass, new HashSet<>(), new ArrayList<>(),
-							new HashSet<>(), factory.createBlock());
-					superclass.setShadow(true);
-					constructor.setImplicit(true);
-				}
-				CtExecutableReference er = constructor.getReference();
-				created.setExecutable(er);
+				// CtClass superclass;
+				// try {
+				// 	superclass = (CtClass) factory.Class().get(superclassRef.getQualifiedName());
+				// } catch (Exception e) {
+				// 	throw new WrongAstContextException("cannot get the super Class", e);
+				// }
+				// if (superclass == null) {
+				// 	CtPackage pack;
+				// 	if (superclassRef.getPackage() != null) {
+				// 		pack = factory.Package().get(superclassRef.getPackage().getQualifiedName());
+				// 		if (pack == null) {
+				// 			pack = factory.Package().getOrCreate(superclassRef.getPackage().getQualifiedName());
+				// 			pack.setShadow(true);
+				// 		}
+				// 	} else {
+				// 		pack = parent.getParent(CtPackage.class);
+				// 	}
+				// 	superclass = factory.createClass(pack, superclassRef.getSimpleName());
+				// 	superclass.setShadow(true);
+				// }
+				// CtConstructor constructor = superclass.getConstructor();
+				// if (constructor == null) {
+				// 	constructor = factory.createConstructor(superclass, new HashSet<>(), new ArrayList<>(),
+				// 			new HashSet<>(), factory.createBlock());
+				// 	constructor.setShadow(true);
+				// 	constructor.setImplicit(true);
+				// 	if (!parent2.getReference().canAccess(constructor)) {
+				// 		constructor.setVisibility(ModifierKind.PUBLIC);
+				// 		superclass.setVisibility(ModifierKind.PUBLIC);
+				// 	}
+				// }
+				// CtExecutableReference er = constructor.getReference();
+				
+				created.setExecutable(factory.Constructor().createReference(superclassRef));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
 				} else if (parent instanceof CtStatementList) {
@@ -689,8 +714,21 @@ public class ActionApplier {
 				break;
 			}
 			case "TypeReference": {
+				CtTypeReference sp = getSpoonEleStrict(source);
 				CtTypeReference created = factory.createTypeReference();
 				CtElement parent = getSpoonEleStrict(parentTarget);
+				if (sp.getDeclaringType()!=null) {
+					CtTypeReference tref = factory.Type().createReference(sp.getDeclaringType().getQualifiedName());
+					tref.setImplicit(true);
+					tref.setParent(parent);
+					created.setDeclaringType(tref);
+				}
+				if (sp.getPackage() != null) {
+					CtPackageReference pref = factory.Package().createReference(sp.getPackage().getQualifiedName());
+					pref.setImplicit(true);
+					pref.setParent(parent);
+					created.setPackage(pref);
+				}
 				if (target.getLabel().equals(CtRole.CAST.name())) {
 					((CtExpression) parent).addTypeCast(created);
 				} else if (target.getLabel().equals(CtRole.SUPER_TYPE.name())) {
@@ -1171,7 +1209,12 @@ public class ActionApplier {
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
-				created.setTarget(factory.createTypeAccess(parent.getParent(CtType.class).getSuperclass()));
+				CtTypeReference<?> pr = factory.Type().createReference(parent.getParent(CtType.class));
+				CtVariableReference v = created.getVariable();
+				pr.setParent(v);
+				v.setType(pr);
+				// factory.createVarTypeAccess(parent.getParent(CtType.class).getSuperclass());
+				// created.setTarget();
 				// created.setVariable(factory.createConstructorCall(parent.getParent(CtType.class).getSuperclass()));
 				created.setImplicit(((CtSuperAccess) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
@@ -1377,9 +1420,14 @@ public class ActionApplier {
 						} else {
 							throw new RuntimeException(parentparent.getClass().toString());
 						}
+					} else if (parentparent instanceof CtType) {
 					} else {
 						throw new RuntimeException(parentparent.getClass().toString());
 					}
+				} else if (parent instanceof CtExecutableReference) {
+					((CtExecutableReference) parent).isImplicit();//(created);
+				} else if (parent instanceof CtNewArray) {
+ 					((CtNewArray) parent).isImplicit();//(created);
 				} else {
 					throw new RuntimeException(parent.getClass().toString());
 				}
@@ -1392,7 +1440,9 @@ public class ActionApplier {
 				CtElement sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
-				if (parent instanceof CtNewClass) {
+				if (parentTarget.getMetadata("type").equals("SuperInvocation")) {
+				} else if (parentTarget.getMetadata("type").equals("ThisInvocation")) {
+				} else if (parent instanceof CtNewClass) {
 					((CtNewClass) parent).setExecutable(created);
 				} else if (parent instanceof CtAbstractInvocation) {
 					((CtAbstractInvocation) parent).setExecutable(created);
@@ -1480,7 +1530,7 @@ public class ActionApplier {
 		T r;
 		r = (T) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 		if (r == null) {
-			throw new RuntimeException("following ITree should contain a spoon object" + tree.toShortString());
+			throw new RuntimeException("following ITree should contain a spoon object: " + tree.toShortString());
 		}
 		return r;
 	}
@@ -1637,7 +1687,7 @@ public class ActionApplier {
 				|| (aaa.getMetadata("type").equals("Catch")) || (aaa.getMetadata("type").equals("LABEL"))
 				|| (aaa.getMetadata("type").equals("Parameter")) || (aaa.getMetadata("type").equals("Annotation"))
 				|| (aaa.getLabel().equals("EXPRESSION") || (aaa.getMetadata("type").equals("TypeReference"))
-				|| (aaa.getLabel().equals("TYPE")));
+						|| (aaa.getLabel().equals("TYPE")));
 	}
 
 	private static boolean shouldIgnore2(CtBodyHolder parent, AbstractVersionedTree aaa) {
@@ -1685,9 +1735,9 @@ public class ActionApplier {
 		if (ele != null) {
 			try {
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
-				if (ele instanceof CtWrapper && ((CtWrapper)ele).getValue() instanceof CtExtendedModifier) {
+				if (ele instanceof CtWrapper && ((CtWrapper) ele).getValue() instanceof CtExtendedModifier) {
 					CtModifiable parent = getSpoonEleStrict(parentTarget);
-					parent.removeModifier(((CtWrapper<CtExtendedModifier>)ele).getValue().getKind());
+					parent.removeModifier(((CtWrapper<CtExtendedModifier>) ele).getValue().getKind());
 					// TODO maybe better to correctly impl CtWrapper.delete()
 				} else {
 					ele.delete();
@@ -1711,16 +1761,39 @@ public class ActionApplier {
 				CtElement parent = getSpoonEleStrict(parentTarget);
 				if (parent == null) {
 					LOGGER.warning("no parent for label " + target.getLabel());
+				} else if (parent instanceof CtPackage) {
+					String toCompAgainst = ((CtPackage) parent).getQualifiedName();
+					List<CtPackageReference> pRefToChange = new ArrayList<>();
+					for (CtType<?> c : factory.getModel().getAllTypes()) {
+						pRefToChange.addAll(c.getElements(new Filter<CtPackageReference>() {
+							@Override
+							public boolean matches(CtPackageReference x) {
+								return x.isImplicit() && x.getQualifiedName().startsWith(toCompAgainst);
+							}
+						}));
+					}
+					((CtNamedElement) parent).setSimpleName(target.getLabel());
+					String newQPName = ((CtPackage) parent).getQualifiedName();
+					for (CtPackageReference p : pRefToChange) {
+						if (p.getQualifiedName().startsWith(toCompAgainst)) {
+							p.setSimpleName(newQPName+p.getSimpleName().substring(toCompAgainst.length()));
+						}
+					}
+					// TODO update all refs to old package --'
 				} else if (parent instanceof CtNamedElement) {
 					((CtNamedElement) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtWildcardReference) {
 				} else if (parent instanceof CtTypeReference) {
-					CtTypeReference sps = getSpoonEle(source.getParent());
-					CtTypeReference ref = factory.Type().createReference(sps.getQualifiedName());
-					((CtTypeReference<?>) ref).setSimpleName(target.getLabel());
-					if (parent.isParentInitialized()) {
-						((CtTypeReference<?>) parent).replace(ref);
-					}
+					// if (!parent.isParentInitialized()) {
+					// 	throw null;
+					// } else if (CtRole.SUPER_TYPE.equals(parent.getRoleInParent())) {
+					// 	((CtTypeReference)parent).setSimpleName(target.getLabel());
+					// } else if (CtRole.INTERFACE.equals(parent.getRoleInParent())) {
+					// 	((CtTypeReference)parent).setSimpleName(target.getLabel());
+					// } else {
+					// 	((CtTypeReference)parent).setSimpleName(target.getLabel());
+					// }
+					((CtTypeReference)parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtBinaryOperator) {
 					((CtBinaryOperator<?>) parent).setKind(BinaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtUnaryOperator) {
@@ -1893,7 +1966,21 @@ public class ActionApplier {
 
 					// ((CtAssignment) parent).setLabel(target.getLabel());
 				} else if (parent instanceof CtPackageReference) {
-					parent.replace(factory.Package().getOrCreate(target.getLabel()).getReference());
+					// if (parent.isParentInitialized()){
+					// 	CtElement parentparent = parent.getParent();
+					// 	if (parentparent.isParentInitialized() && CtRole.SUPER_TYPE.equals(parentparent.getRoleInParent())) {
+					// 		assert parentparent instanceof CtTypeReference: parentparent.getClass();
+					// 		((CtPackageReference)parent).setSimpleName(factory.Package().getOrCreate(target.getLabel()).getReference().getSimpleName());
+					// 		// ((CtType)parentparent.getParent()).setSuperclass((CtTypeReference)parentparent);
+					// 	} else if (parentparent.isParentInitialized() && CtRole.INTERFACE.equals(parentparent.getRoleInParent())) {
+					// 		assert parentparent instanceof CtTypeReference: parentparent.getClass();
+					// 		((CtPackageReference)parent).setSimpleName(factory.Package().getOrCreate(target.getLabel()).getReference().getSimpleName());
+					// 		// ((CtType)parentparent.getParent()).setSuperclass((CtTypeReference)parentparent);
+					// 	} else {
+					// 		throw null;
+					// 	}
+					// }
+					((CtPackageReference)parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtExecutableReference) {
 					((CtExecutableReference)parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtVariableReference) {

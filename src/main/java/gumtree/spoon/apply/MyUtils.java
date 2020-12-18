@@ -1,7 +1,9 @@
 package gumtree.spoon.apply;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
@@ -10,22 +12,40 @@ import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 import com.github.gumtreediff.tree.TreeUtils;
+import com.github.gumtreediff.tree.Version;
+import com.github.gumtreediff.tree.VersionedTree;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.logging.log4j.message.StringFormatterMessageFactory;
 
 import gumtree.spoon.apply.operations.MyCloneHelper;
+import gumtree.spoon.apply.operations.MyScriptGenerator;
+import gumtree.spoon.builder.CtWrapper;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import spoon.SpoonModelBuilder;
 import spoon.reflect.code.BinaryOperatorKind;
+import spoon.reflect.code.CtTypeAccess;
 import spoon.reflect.code.UnaryOperatorKind;
+import spoon.reflect.cu.CompilationUnit;
+import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypeParameter;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.factory.FactoryImpl;
+import spoon.reflect.path.CtPath;
+import spoon.reflect.path.CtRole;
+import spoon.reflect.reference.CtPackageReference;
+import spoon.reflect.reference.CtReference;
+import spoon.reflect.reference.CtTypeReference;
+import spoon.reflect.reference.CtVariableReference;
 import spoon.support.DefaultCoreFactory;
 import spoon.support.StandardEnvironment;
 import spoon.support.compiler.VirtualFile;
 import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
+import spoon.support.reflect.cu.position.SourcePositionImpl;
 
 public class MyUtils {
 
@@ -74,19 +94,19 @@ public class MyUtils {
 		}
 		if (tree instanceof AbstractVersionedTree) {
 			AbstractVersionedTree tt = (AbstractVersionedTree) tree;
-			
-            if (tt.getInsertVersion() != null) {
-                b.append(tt.getInsertVersion());
-            }
-            if (tt.getInsertVersion() != null || tt.getRemoveVersion() != null) {
-                b.append("-");
-            }
-            if (tt.getRemoveVersion() != null) {
-                b.append(tt.getRemoveVersion());
-            }
-            if (tt.getInsertVersion() != null || tt.getRemoveVersion() != null) {
-                b.append(" ");
-            }
+
+			if (tt.getInsertVersion() != null) {
+				b.append(tt.getInsertVersion());
+			}
+			if (tt.getInsertVersion() != null || tt.getRemoveVersion() != null) {
+				b.append("-");
+			}
+			if (tt.getRemoveVersion() != null) {
+				b.append(tt.getRemoveVersion());
+			}
+			if (tt.getInsertVersion() != null || tt.getRemoveVersion() != null) {
+				b.append(" ");
+			}
 		}
 		if (tree.getMetadata("type") != null) {
 			b.append(tree.getMetadata("type") + "@" + tree.getLabel());
@@ -283,5 +303,142 @@ public class MyUtils {
 			default:
 				throw new UnsupportedOperationException(o.name());
 		}
+	}
+
+	/**
+	 * also put a position with valid path start end
+	 * @param <T>
+	 * @param <U>
+	 * @param tree
+	 * @param version
+	 * @return
+	 */
+	public static <T> ImmutablePair<CtElement,SourcePosition> toNormalizedPreciseSpoon(ITree tree, Version version) {
+		CtElement ele = null;
+		if (tree instanceof AbstractVersionedTree) {
+			if (((AbstractVersionedTree) tree).getInsertVersion() == version) {
+				ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+			}
+		} else {
+			ele = (CtElement) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+			if (ele == null) {
+				return new ImmutablePair<>(null,null);
+			}
+		}
+		if (ele == null) {
+			Map<Version, CtElement> map = (Map<Version, CtElement>) tree
+					.getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
+			if (map != null) {
+				ele = map.get(version);
+			}
+		}
+		if (ele == null) {
+			Map<Version, CtElement> map = (Map<Version, CtElement>) tree.getParent()
+					.getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
+			if (map != null) {
+				ele = map.get(version);
+			}
+		}
+		if (ele == null) {
+			ele = (CtElement) tree.getParent().getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+			if (ele == null) {
+				ele = (CtElement) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+			}
+			if (ele == null) {
+				ele = (CtElement) tree.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+			}
+		}
+		if (ele == null) {
+			return new ImmutablePair<>(null,null);
+		}
+		SourcePosition position = ele.getPosition();
+        if (ele instanceof CtPackage) {
+        } else if (ele instanceof CtPackageReference && ele.isParentInitialized()
+                && ele.getParent() instanceof CtPackage) {
+		} else if ((position == null || !position.isValidPosition())) {
+			// position = computePrecisePosition(ele);
+			throw new RuntimeException(ele.getClass().toString());
+		}
+		return new ImmutablePair<CtElement,SourcePosition>(ele, position);
+	}
+
+	public static SourcePosition computePrecisePosition(CtElement ele) {
+		CompilationUnit compilationUnit;
+		int start, end;
+		SourcePosition position = ele.getPosition();
+		if (position != null && position.isValidPosition() && (position instanceof SourcePositionImpl || ele instanceof CtTypeAccess)) {
+			return position;
+		} else if (ele instanceof CtReference || ele instanceof CtTypeAccess) {
+			CtElement e = ele;
+			position = ele.getPosition();
+			int ss = 0, es = 0;
+			while (position == null || !position.isValidPosition()) {
+				CtRole role = e.getRoleInParent();
+				if (e instanceof CtPackageReference && e.getParent() instanceof CtPackage) {
+					return e.getPosition();
+				}
+				switch (role) {
+					case ACCESSED_TYPE: {
+						CtElement old = e;
+						e = e.getParent();
+						position = e.getPosition();
+						ss += e.toString().length() - ((CtTypeReference) old).getSimpleName().length();
+						break;
+					}
+					case PACKAGE_REF: {
+						CtElement old = e;
+						e = e.getParent().getParent();
+						position = e.getPosition();
+						es -= e.toString().length() - ((CtPackageReference) old).getSimpleName().length();
+						break;
+					}
+					case TARGET: {
+						CtElement old = e;
+						e = e.getParent();
+						position = e.getPosition();
+						es = -(e.toString().length() - old.toString().length() - es);
+						break;
+					}
+					case VARIABLE: {
+						CtElement old = e;
+						e = e.getParent().getParent();
+						position = e.getPosition();
+						es -= e.toString().length() - ((CtVariableReference) old).getSimpleName().length();
+						break;
+					}
+					case TYPE: {
+						CtElement old = e;
+						e = e.getParent().getParent();
+						position = e.getPosition();
+						ss += ((DeclarationSourcePosition)position).getModifierSourceEnd() - ((DeclarationSourcePosition)position).getSourceStart();
+						es -= ((DeclarationSourcePosition)position).getSourceEnd() - ((DeclarationSourcePosition)position).getNameStart();
+						break;// getSourceStart // getModifierSourceEnd // getNameStart //getSourceEnd
+					}
+					default: {
+						System.err.println(role.toString() + " not handled");
+						e = e.getParent();
+						position = e.getPosition();
+						break;
+					}
+				}
+			}
+			compilationUnit = position.getCompilationUnit();
+			int correction = e.toString().length()-(position.getSourceEnd()-position.getSourceStart());
+			start = position.getSourceStart() + ss;
+			end = Math.max(start, position.getSourceEnd() + es);// + correction;
+			position.getSourceStart();
+		} else if (ele instanceof CtPackage) {
+			return null;
+		} else {
+			position = ele.getPosition();
+			if (position == null || !position.isValidPosition()) {
+				throw new RuntimeException(ele.getClass().toString());
+			} else {
+				compilationUnit = position.getCompilationUnit();
+				start = position.getSourceStart();
+				end = position.getSourceEnd();
+			}
+		}
+		return new SourcePositionImpl(compilationUnit, start, end, compilationUnit.getLineSeparatorPositions());
 	}
 }

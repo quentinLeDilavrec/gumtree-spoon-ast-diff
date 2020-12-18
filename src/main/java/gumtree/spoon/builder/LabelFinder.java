@@ -26,12 +26,14 @@ import spoon.reflect.code.CtTypeAccess;
 import spoon.reflect.code.CtUnaryOperator;
 import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.code.CtWhile;
+import spoon.reflect.cu.CompilationUnit;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.CtAnnotation;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtNamedElement;
+import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtArrayTypeReference;
 import spoon.reflect.reference.CtExecutableReference;
@@ -40,6 +42,8 @@ import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.reference.CtVariableReference;
 import spoon.reflect.visitor.CtInheritanceScanner;
 import spoon.reflect.visitor.chain.CtScannerListener;
+import spoon.support.reflect.cu.position.PartialSourcePositionImpl;
+import spoon.support.reflect.cu.position.SourcePositionImpl;
 
 class LabelFinder extends CtInheritanceScanner {
 	public String label = "";
@@ -52,7 +56,22 @@ class LabelFinder extends CtInheritanceScanner {
 		SourcePosition pp = e.getPosition();
 		if (pp instanceof DeclarationSourcePosition) {
 			labEle = e.getReference();
+			labEle.setParent(e);
 			labEle.setPosition(CtWrapper.makePosition((DeclarationSourcePosition) pp));
+		} else if (e instanceof CtPackage) {
+			labEle = e.getReference();
+			labEle.setParent(e);
+		} else if(pp instanceof NoSourcePosition) {
+			labEle = e.getReference();
+			labEle.setParent(e);
+			// labEle.setPosition(new PartialSourcePositionImpl(e.getParent().getPosition().getCompilationUnit()));
+			try {
+				System.err.println(e.getClass()+" should have a position");
+			} catch (Exception ee) {
+				System.err.println("named element without a position...");
+			}
+		} else {
+			System.err.println(e.getClass()+" should have a position");
 		}
 	}
 
@@ -61,7 +80,7 @@ class LabelFinder extends CtInheritanceScanner {
 		label = variableAccess.getVariable().getSimpleName();
 		CtVariableReference tmp = variableAccess.getVariable();
 		labEle = tmp;
-		labEle.setPosition(CtWrapper.makePosition(variableAccess.getPosition(), tmp.getSimpleName().length()));
+		labEle.setPosition(CtWrapper.makePosition(variableAccess.getPosition(), tmp.toString().length()));
 	}
 
 	@Override
@@ -71,6 +90,7 @@ class LabelFinder extends CtInheritanceScanner {
 		} else {
 			label = reference.getSimpleName();
 		}
+		labEle =  new CtWrapper<>(reference, reference.getParent(), reference.getRoleInParent());;
 	}
 
 	@Override
@@ -121,6 +141,7 @@ class LabelFinder extends CtInheritanceScanner {
 		} else {
 			label = "null";
 		}
+		labEle = new CtWrapper<>(literal, literal.getParent(), literal.getRoleInParent());
 	}
 
 	@Override
@@ -166,6 +187,11 @@ class LabelFinder extends CtInheritanceScanner {
 	@Override
 	public <T, A extends T> void visitCtAssignment(CtAssignment<T, A> e) {
 		label = "=";
+		labEle =  new CtWrapper<>(label, e);
+		CompilationUnit cu = e.getPosition().getCompilationUnit();
+		labEle.setPosition(new SourcePositionImpl(cu, 
+		e.getAssigned().getPosition().getSourceEnd()+1, 
+		e.getAssignment().getPosition().getSourceStart()-1, cu.getLineSeparatorPositions()));
 	}
 
 	@Override
@@ -175,6 +201,11 @@ class LabelFinder extends CtInheritanceScanner {
 		// label = MyUtils.getOperatorText(e.getKind()) + "=";
 		// }
 		label = e.getKind().name();
+		labEle =  new CtWrapper<>(label, e);
+		CompilationUnit cu = e.getPosition().getCompilationUnit();
+		labEle.setPosition(new SourcePositionImpl(cu, 
+		e.getAssigned().getPosition().getSourceEnd()+1, 
+		e.getAssignment().getPosition().getSourceStart()-1, cu.getLineSeparatorPositions()));
 	}
 
 	@Override
@@ -191,27 +222,37 @@ class LabelFinder extends CtInheritanceScanner {
 	@Override
 	public <T> void visitCtBinaryOperator(CtBinaryOperator<T> operator) {
 		label = operator.getKind().toString();
+		labEle =  new CtWrapper<>(label, operator);
+		CompilationUnit cu = operator.getPosition().getCompilationUnit();
+		labEle.setPosition(new SourcePositionImpl(cu, 
+		operator.getLeftHandOperand().getPosition().getSourceEnd()+1, 
+		operator.getRightHandOperand().getPosition().getSourceStart()-1, cu.getLineSeparatorPositions()));
 	}
 
 	@Override
 	public <T> void visitCtUnaryOperator(CtUnaryOperator<T> operator) {
 		label = operator.getKind().toString();
+		labEle =  new CtWrapper<>(label, operator);
+		CompilationUnit cu = operator.getPosition().getCompilationUnit();
+		labEle.setPosition(new SourcePositionImpl(cu, 
+		operator.getPosition().getSourceStart(), 
+		operator.getOperand().getPosition().getSourceStart()-1, cu.getLineSeparatorPositions()));
 	}
 
-	@Override
-	public <T> void visitCtThisAccess(CtThisAccess<T> thisAccess) {
-		label = thisAccess.toString();
-	}
+	// @Override
+	// public <T> void visitCtThisAccess(CtThisAccess<T> thisAccess) {
+	// 	label = thisAccess.toString();
+	// }
 
-	@Override
-	public <T> void visitCtSuperAccess(CtSuperAccess<T> f) {
-		label = f.toString();
-	}
+	// @Override
+	// public <T> void visitCtSuperAccess(CtSuperAccess<T> f) {
+	// 	label = f.toString();
+	// }
 
 	@Override
 	public <T> void visitCtTypeAccess(CtTypeAccess<T> typeAccess) {
 		if (typeAccess.getAccessedType() != null) {
-			label = typeAccess.getAccessedType().getQualifiedName();
+			// label = typeAccess.getAccessedType().getQualifiedName();
 			label = typeAccess.getAccessedType().getSimpleName();
 		}
 	}

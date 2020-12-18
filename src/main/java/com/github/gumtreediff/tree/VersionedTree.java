@@ -19,10 +19,13 @@ import spoon.Launcher;
 import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
+import spoon.reflect.declaration.CtNamedElement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
+import spoon.reflect.declaration.CtTypedElement;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtExecutableReference;
+import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.visitor.CtScanner;
 import spoon.support.visitor.clone.CloneVisitor;
@@ -57,7 +60,7 @@ public class VersionedTree extends AbstractVersionedTree {
     }
 
     private VersionedTree(ITree other, String... wantedMD) {
-        this(other, (Version)null);
+        this(other, (Version) null);
         for (String key : wantedMD) {
             this.metadata.set(key, other.getMetadata(key));
         }
@@ -91,7 +94,7 @@ public class VersionedTree extends AbstractVersionedTree {
 
     public static class MyCloner extends CloneHelper {
         public final Launcher launcher;
-        
+
         @Override
         public <T extends CtElement> T clone(T element) {
             ITree gtnode = null;
@@ -122,6 +125,7 @@ public class VersionedTree extends AbstractVersionedTree {
         public Launcher getLauncher() {
             return launcher;
         }
+
     }
 
     public static AbstractVersionedTree deepCopySpoon(ITree initialSpooned) {
@@ -144,8 +148,8 @@ public class VersionedTree extends AbstractVersionedTree {
                     AbstractVersionedTree copy = deepCopySpoon(child);
                     result.addChild(copy);
                     copy.setParent(result);
-                result.setMetadata("Cloner", cloner);
-                result.setMetadata("Launcher", copy.getMetadata("Launcher"));
+                    result.setMetadata("Cloner", cloner);
+                    result.setMetadata("Launcher", copy.getMetadata("Launcher"));
                     result.setMetadata("Factory", copy.getMetadata("Factory"));
                 }
                 break;

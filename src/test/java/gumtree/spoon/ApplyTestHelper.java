@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNoException;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -33,12 +34,14 @@ import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.Version;
 import com.github.gumtreediff.tree.VersionInt;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.junit.Assert;
 import org.junit.runner.notification.Failure;
 
 import gumtree.spoon.apply.ActionApplier;
 import gumtree.spoon.apply.MyUtils;
+import gumtree.spoon.builder.CtWrapper;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
@@ -47,10 +50,12 @@ import spoon.compiler.Environment;
 import spoon.reflect.CtModel;
 import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.cu.CompilationUnit;
+import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtPackage;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
+import spoon.reflect.reference.CtPackageReference;
 import spoon.reflect.visitor.PrettyPrinter;
 import spoon.support.StandardEnvironment;
 import spoon.support.compiler.VirtualFile;
@@ -176,11 +181,11 @@ public class ApplyTestHelper {
             System.err.println("*" + p.right.getQualifiedName() + "*");
             try {
                 System.err.println(pp.prettyprint(p.left));
-            System.err.println("--------------->>");
-            System.err.println(pp.prettyprint(p.right));
+                System.err.println("--------------->>");
             } catch (Exception e) {
                 assumeNoException(e);
             }
+            System.err.println(pp.prettyprint(p.right));
         }
         for (MutablePair<CtType, CtType> p : res.values()) {
             assertEquals(pp.prettyprint(p.left), pp.prettyprint(p.right));
@@ -196,7 +201,9 @@ public class ApplyTestHelper {
             assertTrue(middle.getClass().toString(), middle instanceof CtPackage);
             Map<String, MutablePair<CtType, CtType>> m = new HashMap<>();
             for (CtType<?> t : ((CtPackage) right).getTypes()) {
-                m.put(t.getQualifiedName(), new MutablePair(t, null));
+                if (!t.isShadow()) {
+                    m.put(t.getQualifiedName(), new MutablePair(t, null));
+                }
             }
             for (CtType<?> t : ((CtPackage) middle).getTypes()) {
                 if (!t.isShadow()) {
@@ -215,7 +222,9 @@ public class ApplyTestHelper {
             for (CtPackage t : ((CtPackage) middle).getPackages()) {
                 if (m2.containsKey(t.getQualifiedName())) {
                     m2.get(t.getQualifiedName()).setRight(t);
+                } else if (t.isShadow()) {
                 } else {
+                    // throw null; Shadowing every Package is complicated
                     // m2.put(t.getQualifiedName(), new MutablePair(null, t));
                 }
             }
@@ -267,21 +276,24 @@ public class ApplyTestHelper {
         final SpoonGumTreeBuilder scanner = new SpoonGumTreeBuilder();
         ITree srcTree;
         srcTree = scanner.getTree(left);
+        checkSpoonPreciseValue(srcTree);
         MultiDiffImpl mdiff = new MultiDiffImpl(srcTree, leftV);
         ITree dstTree = scanner.getTree(right);
+        checkSpoonPreciseValue(dstTree);
         DiffImpl diff = mdiff.compute(dstTree, rightV);
 
         AbstractVersionedTree middle = mdiff.getMiddle();
         // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), srcTree));
         // System.out.println(MyUtils.toPrettyTree(scanner.getTreeContext(), dstTree));
         System.out.println(middle.toTreeString());
-        CtElement middleE = ((Factory)middle.getMetadata("Factory")).getModel().getRootPackage();
+        CtElement middleE = ((Factory) middle.getMetadata("Factory")).getModel().getRootPackage();
         check1(left, pp, middleE);
-        List<Action> wanted = (List)diff.getAtomic();
+        checkSpoonPreciseValue(middle, leftV, rightV, leftV);
+        List<Action> wanted = (List) diff.getAtomic();
         for (Action action : wanted) {
-            applyAux(scanner, middle, action, new HashSet<>((Collection)wanted));
+            applyAux(scanner, middle, action, new HashSet<>((Collection) wanted));
         }
-        middleE = ((Factory)middle.getMetadata("Factory")).getModel().getRootPackage();
+        middleE = ((Factory) middle.getMetadata("Factory")).getModel().getRootPackage();
         // Queue<ITree> tmp = new LinkedBlockingDeque<>();
         // tmp.add(middle);
 
@@ -293,47 +305,125 @@ public class ApplyTestHelper {
         // }
         // pp.prettyprint(((CtRootPackage)srcTree.getChild(0).getMetadata("spoon_object")).getTypes().iterator().next())
         if (right instanceof CtType || right instanceof CtPackage) {
-            try {
-                CtPackage made1 = MyUtils.makeFactory(toVirtFiles(pp, middleE)).getModel().getRootPackage();
-                CtPackage ori1 = MyUtils.makeFactory(toVirtFiles(pp, right)).getModel().getRootPackage();
-                if (!ori1.equals(made1)) {
-                        final SpoonGumTreeBuilder scanner1 = new SpoonGumTreeBuilder();
-                        ITree srctree1;
-                        srctree1 = scanner1.getTree(made1);
-                        MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1, leftV);
-                        ITree dstTree1 = scanner1.getTree(ori1);
-                        DiffImpl diff1 = mdiff1.compute(dstTree1, rightV);
-                        try {
-                            check1(right, pp, middleE);
-                        } catch (Throwable e) {
-                            for (Action action : diff1.getAtomic()) {
-                                e.addSuppressed(new AssertionError(action));
-                            }
-                        }
-                }
-            } catch (Exception e) {
-                check1(right, pp, middleE);
-            }
+            // try {
+            //     CtPackage made1 = MyUtils.makeFactory(toVirtFiles(pp, middleE)).getModel().getRootPackage();
+            //     CtPackage ori1 = MyUtils.makeFactory(toVirtFiles(pp, right)).getModel().getRootPackage();
+            //     if (!ori1.equals(made1)) {
+            //         final SpoonGumTreeBuilder scanner1 = new SpoonGumTreeBuilder();
+            //         ITree srctree1;
+            //         srctree1 = scanner1.getTree(made1);
+            //         MultiDiffImpl mdiff1 = new MultiDiffImpl(srctree1, leftV);
+            //         ITree dstTree1 = scanner1.getTree(ori1);
+            //         DiffImpl diff1 = mdiff1.compute(dstTree1, rightV);
+            //         try {
+            //             check1(right, pp, middleE);
+            //         } catch (Throwable e) {
+            //             for (Action action : diff1.getAtomic()) {
+            //                 e.addSuppressed(new AssertionError(action));
+            //             }
+            //         }
+            //     }
+            // } catch (Exception e) {
+            check1(right, pp, middleE);
+            // }
         } else {
             check1(right, pp, middleE);
         }
+        checkSpoonPreciseValue(middle, leftV, rightV, rightV);
     }
-    
 
-    public static void applyAux(final SpoonGumTreeBuilder scanner, ITree middle, Action action, Collection<MyAction<?>> wanted) {
+    static void th(ITree node, Version version) {
+        ImmutablePair<CtElement, SourcePosition> wrapped = MyUtils.toNormalizedPreciseSpoon(node, version);
+        assert wrapped != null;
+        SourcePosition position = wrapped.getRight();
+        CtElement ele = wrapped.getLeft();
+        if (ele instanceof CtPackage) {
+            return;
+        } else if (node.getParent() == null) {
+            return;
+        } else if (ele instanceof CtPackageReference && ele.isParentInitialized()
+                && ele.getParent() instanceof CtPackage) {
+            return;
+        } else if (node.getMetadata("type").equals("LABEL")) {
+            if (node.getParent().getMetadata("type").equals("BinaryOperator")) {
+                return;
+            } else if (node.getParent().getMetadata("type").equals("UnaryOperator")) {
+                return;
+            } else if (node.getParent().getMetadata("type").equals("Assignment")) {
+                return;
+            }
+        }
+        assertNotNull(ele);
+        Path path = position.getFile().toPath();
+        int start = position.getSourceStart();
+        int end = position.getSourceEnd();
+    }
+
+    private static void checkSpoonPreciseValue(ITree node) {
+        if (node.getDepth() > 2) {
+            th(node, null);
+        }
+        for (ITree child : node.getChildren()) {
+            checkSpoonPreciseValue(child);
+        }
+    }
+
+    private static void checkSpoonPreciseValue(AbstractVersionedTree node, Version leftV, Version rightV,
+            Version stateV) {
+        if (node.getParent() == null) {
+            // ignore root
+        } else {
+            boolean b = true;
+            if (node.getInsertVersion() == rightV) {
+                b = false;
+                th(node, rightV);
+            }
+            if (node.getInsertVersion() == leftV) {
+                b = false;
+                th(node, leftV);
+            }
+            if (node.getRemoveVersion() == rightV) {
+                b = false;
+                th(node, leftV);
+            } else if (node.getRemoveVersion() == null && node.getInsertVersion() == null) {
+                b = false;
+                th(node, leftV);
+                th(node, rightV);
+            }
+            if (node.getParent() == null) {
+            } else if (node.getMetadata("type").equals("LABEL")) {
+            } else if (node.getMetadata("type").equals("TypeReference")) {
+            } else if (node.getMetadata("type").equals("LABEL")
+                    && node.getParent().getMetadata("type").equals("RootPackage")) {
+            } else if (stateV == leftV && node.getInsertVersion() == null) {
+                assertNotNull(node.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+            } else if (stateV == rightV && node.getRemoveVersion() == null) {
+                assertNotNull(node.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT));
+            }
+            if (b)
+                System.out.println();
+        }
+
+        for (AbstractVersionedTree child : node.getAllChildren()) {
+            checkSpoonPreciseValue(child, leftV, rightV, stateV);
+        }
+    }
+
+    public static void applyAux(final SpoonGumTreeBuilder scanner, ITree middle, Action action,
+            Collection<MyAction<?>> wanted) {
         try {
             if (action instanceof MyInsert) {
                 ActionApplier.applyMyInsert((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
                         (MyInsert) action);
                 for (AtomicAction<AbstractVersionedTree> a : ((MyInsert) action).getCompressed()) {
                     if (!wanted.contains(a)) {
-                        applyAux(scanner, middle, (Action)a, wanted);
+                        applyAux(scanner, middle, (Action) a, wanted);
                     }
                 }
             } else if (action instanceof MyDelete) {
                 for (AtomicAction<AbstractVersionedTree> a : ((MyDelete) action).getCompressed()) {
                     if (!wanted.contains(a)) {
-                        applyAux(scanner, middle, (Action)a, wanted);
+                        applyAux(scanner, middle, (Action) a, wanted);
                     }
                 }
                 ActionApplier.applyMyDelete((Factory) middle.getMetadata("Factory"), scanner.getTreeContext(),
@@ -343,7 +433,7 @@ public class ApplyTestHelper {
                         (MyUpdate) action);
                 for (AtomicAction<AbstractVersionedTree> a : ((MyUpdate) action).getCompressed()) {
                     if (!wanted.contains(a)) {
-                        applyAux(scanner, middle, (Action)a, wanted);
+                        applyAux(scanner, middle, (Action) a, wanted);
                     }
                 }
                 // } else if (action instanceof MyMove) {

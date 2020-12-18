@@ -48,8 +48,15 @@ public class ApplyTest {
 
         @Test
         public void testSimpleApplyA() {
-                String contentsLeft = "class X { " + "}";
-                String contentsRight = "interface X { " + "}";
+                String contentsLeft = "interface X { public void f() {}}";
+                String contentsRight = "interface X { void f() {}}";
+                ApplyTestHelper.onChange(contentsLeft, contentsRight);
+        }
+
+        @Test
+        public void testSimpleApplyAA() {
+                String contentsLeft = "class X {void f() {}}";
+                String contentsRight = "class X {public void f() {}}";
                 ApplyTestHelper.onChange(contentsLeft, contentsRight);
         }
 
@@ -256,6 +263,11 @@ public class ApplyTest {
         }
 
         @Test
+        public void testSimpleApply12b() {
+                ApplyTestHelper.onChange(new File("src/test/resources/examples/aaaa/right_Server_1.228.java"),
+                                new File("src/test/resources/examples/aaaa/left_Server_1.187.java"));
+        }
+        @Test
         public void testSimpleApply13() {
                 String left = "class X {" + "void f(){" + "int cen = Entity.NONE;" + "for(;;){};" + "}" + "}";
                 String right = "class X {" + "void f(){" + "Vector results = new Vector(attacks.size());" + "for(;;){};"
@@ -343,7 +355,7 @@ public class ApplyTest {
         }
 
         @Test
-        public void testSimpleApply17() {
+        public void testSimpleApply17() {// TODO one of the most complicated
                 ApplyTestHelper.onChange(
                                 new File("src/test/resources/examples/t_208618/left_PropPanelUseCase_1.39.java"),
                                 new File("src/test/resources/examples/919148/ReplicationRun/919148_ReplicationRun_0_t.java"));
@@ -443,4 +455,36 @@ public class ApplyTest {
                 + "} class Y { public class Z {} }";
                 ApplyTestHelper.onChange(left, right);
         }
+
+        @Test
+        public void testSimpleApply29() {
+                String contentsLeft = "class X {void f() { while(false) {continue;}}}";
+                String contentsRight = "class X {void f() {while(false) {break;}}}";
+                ApplyTestHelper.onChange(contentsLeft, contentsRight);
+        }
+
+        @Test
+        public void testSimpleApply30() {
+                String contentsLeft = "public class X { String f(String s){return s=\"Hello World!\";}}";
+                String contentsRight = "public class X { String f(String s){return s=\"Hello!\";}}";
+                ApplyTestHelper.onChange(contentsLeft, contentsRight);
+        }
+
+        @Test
+        public void testSimpleApply31() {
+                String contentsLeft = "public class X { String f(String s){return s=\"Hello World!\";}}";
+                String contentsRight = "public class X { String f(String s){int i = (-3); ++i; return s=\"Hello!\";}}";
+                ApplyTestHelper.onChange(contentsLeft, contentsRight);
+        }
+
+        @Test
+        public void testSimpleApply32() {//TODO 17
+                String contentsLeft = "public class X {}";
+                String contentsRight = "package org.apache.derbyTesting.functionTests.tests.replicationTests;"+
+                "import org.apache.derbyTesting.functionTests.tests.replicationTests.ReplicationRun;"+
+                "import org.apache.derbyTesting.junit.BaseTestCase;"+
+                "public class ReplicationRun extends BaseTestCase { public ReplicationRun(java.lang.String testcaseName) {super(testcaseName);ReplicationRun.LF = java.lang.System.getProperties().getProperty(\"line.separator\");}}";
+                ApplyTestHelper.onChange(contentsLeft, contentsRight);
+        }
+        
 }

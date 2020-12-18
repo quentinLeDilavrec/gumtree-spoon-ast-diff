@@ -2,15 +2,19 @@ package gumtree.spoon.builder;
 
 import java.util.Stack;
 
+import com.github.gumtreediff.gen.Registry.Factory;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeContext;
 
+import gumtree.spoon.apply.MyUtils;
+import javassist.CtField;
 import spoon.reflect.code.CtAbstractInvocation;
 import spoon.reflect.code.CtBlock;
 import spoon.reflect.code.CtCase;
 import spoon.reflect.code.CtCatchVariable;
 import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtExpression;
+import spoon.reflect.code.CtFieldWrite;
 import spoon.reflect.code.CtForEach;
 import spoon.reflect.code.CtIf;
 import spoon.reflect.code.CtInvocation;
@@ -26,9 +30,11 @@ import spoon.reflect.code.CtThisAccess;
 import spoon.reflect.code.CtTypeAccess;
 import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.declaration.CtAnnotation;
+import spoon.reflect.declaration.CtClass;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtEnum;
 import spoon.reflect.declaration.CtExecutable;
+import spoon.reflect.declaration.CtModule;
 import spoon.reflect.declaration.CtNamedElement;
 import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.declaration.CtType;
@@ -73,21 +79,20 @@ public class TreeScanner extends CtScanner {
 			lf.scan(element);
 			label = lf.label;
 		}
+		element.setPosition(MyUtils.computePrecisePosition(element));
 		pushNodeToTree(createNode(nodeTypeName, element, nodifiedLabel ? element.getRoleInParent().name() : label));
 
 		int depthBefore = nodes.size();
 		if (nodifiedLabel) {
 			LabelFinder lf = new LabelFinder();
 			lf.scan(element);
-			if (lf.label != null && lf.label.length() > 0 
-			 && !(element instanceof CtSuperAccess)
-			 && !(element instanceof CtTypeAccess)
-			 && !(element instanceof CtAbstractInvocation)
-			 && !(element instanceof CtAnnotation)
-			 && !(element instanceof CtVariableAccess)
+			if (lf.label != null && lf.label.length() > 0 && !(element instanceof CtSuperAccess)
+					&& !(element instanceof CtTypeAccess) && !(element instanceof CtAbstractInvocation)
+					&& !(element instanceof CtAnnotation) && !(element instanceof CtVariableAccess)
 					&& (element instanceof CtNamedElement || element instanceof CtExpression
 							|| (element instanceof CtReference && !(element instanceof CtWildcardReference)))) {
-				this.addSiblingNode(lf.labEle==null?createNode("LABEL", lf.label):createNode("LABEL", lf.labEle, lf.label));
+				this.addSiblingNode(
+						lf.labEle == null ? createNode("LABEL", lf.label) : createNode("LABEL", lf.labEle, lf.label));
 			}
 		}
 		new NodeCreator(this).scan(element);
@@ -106,7 +111,8 @@ public class TreeScanner extends CtScanner {
 	 */
 	private boolean isToIgnore(CtElement element) {
 		if (element instanceof CtStatementList && !(element instanceof CtCase)) {
-			if (element.getRoleInParent() == CtRole.ELSE || element.getRoleInParent() == CtRole.THEN || element.getRoleInParent() == CtRole.STATEMENT) {
+			if (element.getRoleInParent() == CtRole.ELSE || element.getRoleInParent() == CtRole.THEN
+					|| element.getRoleInParent() == CtRole.STATEMENT) {
 				return false;
 			}
 			return true;
@@ -114,19 +120,51 @@ public class TreeScanner extends CtScanner {
 		return isToIgnoreAux(element);
 	}
 
-	private boolean isToIgnoreAux(CtElement element) {
-		if (element.isImplicit() && !(element.getRoleInParent() == CtRole.ELSE || element.getRoleInParent() == CtRole.THEN)) {//((CtForEach)element).getVariable()
-			return true;
-		}else if (!element.isParentInitialized()) {
+	private boolean isToIgnoreAux(CtElement element) {//element.getPosition().getCompilationUnit().getImports().get(0).getReference().
+		if (element.isImplicit()
+				&& !(element.getRoleInParent() == CtRole.ELSE || element.getRoleInParent() == CtRole.THEN)) {//((CtForEach)element).getVariable()
+			if (element instanceof CtPackageReference && element.isParentInitialized()) {
+				CtElement parent = element.getParent();
+				if (!parent.isParentInitialized()) {
+					return true;
+				}
+				CtType pt = parent instanceof CtType ? (CtType) parent : parent.getParent(CtType.class);
+				String top = pt.getTopLevelType().getQualifiedName();
+				if (parent.getRoleInParent() == null) {
+					return true;
+				} else if (parent instanceof CtTypeReference) {
+					switch (parent.getRoleInParent()) {
+						case DECLARING_TYPE:
+							return true;
+						case CAST:
+						case ACCESSED_TYPE:
+						case SUPER_TYPE:
+						case TYPE:
+						default: {
+							if (((CtTypeReference) parent).getDeclaration() == null) {
+							} else {
+								String tq = ((CtTypeReference) parent).getDeclaration().getTopLevelType()
+										.getQualifiedName();
+								return tq.equals(top);
+							}
+						}
+						// return true;
+					}
+				} else {
+					return true;
+				}
+			} else {
+				return true;
+			}
+		} else if (!element.isParentInitialized()) {
 			return false;
 		}
-		if (element.getRoleInParent() != null){
-			if (element.getRoleInParent().equals(CtRole.TYPE) 
-			&& element.getParent() instanceof CtReference 
-			&& (!element.getParent().isParentInitialized()
-			|| (!(element.getParent().getParent() instanceof CtNewArray)
-			&& !(element.getParent().getParent() instanceof CtVariable)
-			&& !(element.getParent().getParent() instanceof CtConstructorCall)))) {
+		if (element.getRoleInParent() != null) {
+			if (element.getRoleInParent().equals(CtRole.TYPE) && element.getParent() instanceof CtReference
+					&& (!element.getParent().isParentInitialized()
+							|| (!(element.getParent().getParent() instanceof CtNewArray)
+									&& !(element.getParent().getParent() instanceof CtVariable)
+									&& !(element.getParent().getParent() instanceof CtConstructorCall)))) {
 				return true;
 			}
 			if (element.getRoleInParent().equals(CtRole.EXECUTABLE_REF) && element.getParent() instanceof CtType) {
@@ -135,19 +173,37 @@ public class TreeScanner extends CtScanner {
 			if (element.getRoleInParent().equals(CtRole.TYPE) && element.getParent() instanceof CtExpression) {
 				return true;
 			}
+			// if (element.getRoleInParent().equals(CtRole.TARGET) 
+			//   && element.getParent() instanceof CtThisAccess
+			//   && element.getParent().isImplicit()
+			//   && element.getParent().isParentInitialized() 
+			//   && element.getParent().getParent() instanceof CtFieldWrite) {
+			// 	return isToIgnoreAux(element.getParent().getParent());
+			// }
+			// if (element.getRoleInParent().equals(CtRole.TARGET) 
+			//   && (element.getParent() instanceof CtThisAccess || element.getParent() instanceof CtSuperAccess)
+			//   && element.getParent().isImplicit()) {
+			// 	return isToIgnoreAux(element.getParent().getParent());
+			// }
 			if (element.getRoleInParent().equals(CtRole.TARGET) && element.getParent() instanceof CtThisAccess) {
 				return true;
 			}
 			if (element.getRoleInParent().equals(CtRole.TARGET) && element.getParent() instanceof CtSuperAccess) {
 				return true;
 			}
-			if (element.getRoleInParent().equals(CtRole.DECLARING_TYPE) && element.getParent() instanceof CtExecutableReference) {
+			if (element.getRoleInParent().equals(CtRole.DECLARING_TYPE)
+					&& element.getParent() instanceof CtExecutableReference) {
 				return true;
 			}
-			if (element.getRoleInParent().equals(CtRole.DECLARING_TYPE) && element.getParent() instanceof CtVariableReference) {
+			if (element.getRoleInParent().equals(CtRole.DECLARING_TYPE)
+					&& element.getParent() instanceof CtVariableReference) {
 				return true;
 			}
 			if (element.getRoleInParent().equals(CtRole.ARGUMENT_TYPE)) {
+				return true;
+			}
+			// if (element.toString().length()==0) {
+			if (element instanceof CtReference && ((CtReference)element).getSimpleName().length()==0) {
 				return true;
 			}
 		}
@@ -182,7 +238,7 @@ public class TreeScanner extends CtScanner {
 		if (element != null) {
 			nodeTypeName = getTypeName(element.getClass().getSimpleName());
 		}
-		if (element instanceof CtInvocation && ((CtInvocation)element).getExecutable().isConstructor()) { // <init>
+		if (element instanceof CtInvocation && ((CtInvocation) element).getExecutable().isConstructor()) { // <init>
 			// if (invocation.getExecutable().isConstructor()) { // <init>
 			// It's a constructor (super or this)
 			CtType<?> parentType;
@@ -192,7 +248,7 @@ public class TreeScanner extends CtScanner {
 				parentType = null;
 			}
 			if (parentType == null || parentType.getQualifiedName() != null && parentType.getQualifiedName()
-					.equals(((CtInvocation)element).getExecutable().getDeclaringType().getQualifiedName())) {
+					.equals(((CtInvocation) element).getExecutable().getDeclaringType().getQualifiedName())) {
 				nodeTypeName = "ThisInvocation";
 			} else {
 				nodeTypeName = "SuperInvocation";

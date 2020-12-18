@@ -101,15 +101,24 @@ public class CtWrapper<L> extends CtElementImpl {
 	public CtPath getPath() {
 		return parent.getPath();
 	}
-
+	@Override
+	public <E extends CtElement> E setPosition(SourcePosition position) {
+		return super.setPosition(position);
+	}
 	@Override
 	public SourcePosition getPosition() {
+		if (super.getPosition().isValidPosition()) {
+			return super.getPosition();
+		}
 		SourcePosition pp = parent.getPosition();
-		if (!(value instanceof CtElement) && pp instanceof DeclarationSourcePosition) {
-			DeclarationSourcePosition ppp = (DeclarationSourcePosition)pp;
-			return new SourcePositionImpl(pp.getCompilationUnit(), ppp.getNameStart(), ppp.getNameEnd(), ppp.getCompilationUnit().getLineSeparatorPositions());
+		// if (!(value instanceof CtElement) && pp instanceof DeclarationSourcePosition) {
+		// 	DeclarationSourcePosition ppp = (DeclarationSourcePosition)pp;
+		// 	return new SourcePositionImpl(pp.getCompilationUnit(), ppp.getNameStart(), ppp.getNameEnd(), ppp.getCompilationUnit().getLineSeparatorPositions());
+		// } else 
+		if (value instanceof CtElement && ((CtElement)value).getPosition().isValidPosition()) {
+			return ((CtElement)value).getPosition();
 		} else {
-			Logger.getLogger("CtWrapper").warning("Should handle specifically "+ parent.getClass());
+			Logger.getLogger("CtWrapper").warning("Should handle position specifically ; value: "+ value.getClass() + "`\tposition: " + pp.getClass() + "\tparent: "+ parent.getClass());
 			return pp;
 		}
 	}
