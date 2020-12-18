@@ -41,7 +41,7 @@ public class ActionApplier {
 	static spoon.reflect.visitor.PrettyPrinter pp = new spoon.reflect.visitor.DefaultJavaPrettyPrinter(env);
 
 	public static void applyMyInsert(Factory factory, TreeContext ctx, MyInsert action)
-			throws WrongAstContextException {
+			throws WrongAstContextException, MissingParentException {
 		ITree source = action.getSource();
 		factory.createLocalVariableReference().getDeclaration();
 		AbstractVersionedTree target = action.getTarget();
@@ -1526,11 +1526,11 @@ public class ActionApplier {
 		return r;
 	}
 
-	private static <T extends CtElement> T getSpoonEleStrict(ITree tree) {
+	private static <T extends CtElement> T getSpoonEleStrict(ITree tree) throws MissingParentException {
 		T r;
 		r = (T) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 		if (r == null) {
-			throw new RuntimeException("following ITree should contain a spoon object: " + tree.toShortString());
+			throw new MissingParentException("following ITree should contain a spoon object: " + tree.toShortString());
 		}
 		return r;
 	}
@@ -1748,7 +1748,7 @@ public class ActionApplier {
 		}
 	}
 
-	public static void applyMyUpdate(Factory factory, TreeContext ctx, MyUpdate action) {
+	public static void applyMyUpdate(Factory factory, TreeContext ctx, MyUpdate action) throws MissingParentException {
 		AbstractVersionedTree target = action.getTarget();
 		AbstractVersionedTree parentTarget = target.getParent();
 		String targetType = (String) target.getMetadata("type");

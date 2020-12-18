@@ -18,6 +18,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.github.gumtreediff.actions.MyAction;
@@ -560,7 +561,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                                 auxApply(scanner, this.factory, action2, wantedAA, inverted2);
                                 waitingToBeApplied.remove(node);
                                 waitingHasbeApplied = true;
-                            } catch (gumtree.spoon.apply.WrongAstContextException e) {
+                            } catch (WrongAstContextException|MissingParentException e) {
                             }
                         }
                     } while (waitingHasbeApplied);
@@ -582,13 +583,16 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                     //             action2 = inverted2 ? getAAction(node, !waitingToBeApplied.get(node)) : action2;
                     //             auxApply(scanner, this.factory, action2, inverted2);
                     //             waitingToBeApplied.remove(node);
-                    //         } catch (gumtree.spoon.apply.WrongAstContextException e) {
+                    //         } catch (WrongAstContextException e) {
                     //         }
                     //     }
                     // }
                     if (b)
                         evoState.triggerCallback();
-                } catch (gumtree.spoon.apply.WrongAstContextException e) {
+                } catch (WrongAstContextException e) {
+                    waitingToBeApplied.put(n, change.way);
+                } catch (MissingParentException e) {
+                    logger.log(Level.WARNING,"problem while applying atomic evolution", e);
                     waitingToBeApplied.put(n, change.way);
                 }
             }
@@ -635,7 +639,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
 
     public boolean auxApply(final SpoonGumTreeBuilder scanner, Factory facto,
             AtomicAction<AbstractVersionedTree> action, Set<AtomicAction<AbstractVersionedTree>> otherWantedAA,
-            boolean inverted) throws WrongAstContextException {
+            boolean inverted) throws WrongAstContextException, MissingParentException {
         MyAction<AbstractVersionedTree> invertableAction = inverted ? invertAction(action) : action;
         if (invertableAction instanceof Insert) {
             ActionApplier.applyMyInsert(facto, scanner.getTreeContext(), (MyInsert) invertableAction);
