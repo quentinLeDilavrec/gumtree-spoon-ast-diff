@@ -336,7 +336,7 @@ public class ActionApplier {
 			case "Method": {
 				CtMethod<Object> created = factory.createMethod();
 				CtElement sp = getSpoonEle(source);
-				CtType<?> parent = (CtType<?>) parentTarget.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+				CtType<?> parent = getSpoonEleStrict(parentTarget);
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setDefaultMethod(((CtMethod) sp).isDefaultMethod());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
