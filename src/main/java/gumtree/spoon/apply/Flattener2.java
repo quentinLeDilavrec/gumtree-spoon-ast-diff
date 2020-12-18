@@ -179,6 +179,7 @@ public class Flattener2 {
         }
         return r;
     }
+
     // x must not be null
     private boolean isInLineage(AbstractVersionedTree x, AbstractVersionedTree n, Set<AbstractVersionedTree> cache) {
         if (n == null || cache.contains(n)) {
@@ -231,17 +232,19 @@ public class Flattener2 {
             mergeCandidates.addAll(tmp);
         }
         Cluster2 composed;
-        if (mergeCandidates.size() > 1 && !mergeCandidates.stream().anyMatch(x-> x.nodes.containsAll(targets))) {
+        if (mergeCandidates.size() > 1 && !mergeCandidates.stream().anyMatch(x -> x.nodes.containsAll(targets))) {
             if (mergeCandidates.size() == 2) {
                 Iterator<Cluster2> it = mergeCandidates.iterator();
                 composed = compose(it.next(), it.next());
             } else {
                 composed = compose(mergeCandidates);
             }
-            this.clusters.add(composed);
-            this.composedClusters.put(composed, mergeCandidates);
-            for (AbstractVersionedTree n : composed.nodes) {
-                this.maybePresentNodes.get(n).add(composed);
+            if (composed != null) {
+                this.clusters.add(composed);
+                this.composedClusters.put(composed, mergeCandidates);
+                for (AbstractVersionedTree n : composed.nodes) {
+                    this.maybePresentNodes.get(n).add(composed);
+                }
             }
         }
         return aas;
