@@ -1320,6 +1320,8 @@ public class ActionApplier {
 					((CtTypeReference) parent).addActualTypeArgument(created);
 				} else if (target.getLabel().equals(CtRole.TYPE.name())) {
 					((CtTypedElement) parent).setType(created);
+				} else if (target.getLabel().equals(CtRole.THROWN.name())) {
+					((CtExecutable) parent).addThrownType(created);
 				} else {
 					throw new UnsupportedOperationException(
 							parent.getClass().toString() + " as a parent is no handled for role " + target.getLabel());
