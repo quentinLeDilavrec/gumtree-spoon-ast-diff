@@ -71,6 +71,12 @@ public class ApplierHelper<T> implements AutoCloseable {
         this.evoState = evoStateMaintainer;
     }
 
+    public ApplierHelper(SpoonGumTreeBuilder scanner, MultiDiffImpl mdiff, Diff diff,
+            EvoStateMaintainer<T> evoStateMaintainer) {
+        this(scanner, mdiff.getMiddle(), diff, evoStateMaintainer);
+        this.mdiff = mdiff;
+    }
+
     public void setLeafsActionsLimit(int limit) {
         this.leafsActionsLimit = limit;
     }
@@ -194,7 +200,7 @@ public class ApplierHelper<T> implements AutoCloseable {
         ComposingClusterizer flat = Combination.flatten(evoState.globalClusterizer, wantedActions);
         for (MyAction<?> ca : wantedActions) {
             if (ca instanceof ComposedAction) {
-                flat.clusterize((ComposedAction<AbstractVersionedTree>)ca);
+                flat.clusterize((ComposedAction<AbstractVersionedTree>) ca);
             }
         }
         Set<Cluster> toBreak = new HashSet<>();
@@ -212,8 +218,8 @@ public class ApplierHelper<T> implements AutoCloseable {
                 tryToBreak.addAll(flat.getCluster((ComposedAction<AbstractVersionedTree>) a));
             }
         }
-        tryToBreak.removeIf(x->x.getNodes().size()<=1);
-        tryToBreak.sort((a,b)->b.getNodes().size()-a.getNodes().size());
+        tryToBreak.removeIf(x -> x.getNodes().size() <= 1);
+        tryToBreak.sort((a, b) -> b.getNodes().size() - a.getNodes().size());
         while (j < 10) {
             Set<Cluster> tmp = new HashSet<>();
             tmp.addAll(toBreak);
@@ -232,21 +238,22 @@ public class ApplierHelper<T> implements AutoCloseable {
                 toBreak = tmp;
                 constrainedTree = tmp2;
                 tryToBreak.clear();
-                for (ImmutablePair<Integer,Cluster> pair : tmp2) {
+                for (ImmutablePair<Integer, Cluster> pair : tmp2) {
                     tryToBreak.add(pair.right);
                 }
-                tryToBreak.removeIf(x->x.getNodes().size()<=1);
-                tryToBreak.sort((a,b)->b.getNodes().size()-a.getNodes().size());
+                tryToBreak.removeIf(x -> x.getNodes().size() <= 1);
+                tryToBreak.sort((a, b) -> b.getNodes().size() - a.getNodes().size());
             }
             j++;
         }
         Combination.CombinationHelper<Cluster> combs = Combination.build(flat, constrainedTree);
-        logger.info("On track for at least 2^"+combs.minExposant()+" cases");
+        logger.info("On track for at least 2^" + combs.minExposant() + " cases");
         Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new HashMap<>();
         do {
             Combination.CHANGE<Cluster> change = combs.next();
             boolean b = false;
-            boolean clustDefPres = flat.getActions().contains(change.content.getRoot().getMetadata(MyScriptGenerator.DELETE_ACTION));
+            boolean clustDefPres = flat.getActions()
+                    .contains(change.content.getRoot().getMetadata(MyScriptGenerator.DELETE_ACTION));
             for (AbstractVersionedTree n : change.content.getNodes()) {
                 boolean nDefPres = flat.getActions().contains(n.getMetadata(MyScriptGenerator.DELETE_ACTION));
                 boolean way = clustDefPres == nDefPres ? change.way : !change.way;
@@ -268,7 +275,7 @@ public class ApplierHelper<T> implements AutoCloseable {
                                 auxApply(scanner, this.factory, action2, wantedAA, inverted2);
                                 waitingToBeApplied.remove(node);
                                 waitingHasbeApplied = true;
-                            } catch (WrongAstContextException|MissingParentException e) {
+                            } catch (WrongAstContextException | MissingParentException e) {
                             }
                         }
                     } while (waitingHasbeApplied);
@@ -277,7 +284,7 @@ public class ApplierHelper<T> implements AutoCloseable {
                 } catch (WrongAstContextException e) {
                     waitingToBeApplied.put(n, change.way);
                 } catch (MissingParentException e) {
-                    logger.log(Level.WARNING,"problem while applying atomic evolution", e);
+                    logger.log(Level.WARNING, "problem while applying atomic evolution", e);
                     waitingToBeApplied.put(n, change.way);
                 }
             }
@@ -484,7 +491,7 @@ public class ApplierHelper<T> implements AutoCloseable {
         }
         return false;
     }
-    
+
     // TODO is it better than isInTest/isInApp ?
     private Set<Section> sectionSpanning(MyAction<?> a) {
         if (a instanceof AtomicAction) {
