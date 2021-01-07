@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import gumtree.spoon.apply.Combination;
 import gumtree.spoon.apply.MyUtils;
 import gumtree.spoon.apply.Combination.CombinationHelper;
 import gumtree.spoon.apply.Combination.ReflectedConstrainedHelper;
+import gumtree.spoon.apply.Flattener.Clusterizer.Cluster;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
@@ -85,28 +87,30 @@ public class GrayCodeReflectedTest {
 
         // TODO add actions
 
-        Flattener2 flat = Combination.flatten(myactions);
-        Set<Cluster2> toBreak = new HashSet<>();
-        LinkedList<Cluster2> tryToBreak = new LinkedList<>();
-        List<ImmutablePair<Integer, Cluster2>> constrainedTree = flat.getConstrainedTree(toBreak);
+        Flattener.ComposingClusterizer flat = Combination.flatten(new Flattener.Clusterizer(new LinkedHashSet<>(diff.getAtomic())), myactions);
+        Set<Cluster> toBreak = new HashSet<>();
+        LinkedList<Cluster> tryToBreak = new LinkedList<>();
+        flat.setInibiteds(toBreak);
+        List<ImmutablePair<Integer, Cluster>> constrainedTree = flat.getConstrainedTree();
         int j = 0;
         int prevSize = 0;
         for (int x : Combination.detectLeafs(constrainedTree)) {
             prevSize += x == 0 ? 0 : 1;
         }
-        for (MyAction<?> a : myactions) {
+        for (MyAction<?> a : diff.getComposed()) {
             if (a instanceof ComposedAction) {
                 tryToBreak.addAll(flat.getCluster((ComposedAction<AbstractVersionedTree>) a));
             }
         }
         while (j < 10) {
-            Set<Cluster2> tmp = new HashSet<>();
+            Set<Cluster> tmp = new HashSet<>();
             tmp.addAll(toBreak);
             if (tryToBreak.isEmpty()) {
                 break;
             }
             tmp.add(tryToBreak.poll());
-            List<ImmutablePair<Integer, Cluster2>> tmp2 = flat.getConstrainedTree(tmp);
+            flat.setInibiteds(tmp);
+            List<ImmutablePair<Integer, Cluster>> tmp2 = flat.getConstrainedTree();
             int c = 0;
             for (int x : Combination.detectLeafs(constrainedTree)) {
                 c += x == 0 ? 0 : 1;
@@ -118,7 +122,7 @@ public class GrayCodeReflectedTest {
             }
             j++;
         }
-        ReflectedConstrainedHelper<Cluster2> combs = Combination.build(flat,constrainedTree);
+        ReflectedConstrainedHelper<Cluster> combs = Combination.build(flat,constrainedTree);
         Combination.CHANGE<Integer> next;
         int[] curr = Arrays.copyOf(combs.originalInit, combs.originalInit.length);
         for (int i = 0; i < curr.length; i++) {

@@ -27,11 +27,14 @@ import com.github.gumtreediff.actions.MyAction.ComposedAction;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.TreeUtils;
+import com.github.gumtreediff.tree.Version;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 
 import gumtree.spoon.apply.Combination.SIDE;
+import gumtree.spoon.apply.Flattener.Clusterizer.Cluster;
+import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.operations.Operation;
 
@@ -536,14 +539,35 @@ public class Combination {
         }
     }
 
-    public static Flattener2 flatten(Collection<? extends MyAction<?>> wanted) {
+    public static boolean isPresentAtVersion(AbstractVersionedTree node, Version version) {
+        Version insertVersion = node.getInsertVersion();
+        Version removeVersion = node.getRemoveVersion();
+        if (insertVersion == null && removeVersion == null) {
+            return true;
+        } else if (insertVersion.partiallyCompareTo(version) == Version.COMP_RES.INFERIOR && removeVersion == null) {
+            return true;
+        } else if (insertVersion.partiallyCompareTo(version) == Version.COMP_RES.INFERIOR
+                && removeVersion.partiallyCompareTo(version) == Version.COMP_RES.SUPERIOR) {
+            return true;
+        }
+        return false;
+    }
+
+    public static Flattener.ComposingClusterizer flatten2(EvoStateMaintainer<?> stateMaintainer, Collection<? extends MyAction<?>> wanted) {
+        // TODO initial state of combinatory computation should constructed from the initial state mentioned by evoStateMaintainer
+        // as a root cluster in the contrained tree (i.e -1)
+
+        Flattener.Clusterizer c = stateMaintainer.globalClusterizer;
+        throw null;
+    }
+
+    public static Flattener.ComposingClusterizer flatten(Flattener.Clusterizer original, Collection<? extends MyAction<?>> wanted) {
         Set<AtomicAction<AbstractVersionedTree>> wanted2 = new HashSet<>();
         Map<AtomicAction<AbstractVersionedTree>, Set<ComposedAction<AbstractVersionedTree>>> composed = new HashMap<>();
         for (MyAction<?> a : wanted) {
             atomize(a, wanted2, composed);
         }
-        Flattener2 flat = new Flattener2(wanted2);
-        flat.compute();
+        Flattener.ComposingClusterizer flat = new Flattener.ComposingClusterizer(original,wanted2);
         Set<ComposedAction<AbstractVersionedTree>> composed2 = new HashSet<>();
         for (Set<ComposedAction<AbstractVersionedTree>> ca : composed.values()) {
             composed2.addAll(ca);
@@ -556,10 +580,11 @@ public class Combination {
         return flat;
     }
 
-    public static ReflectedConstrainedHelper<Cluster2> build(Flattener2 flat, List<ImmutablePair<Integer, Cluster2>> l) {
-        int[] init = l.stream().map(x->flat.isInitiallyPresent(x.right.root)?1:0).mapToInt(Integer::intValue).toArray();//Combination.initialState(l);
+    public static ReflectedConstrainedHelper<Cluster> build(Flattener.Clusterizer flat, List<ImmutablePair<Integer, Cluster>> l) {
+        int[] init = l.stream().map(x -> flat.getActions().contains(x.right.getRoot().getMetadata(MyScriptGenerator.DELETE_ACTION)) ? 1 : 0).mapToInt(Integer::intValue)
+                .toArray();//Combination.initialState(l);
         int[] leafs = Combination.detectLeafs(l);
-        Cluster2[] nodes = l.stream().map(ImmutablePair::getRight).toArray(Cluster2[]::new);
+        Cluster[] nodes = l.stream().map(ImmutablePair::getRight).toArray(Cluster[]::new);
         int[] deps = l.stream().map(ImmutablePair::getLeft).mapToInt(Integer::intValue).toArray();
         StringBuilder log = new StringBuilder();
         log.append("Build constrained tree with:");
@@ -571,7 +596,7 @@ public class Combination {
         log.append(Arrays.toString(deps));
         logger.info(log.toString());
         assert init.length > 0 && init.length == leafs.length && init.length == deps.length : init;
-        return new ReflectedConstrainedHelper<Cluster2>(init, leafs, deps, nodes);
+        return new ReflectedConstrainedHelper<Cluster>(init, leafs, deps, nodes);
     }
 
     // TODO expose non composed top level by "composing" them

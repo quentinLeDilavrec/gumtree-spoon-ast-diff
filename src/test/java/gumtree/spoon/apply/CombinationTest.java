@@ -46,6 +46,7 @@ import org.junit.runner.notification.Failure;
 
 import gumtree.spoon.apply.ActionApplier;
 import gumtree.spoon.apply.MyUtils;
+import gumtree.spoon.apply.Flattener.Clusterizer.Cluster;
 import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.DiffImpl;
@@ -241,8 +242,7 @@ public class CombinationTest {
         //     }
         // }
         // wanted.addAll(topAto);
-        Flattener2 flat = new Flattener2(wanted2);
-        flat.compute();
+        Flattener.ComposingClusterizer flat = new Flattener.ComposingClusterizer(new Flattener.Clusterizer(wanted2) ,wanted2);
         Set<ComposedAction<AbstractVersionedTree>> composed2 = new HashSet<>();
         for (Set<ComposedAction<AbstractVersionedTree>> ca : composed.values()) {
             composed2.addAll(ca);
@@ -253,15 +253,15 @@ public class CombinationTest {
         // for (ImmutablePair<Integer, AbstractVersionedTree> a : flat.getConstrainedTree()) {
         //     System.out.println(a.right);
         // }
-        Set<Cluster2> projectWide2 = new HashSet<>();
+        Set<Cluster> projectWide2 = new HashSet<>();
         projectWide.stream().forEach(x->projectWide2.addAll(flat.getCluster(x)));
-        List<ImmutablePair<Integer, Cluster2>> l = flat.getConstrainedTree(
-            projectWide2);
-        int[] init = l.stream().map(x->flat.isInitiallyPresent(x.right.root)?1:0).mapToInt(Integer::intValue).toArray();//Combination.initialState(l);
+        flat.setInibiteds(projectWide2);
+        List<ImmutablePair<Integer, Cluster>> l = flat.getConstrainedTree();
+        int[] init = l.stream().map(x->flat.getActions().contains(x.right.getRoot().getMetadata(MyScriptGenerator.DELETE_ACTION))?1:0).mapToInt(Integer::intValue).toArray();//Combination.initialState(l);
         int[] leafs = Combination.detectLeafs(l);
-        Cluster2[] nodes = l.stream().map(ImmutablePair::getRight).toArray(Cluster2[]::new);
+        Cluster[] nodes = l.stream().map(ImmutablePair::getRight).toArray(Cluster[]::new);
         int[] deps = l.stream().map(ImmutablePair::getLeft).mapToInt(Integer::intValue).toArray();
-        for (ImmutablePair<Integer, Cluster2> a : l) {
+        for (ImmutablePair<Integer, Cluster> a : l) {
             System.out.println(a.right);
         }
 

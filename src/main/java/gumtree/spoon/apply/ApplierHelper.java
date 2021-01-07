@@ -1,8 +1,5 @@
 package gumtree.spoon.apply;
 
-import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -11,13 +8,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
-import java.util.Map.Entry;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -28,312 +20,56 @@ import com.github.gumtreediff.actions.MyAction.MyDelete;
 import com.github.gumtreediff.actions.MyAction.MyInsert;
 import com.github.gumtreediff.actions.MyAction.MyMove;
 import com.github.gumtreediff.actions.MyAction.MyUpdate;
-import com.github.gumtreediff.actions.model.Action;
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
-import com.github.gumtreediff.actions.model.Move;
 import com.github.gumtreediff.actions.model.Update;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
-import com.github.gumtreediff.tree.ITree;
 import com.github.gumtreediff.tree.Version;
 import com.github.gumtreediff.tree.VersionedTree;
 
-import org.apache.commons.compress.utils.Iterators;
-import org.apache.commons.lang3.math.Fraction;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.eclipse.jetty.util.MultiMap;
 
-import gumtree.spoon.apply.ActionApplier;
-import gumtree.spoon.apply.Combination;
-import gumtree.spoon.apply.WrongAstContextException;
+import gumtree.spoon.apply.EvoStateMaintainer.Section;
+import gumtree.spoon.apply.Flattener.ComposingClusterizer;
+import gumtree.spoon.apply.Flattener.Clusterizer.Cluster;
 import gumtree.spoon.apply.operations.MyScriptGenerator;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
 import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
-import gumtree.spoon.diff.operations.Operation;
 import spoon.Launcher;
-import spoon.MavenLauncher;
-import spoon.compiler.Environment;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
-import spoon.reflect.declaration.CtModule;
-import spoon.reflect.declaration.CtPackage;
-import spoon.reflect.declaration.CtType;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtExecutableReference;
-import spoon.support.DefaultOutputDestinationHandler;
-import spoon.support.JavaOutputProcessor;
-import spoon.support.OutputDestinationHandler;
-import spoon.support.StandardEnvironment;
 
-public abstract class ApplierHelper<T> implements AutoCloseable {
+public class ApplierHelper<T> implements AutoCloseable {
     Logger logger = Logger.getLogger(ApplierHelper.class.getName());
 
     protected SpoonGumTreeBuilder scanner;
     protected AbstractVersionedTree middle;
     protected Diff diff;
     protected List<MyAction<AbstractVersionedTree>> actions;
-    public final EvoStateMaintainer evoState;
-    protected Consumer<Set<T>> validityLauncher;
+    public final EvoStateMaintainer<T> evoState;
 
-    public void setValidityLauncher(Consumer<Set<T>> validityLauncher) {
-        this.validityLauncher = validityLauncher;
-    }
-
-    protected float meanSimConst = .99f;
-    protected float minReqConst = .9f;
-    public final Map<T, Set<T>> evoToEvo;
+    // protected float meanSimConst = .99f;
+    // protected float minReqConst = .9f;
+    // public final Map<T, Set<T>> evoToEvo;
     protected Factory factory;
     protected Launcher launcher;
     protected MultiDiffImpl mdiff;
     protected int leafsActionsLimit;
 
-    private final class VirtComposedAction implements ComposedAction<AbstractVersionedTree> {
-        private final Set<T> components;
-        List<MyAction<AbstractVersionedTree>> compo;
-
-        private VirtComposedAction(Set<T> components) {
-            this.compo = new ArrayList<>(extractActions(components));
-            this.components = components;
-        }
-
-        @Override
-        public List<MyAction<AbstractVersionedTree>> composed() {
-            return compo;
-        }
-
-        @Override
-        public String getName() {
-            return null;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder r = new StringBuilder();
-            r.append("Virt composed action containing:");
-            for (MyAction<AbstractVersionedTree> component : composed()) {
-                r.append("\n\t-");
-                r.append(component.toString());
-            }
-            return r.toString();
-        }
-    }
-
-    protected class EvoStateMaintainer {
-        protected Map<T, Integer> evoState = new HashMap<>();
-        protected Map<T, Integer> evoReqSize = new HashMap<>();
-        // protected Map<T, Set<MyAction<AbstractVersionedTree>>> evoToTree = new HashMap<>();
-        protected final Map<T, Set<T>> evoToEvo = ApplierHelper.this.evoToEvo;
-        protected Map<AtomicAction<AbstractVersionedTree>, Set<T>> presentMap = new HashMap<>();
-        // protected Map<Object, Set<T>> absentMap = new HashMap<>();
-        protected Map<MyAction<AbstractVersionedTree>, Boolean> reqState = new HashMap<>(); // false by default
-        protected Set<T> validable = new HashSet<>();
-
-        protected EvoStateMaintainer() {
-            for (T e : evoToEvo.keySet()) {
-                markRequirements(new Chain<>(e));
-            }
-            for (Set<T> values : presentMap.values()) {
-                for (T evolution : values) {
-                    evoReqSize.put(evolution, evoReqSize.getOrDefault(evolution, 0) + 1);
-                }
-            }
-        }
-
-        protected boolean set(MyAction<AbstractVersionedTree> a, boolean inverted, boolean silent) {
-            Boolean prev = reqState.put(a, inverted);
-            if (prev != null && prev == inverted) {
-                // nothing to do
-                return false;
-            } else {
-                for (T e : presentMap.getOrDefault(a, Collections.emptySet())) {
-                    Integer v = evoState.getOrDefault(e, 0);
-                    evoState.put(e, inverted ? v - 1 : v + 1);
-                    if (isLaunchable(e)) {
-                        validable.add(e);
-                    } else {
-                        validable.remove(e);
-                    }
-                }
-                if (!silent) {
-                    triggerCallback();
-                }
-                return true;
-            }
-        }
-
-        protected void triggerCallback() {
-            validityLauncher.accept(Collections.unmodifiableSet(new HashSet<>(validable)));
-        }
-
-        private boolean isLaunchable(T e) {
-            return ratio(e).floatValue() > minReqConst;
-        }
-
-        public Fraction ratio(T e) {
-            return Fraction.getFraction(evoState.get(e), evoReqSize.get(e));
-        }
-
-        public Set<T> getEvolutions(Set<T> e) {
-            Set<T> r = new HashSet<>();
-            getEvolutions(e, r);
-            return r;
-        }
-
-        private void getEvolutions(Set<T> evos, Set<T> r) {
-            for (T e : evos) {
-                r.add(e);
-                if (evoToEvo.containsKey(e)) {
-                    getEvolutions(evoToEvo.get(e), r);
-                }
-            }
-        }
-
-        public Set<MyAction<AbstractVersionedTree>> getActions(Set<T> e) {
-            Set<MyAction<AbstractVersionedTree>> r = new HashSet<>();
-            for (T e1 : e) {
-                Object original = getOriginal(e1);
-                if (original instanceof Operation) {
-                    MyAction<AbstractVersionedTree> action = (MyAction<AbstractVersionedTree>) ((Operation) original)
-                            .getAction();
-                    r.add(action);
-                }
-            }
-            return r;
-        }
-
-        public boolean isCurrentlyApplied(MyAction<AbstractVersionedTree> a) {
-            // if (a instanceof Move) {
-            // Boolean s = reqState.get(a.getSource());
-            // Boolean t = reqState.get(a.getTarget());
-            // return s && t;
-            // } else {
-            // return reqState.get(a.getTarget());
-            // }
-            return reqState.get(a);
-        }
-
-        public Set<T> getComponents(T e) {
-            return Collections.unmodifiableSet(evoToEvo.get(e));
-        }
-
-        private void markRequirements(Chain<T> evos) {
-            Object original = getOriginal(evos.curr);
-            if (original instanceof AtomicAction) {
-                markRequirements((AtomicAction<AbstractVersionedTree>) original, evos);
-            }
-            Set<T> compo = evoToEvo.get(evos.curr);
-            if (compo != null) {
-                for (T e : compo) {
-                    if(!evos.contains(e)){
-                        Chain<T> newe = new Chain<>(e, evos);
-                        markRequirements(newe);
-                    }
-                }
-            }
-        }
-
-        private void coarseDecompose(Set<MyAction<?>> r, MyAction<?> a) {
-            if (a instanceof AtomicAction) {
-                r.add(a);
-            } else {
-                for (MyAction<?> ca : ((ComposedAction<AbstractVersionedTree>) a).composed()) {
-                    r.add(ca);
-                    coarseDecompose(r, ca);
-                }
-            }
-        }
-
-        private void markRequirements(AtomicAction<AbstractVersionedTree> a, Collection<T> e) {
-            presentMap.putIfAbsent(a, new HashSet<>());
-            for (T ee : e) {
-                Object original = getOriginal(ee);
-                if (a == original) {
-                    // needed to refere to atomic action in the db
-                    presentMap.get(a).add(ee);
-                } else if (original instanceof AtomicAction) {
-                    // here we do nothing, to keep AtomicActions precise
-                } else if (original instanceof ComposedAction) {
-                    // here we only point from atomic actions exactly part of the composed one
-                    Set<MyAction<?>> decomposed = new HashSet<>();
-                    coarseDecompose(decomposed, (ComposedAction<AbstractVersionedTree>)original);
-                    if (decomposed.contains(a)) {
-                        presentMap.get(a).add(ee);
-                    }
-                } else {
-                    // other source of evolutions
-                    presentMap.get(a).add(ee);
-                }
-            }
-            // if (a instanceof Delete) {
-            // // markDeleteRequirements(a, e);
-            // // } else if (a instanceof Move) {
-            // // markSourceRequirements(a, e);
-            // // markInsertRequirements(a, e);
-            // } else {
-            // markInsertRequirements(a, e);
-            // // markContextRequirements(a, e);
-            // }
-        }
-
-        private void markInsertRequirements(MyAction<AbstractVersionedTree> a, Collection<T> e) {
-            // AbstractVersionedTree t = a.getTarget();
-            // assert (t != null);
-            // // AbstractVersionedTree p = t.getParent();
-            // presentMap.putIfAbsent(t, new HashSet<>());
-            // presentMap.get(t).addAll(e);
-        }
-
-        private void markDeleteRequirements(MyAction<AbstractVersionedTree> a, Collection<T> e) {
-            // AbstractVersionedTree t = a.getTarget();
-            // assert (t != null);
-            // absentMap.putIfAbsent(t, new HashSet<>());
-            // absentMap.get(t).addAll(e);
-            // for (AbstractVersionedTree c : t.getAllChildren()) {
-            // absentMap.putIfAbsent(c, new HashSet<>());
-            // absentMap.get(c).addAll(e);
-            // }
-        }
-
-        // /**
-        // * For a move, the insertion must be done before the deletion.
-        // * Thus the inserted node must be populated before the removed node is
-        // unpopulated.
-        // * @param a
-        // * @param e
-        // */
-        // private void markSourceRequirements(MyMove a, Collection<T> e)
-        // {
-        // AbstractVersionedTree s = (AbstractVersionedTree)a.getSource();
-        // AbstractVersionedTree t = a.getTarget();
-        // assert (t != null);
-        // assert (s != null);
-        // presentMap.putIfAbsent(s, new HashSet<>());
-        // presentMap.get(s).addAll(e);
-        // }
-
-        // private void markContextRequirements(MyAction<AbstractVersionedTree><?> a, Collection<T> e) {
-        // // TODO
-        // }
-    }
-
     protected ApplierHelper(SpoonGumTreeBuilder scanner, AbstractVersionedTree middle, Diff diff,
-            Map<T, Set<T>> atomizedRefactorings) {
+            EvoStateMaintainer<T> evoStateMaintainer) {
         this.scanner = scanner;
         this.middle = middle;
         this.factory = (Factory) middle.getMetadata("Factory");
         this.launcher = (Launcher) middle.getMetadata("Launcher");
         this.diff = diff;
         this.actions = (List) ((DiffImpl) diff).getAtomic();
-        this.evoToEvo = atomizedRefactorings;
-        this.evoState = new EvoStateMaintainer();
+        this.evoState = evoStateMaintainer;
     }
-
-    // public ApplierHelper(EvolutionsAtProj eap, Map<T, Set<T>> atomizedRefactorings) {
-    //     this(eap.getScanner(), eap.getMdiff().getMiddle(), eap.getDiff(), atomizedRefactorings);
-    //     this.mdiff = eap.getMdiff();
-    // }
 
     public void setLeafsActionsLimit(int limit) {
         this.leafsActionsLimit = limit;
@@ -342,17 +78,17 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
     public Launcher applyEvolutions(Set<T> wantedEvos) {
         Set<MyAction<?>> actions = new HashSet<>();
         for (T evo : wantedEvos) {
-            Object ori = getOriginal(evo);
+            Object ori = evoState.getOriginal(evo);
             if (ori instanceof MyAction) {
-                actions.add((MyAction)ori);
+                actions.add((MyAction) ori);
             } else {
                 Set<T> components = new HashSet<>();
-                Set<T> tmp = evoToEvo.get(evo);
+                Set<T> tmp = evoState.evoToEvo.get(evo);
                 if (tmp != null) {
                     components.addAll(tmp);
                 }
                 ComposedAction<AbstractVersionedTree> composed = new VirtComposedAction(components);
-                if (composed.composed().size()>0) {
+                if (composed.composed().size() > 0) {
                     actions.add(composed);
                 }
             }
@@ -364,7 +100,6 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         }
 
         actions.add(new ComposedAction<AbstractVersionedTree>() {
-
             private ArrayList<MyAction<?>> components = new ArrayList<>(testSet);
 
             @Override
@@ -390,15 +125,14 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
             public List<? extends MyAction<?>> composed() {
                 return Collections.unmodifiableList(components);
             }
-
         });
         return applyCombActions(actions);
     }
 
     private void popTopGroups(Collection<MyAction<?>> testSet, Collection<MyAction<?>> appSet, MyAction<?> a) {
-        if (internalIsInTest(a)) {
+        if (isInTest(a)) {
             testSet.add(a);
-        } else if (internalIsInApp(a)) {
+        } else if (isInApp(a)) {
             appSet.add(a);
         }
         if (a instanceof ComposedAction) {
@@ -417,25 +151,19 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
 
     private void extractActions(Set<T> wantedEvos, Chain<T> path, Set<MyAction<AbstractVersionedTree>> acts) {
         for (T evolution : wantedEvos) {
-            Object original = getOriginal(evolution);
+            Object original = evoState.getOriginal(evolution);
             if (original instanceof MyAction) {
                 acts.add((MyAction<AbstractVersionedTree>) /* ((Operation) */ original/* ).getAction() */);
             }
             Set<T> others = evoState.evoToEvo.get(evolution);
-            if (others != null && (path==null||!path.contains(evolution))) {
-                extractActions(others, path==null ? new Chain<>(evolution) : new Chain<>(evolution, path) , acts);
+            if (others != null && (path == null || !path.contains(evolution))) {
+                extractActions(others, path == null ? new Chain<>(evolution) : new Chain<>(evolution, path), acts);
             }
         }
     }
 
-    protected abstract Object getOriginal(T evolution);
-
     public Launcher applyAllActions() {
         return applyCombActions(actions);
-    }
-
-    private ComposedAction<AbstractVersionedTree> getCAction(AbstractVersionedTree tree, boolean way) {
-        return (ComposedAction<AbstractVersionedTree>) tree.getMetadata("VirtuallyComposed");
     }
 
     private AtomicAction<AbstractVersionedTree> getAAction(AbstractVersionedTree tree, boolean way) {
@@ -462,16 +190,17 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
 
     private Launcher applyCombActions(Collection<? extends MyAction<?>> wantedActions) {
         Set<AtomicAction<AbstractVersionedTree>> wantedAA = new HashSet<>();
-        Flattener2 flat = Combination.flatten(wantedActions);
-        flat.compute();
+
+        ComposingClusterizer flat = Combination.flatten(evoState.globalClusterizer, wantedActions);
         for (MyAction<?> ca : wantedActions) {
             if (ca instanceof ComposedAction) {
                 flat.clusterize((ComposedAction<AbstractVersionedTree>)ca);
             }
         }
-        Set<Cluster2> toBreak = new HashSet<>();
-        LinkedList<Cluster2> tryToBreak = new LinkedList<>();
-        List<ImmutablePair<Integer, Cluster2>> constrainedTree = flat.getConstrainedTree(toBreak);
+        Set<Cluster> toBreak = new HashSet<>();
+        LinkedList<Cluster> tryToBreak = new LinkedList<>();
+        flat.setInibiteds(toBreak);
+        List<ImmutablePair<Integer, Cluster>> constrainedTree = flat.getConstrainedTree();
         int j = 0;
         int prevSize = 0;
         for (int x : Combination.detectLeafs(constrainedTree)) {
@@ -483,16 +212,17 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                 tryToBreak.addAll(flat.getCluster((ComposedAction<AbstractVersionedTree>) a));
             }
         }
-        tryToBreak.removeIf(x->x.nodes.size()<=1);
-        tryToBreak.sort((a,b)->b.nodes.size()-a.nodes.size());
+        tryToBreak.removeIf(x->x.getNodes().size()<=1);
+        tryToBreak.sort((a,b)->b.getNodes().size()-a.getNodes().size());
         while (j < 10) {
-            Set<Cluster2> tmp = new HashSet<>();
+            Set<Cluster> tmp = new HashSet<>();
             tmp.addAll(toBreak);
             if (tryToBreak.isEmpty()) {
                 break;
             }
             tmp.add(tryToBreak.poll());
-            List<ImmutablePair<Integer, Cluster2>> tmp2 = flat.getConstrainedTree(tmp);
+            flat.setInibiteds(tmp);
+            List<ImmutablePair<Integer, Cluster>> tmp2 = flat.getConstrainedTree();
             int c = 0;
             for (int x : Combination.detectLeafs(constrainedTree)) {
                 c += x == 0 ? 0 : 1;
@@ -502,46 +232,23 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                 toBreak = tmp;
                 constrainedTree = tmp2;
                 tryToBreak.clear();
-                for (ImmutablePair<Integer,Cluster2> pair : tmp2) {
+                for (ImmutablePair<Integer,Cluster> pair : tmp2) {
                     tryToBreak.add(pair.right);
                 }
-                tryToBreak.removeIf(x->x.nodes.size()<=1);
-                tryToBreak.sort((a,b)->b.nodes.size()-a.nodes.size());
+                tryToBreak.removeIf(x->x.getNodes().size()<=1);
+                tryToBreak.sort((a,b)->b.getNodes().size()-a.getNodes().size());
             }
             j++;
         }
-        Combination.CombinationHelper<Cluster2> combs = Combination.build(flat, constrainedTree);
+        Combination.CombinationHelper<Cluster> combs = Combination.build(flat, constrainedTree);
         logger.info("On track for at least 2^"+combs.minExposant()+" cases");
-        // int exp = combs.minExposant();
-        // if (exp > leafsActionsLimit) {
-        //     logger.warning(exp + " leafs would make too much combinations");
-        //     StringBuilder infoBuilder = new StringBuilder();
-        //     for (AbstractVersionedTree t : combs.getLeafList()) {
-        //         infoBuilder.append("\n -");
-        //         Object a = t.getMetadata("VirtuallyComposed");
-        //         if (a != null) {
-        //             infoBuilder.append(a.toString());
-        //         } else {
-        //             a = t.getMetadata(MyScriptGenerator.INSERT_ACTION);
-        //             if (a != null) {
-        //                 infoBuilder.append(a.toString());
-        //             } else {
-        //                 a = t.getMetadata(MyScriptGenerator.DELETE_ACTION);
-        //                 infoBuilder.append(a.toString());
-        //             }
-        //         }
-        //     }
-        //     logger.info("Following set of actions would need too much combinations" + infoBuilder);
-        //     return null;
-        // }
         Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new HashMap<>();
         do {
-            Combination.CHANGE<Cluster2> change = combs.next();
+            Combination.CHANGE<Cluster> change = combs.next();
             boolean b = false;
-            boolean clustDefPres = flat.isInitiallyPresent(change.content.root);
-            // boolean clustDefPres = change.content.initiallyPresentNodes.contains(change.content.root);
-            for (AbstractVersionedTree n : change.content.nodes) {
-                boolean nDefPres = flat.isInitiallyPresent(n);
+            boolean clustDefPres = flat.getActions().contains(change.content.getRoot().getMetadata(MyScriptGenerator.DELETE_ACTION));
+            for (AbstractVersionedTree n : change.content.getNodes()) {
+                boolean nDefPres = flat.getActions().contains(n.getMetadata(MyScriptGenerator.DELETE_ACTION));
                 boolean way = clustDefPres == nDefPres ? change.way : !change.way;
                 try {
                     AtomicAction<AbstractVersionedTree> aaction = getAAction(n, way);
@@ -565,28 +272,6 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                             }
                         }
                     } while (waitingHasbeApplied);
-                    // // ComposedAction<AbstractVersionedTree> caction = getCAction(change.content, change.way);
-                    // if (caction != null) {
-                    //     for (MyAction<?> myAction : caction.composed()) {
-                    //         b |= applyCombActionsAux(waitingToBeApplied, change.way, myAction);
-                    //     }
-                    // } else {
-                    //     AtomicAction<AbstractVersionedTree> aaction = getAAction(change.content, change.way);
-                    //     boolean inverted = aaction == null;
-                    //     aaction = inverted ? getAAction(change.content, !change.way) : aaction;
-                    //     b |= auxApply(scanner, this.factory, aaction, inverted);
-                    //     for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
-                    //         try {
-                    //             AtomicAction<AbstractVersionedTree> action2 = getAAction(node,
-                    //                     waitingToBeApplied.get(node));
-                    //             boolean inverted2 = action2 == null;
-                    //             action2 = inverted2 ? getAAction(node, !waitingToBeApplied.get(node)) : action2;
-                    //             auxApply(scanner, this.factory, action2, inverted2);
-                    //             waitingToBeApplied.remove(node);
-                    //         } catch (WrongAstContextException e) {
-                    //         }
-                    //     }
-                    // }
                     if (b)
                         evoState.triggerCallback();
                 } catch (WrongAstContextException e) {
@@ -599,33 +284,6 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         } while (!combs.isInit());
         return launcher;
     }
-
-    // private boolean applyCombActionsAux(Map<AbstractVersionedTree, Boolean> waitingToBeApplied, boolean way,
-    //         MyAction<?> myAction2) throws WrongAstContextException {
-    //     boolean b = false;
-    //     if (myAction2 instanceof ComposedAction) {
-    //         for (MyAction<?> myAction : ((ComposedAction<AbstractVersionedTree>) myAction2).composed()) {
-    //             b |= applyCombActionsAux(waitingToBeApplied, way, myAction);
-    //         }
-    //     } else if (myAction2 instanceof AtomicAction) {
-    //         AtomicAction<AbstractVersionedTree> action = (AtomicAction<AbstractVersionedTree>) myAction2;
-    //         AtomicAction<AbstractVersionedTree> aaction = getAAction(action.getTarget(), way);
-    //         boolean inverted = aaction == null;
-    //         aaction = inverted ? getAAction(action.getTarget(), !way) : aaction;
-    //         b |= auxApply(scanner, this.factory, aaction, inverted);
-    //         for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
-    //             try {
-    //                 AtomicAction<AbstractVersionedTree> action2 = getAAction(node, waitingToBeApplied.get(node));
-    //                 boolean inverted2 = action2 == null;
-    //                 action2 = inverted2 ? getAAction(node, !waitingToBeApplied.get(node)) : action2;
-    //                 auxApply(scanner, this.factory, action2, inverted2);
-    //                 waitingToBeApplied.remove(node);
-    //             } catch (gumtree.spoon.apply.WrongAstContextException e) {
-    //             }
-    //         }
-    //     }
-    //     return b;
-    // }
 
     private void decompose(Set<AtomicAction<AbstractVersionedTree>> wantedAA, MyAction<?> a) {
         if (a instanceof AtomicAction) {
@@ -773,11 +431,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         return (T) r;
     }
 
-    protected abstract Boolean isInApp(CtElement element);
-
-    protected abstract Boolean isInTest(CtElement element);
-
-    private boolean internalIsInApp(MyAction<?> a) {
+    private boolean isInApp(MyAction<?> a) {
         if (a instanceof AtomicAction) {
             AbstractVersionedTree tree = ((AtomicAction<AbstractVersionedTree>) a).getTarget();
             assert tree != null;
@@ -787,36 +441,16 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                     tree = tree.getParent();
                     continue;
                 }
-                Boolean tmp = isInApp(ele);
+                Boolean tmp = evoState.isInApp(ele);
                 if (tmp == null) {
                     tree = tree.getParent();
                     continue;
                 }
                 return tmp;
-                // if (ele instanceof CtReference) {
-                //     tree = tree.getParent();
-                //     continue;
-                // }
-                // SourcePosition pos = ele.getPosition();
-                // if (pos == null) {
-                //     tree = tree.getParent();
-                //     continue;
-                // }
-                // CompilationUnit cu = pos.getCompilationUnit();
-                // if (cu == null) {
-                //     tree = tree.getParent();
-                //     continue;
-                // }
-                // Boolean isTest = (Boolean) cu.getMetadata("isTest");
-                // if (isTest != null && isTest) {
-                //     return false;
-                // } else {
-                //     return true;
-                // }
             }
         } else if (a instanceof ComposedAction) {
             for (MyAction<?> aa : ((ComposedAction<AbstractVersionedTree>) a).composed()) {
-                if (!internalIsInApp(aa)) {
+                if (!isInApp(aa)) {
                     return false;
                 }
             }
@@ -824,7 +458,7 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
         return false;
     }
 
-    private boolean internalIsInTest(MyAction<?> a) {
+    private boolean isInTest(MyAction<?> a) {
         if (a instanceof AtomicAction) {
             AbstractVersionedTree tree = ((AtomicAction<AbstractVersionedTree>) a).getTarget();
             assert tree != null;
@@ -834,40 +468,79 @@ public abstract class ApplierHelper<T> implements AutoCloseable {
                     tree = tree.getParent();
                     continue;
                 }
-                Boolean tmp = isInTest(ele);
+                Boolean tmp = evoState.isInTest(ele);
                 if (tmp == null) {
                     tree = tree.getParent();
                     continue;
                 }
                 return tmp;
-                // if (ele instanceof CtReference) {
-                //     tree = tree.getParent();
-                //     continue;
-                // }
-                // SourcePosition pos = ele.getPosition();
-                // if (pos == null) {
-                //     tree = tree.getParent();
-                //     continue;
-                // }
-                // CompilationUnit cu = pos.getCompilationUnit();
-                // if (cu == null) {
-                //     tree = tree.getParent();
-                //     continue;
-                // }
-                // Boolean isTest = (Boolean) cu.getMetadata("isTest");
-                // if (isTest != null && isTest) {
-                //     return true;
-                // } else {
-                //     return false;
-                // }
             }
         } else if (a instanceof ComposedAction) {
             for (MyAction<?> aa : ((ComposedAction<AbstractVersionedTree>) a).composed()) {
-                if (!internalIsInTest(aa)) {
+                if (!isInTest(aa)) {
                     return false;
                 }
             }
         }
         return false;
+    }
+    
+    // TODO is it better than isInTest/isInApp ?
+    private Set<Section> sectionSpanning(MyAction<?> a) {
+        if (a instanceof AtomicAction) {
+            AbstractVersionedTree tree = ((AtomicAction<AbstractVersionedTree>) a).getTarget();
+            assert tree != null;
+            while (tree != null) {
+                CtElement ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+                if (ele == null) {
+                    tree = tree.getParent();
+                    continue;
+                }
+                Set<Section> tmp = evoState.sectionSpanning(ele);
+                if (tmp == null) {
+                    tree = tree.getParent();
+                    continue;
+                }
+                return tmp;
+            }
+        } else if (a instanceof ComposedAction) {
+            Set<Section> r = new HashSet<>();
+            for (MyAction<?> aa : ((ComposedAction<AbstractVersionedTree>) a).composed()) {
+                r.addAll(sectionSpanning(aa));
+            }
+            return r;
+        }
+        return Collections.EMPTY_SET;
+    }
+
+    private final class VirtComposedAction implements ComposedAction<AbstractVersionedTree> {
+        private final Set<T> components;
+        List<MyAction<AbstractVersionedTree>> compo;
+
+        private VirtComposedAction(Set<T> components) {
+            this.compo = new ArrayList<>(extractActions(components));
+            this.components = components;
+        }
+
+        @Override
+        public List<MyAction<AbstractVersionedTree>> composed() {
+            return compo;
+        }
+
+        @Override
+        public String getName() {
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder r = new StringBuilder();
+            r.append("Virt composed action containing:");
+            for (MyAction<AbstractVersionedTree> component : composed()) {
+                r.append("\n\t-");
+                r.append(component.toString());
+            }
+            return r.toString();
+        }
     }
 }
