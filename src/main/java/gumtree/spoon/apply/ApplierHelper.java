@@ -266,6 +266,7 @@ public class ApplierHelper<T> implements AutoCloseable {
                     boolean waitingHasbeApplied;
                     do {
                         waitingHasbeApplied = false;
+                        Set<AbstractVersionedTree> toRm = new HashSet<>();
                         for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
                             try {
                                 AtomicAction<AbstractVersionedTree> action2 = getAAction(node,
@@ -273,11 +274,12 @@ public class ApplierHelper<T> implements AutoCloseable {
                                 boolean inverted2 = action2 == null;
                                 action2 = inverted2 ? getAAction(node, !waitingToBeApplied.get(node)) : action2;
                                 auxApply(scanner, this.factory, action2, wantedAA, inverted2);
-                                waitingToBeApplied.remove(node);
+                                toRm.add(node);
                                 waitingHasbeApplied = true;
                             } catch (WrongAstContextException | MissingParentException e) {
                             }
                         }
+                        toRm.forEach(x -> waitingToBeApplied.remove(x));
                     } while (waitingHasbeApplied);
                     if (b)
                         evoState.triggerCallback();
