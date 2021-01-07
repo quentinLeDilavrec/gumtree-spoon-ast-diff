@@ -58,14 +58,14 @@ public interface Flattener {
                 return root;
             }
     
-            public Set<Cluster> getChildren() {
-                LinkedHashSet<Cluster> r = new LinkedHashSet<>();
-                for (AbstractVersionedTree clust : nodes) {
+            // public Set<Cluster> getChildren() {
+            //     LinkedHashSet<Cluster> r = new LinkedHashSet<>();
+            //     for (AbstractVersionedTree x : nodes) {
     
+            //     }
+            //     return r;
+            // }
                 }
-                return r;
-            }
-        }
     
         private final Cluster makeClust(AbstractVersionedTree root, AbstractVersionedTree maybePresentParent) {
             return new Cluster(root,maybePresentParent);
