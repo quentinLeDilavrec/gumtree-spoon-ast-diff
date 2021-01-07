@@ -1318,6 +1318,8 @@ public class ActionApplier {
 					((CtArrayTypeReference) parent).setComponentType(created);
 				} else if (parent instanceof CtTypeReference) {
 					((CtTypeReference) parent).addActualTypeArgument(created);
+				} else if (target.getLabel().equals(CtRole.TYPE.name())) {
+					((CtTypedElement) parent).setType(created);
 				} else {
 					throw new UnsupportedOperationException(
 							parent.getClass().toString() + " as a parent is no handled for role " + target.getLabel());
@@ -1442,8 +1444,6 @@ public class ActionApplier {
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				if (parentTarget.getMetadata("type").equals("SuperInvocation")) {
 				} else if (parentTarget.getMetadata("type").equals("ThisInvocation")) {
-				} else if (parent instanceof CtNewClass) {
-					((CtNewClass) parent).setExecutable(created);
 				} else if (parent instanceof CtAbstractInvocation) {
 					((CtAbstractInvocation) parent).setExecutable(created);
 				} else if (parent instanceof CtExecutableReferenceExpression) {
