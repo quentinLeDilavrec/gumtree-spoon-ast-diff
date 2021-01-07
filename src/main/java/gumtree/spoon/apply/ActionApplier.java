@@ -482,7 +482,8 @@ public class ActionApplier {
 				CtElement sp = getSpoonEle(source);
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
-				CtTypeReference topClassRef = factory.Type().createReference(parent.getParent(CtType.class).getTopLevelType());
+				CtTypeReference topClassRef = factory.Type()
+						.createReference(parent.getParent(CtType.class).getTopLevelType());
 				CtTypeAccess typeAcc = factory.createTypeAccess(topClassRef);
 				topClassRef.setParent(typeAcc);
 				created.setTarget(typeAcc);
@@ -635,7 +636,7 @@ public class ActionApplier {
 				// 	}
 				// }
 				// CtExecutableReference er = constructor.getReference();
-				
+
 				created.setExecutable(factory.Constructor().createReference(superclassRef));
 				if (parent instanceof CtBodyHolder) {
 					addInBody(factory, target, created, (CtBodyHolder) parent);
@@ -717,7 +718,7 @@ public class ActionApplier {
 				CtTypeReference sp = getSpoonEleStrict(source);
 				CtTypeReference created = factory.createTypeReference();
 				CtElement parent = getSpoonEleStrict(parentTarget);
-				if (sp.getDeclaringType()!=null) {
+				if (sp.getDeclaringType() != null) {
 					CtTypeReference tref = factory.Type().createReference(sp.getDeclaringType().getQualifiedName());
 					tref.setImplicit(true);
 					tref.setParent(parent);
@@ -1431,7 +1432,7 @@ public class ActionApplier {
 				} else if (parent instanceof CtExecutableReference) {
 					((CtExecutableReference) parent).isImplicit();//(created);
 				} else if (parent instanceof CtNewArray) {
- 					((CtNewArray) parent).isImplicit();//(created);
+					((CtNewArray) parent).isImplicit();//(created);
 				} else {
 					throw new RuntimeException(parent.getClass().toString());
 				}
@@ -1535,7 +1536,8 @@ public class ActionApplier {
 		r = (T) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 		if (r == null) {
 			String treeString = tree.toTreeString();
-			throw new MissingParentException("following ITree should contain a spoon object: " + treeString.substring(0, Math.min(200, treeString.length())));
+			throw new MissingParentException("following ITree should contain a spoon object: "
+					+ treeString.substring(0, Math.min(200, treeString.length())));
 		}
 		return r;
 	}
@@ -1688,11 +1690,11 @@ public class ActionApplier {
 
 	private static boolean shouldIgnore1(AbstractVersionedTree aaa) {
 		return (aaa.getMetadata("type").equals("MODIFIER")) || (aaa.getMetadata("type").equals("RETURN_TYPE"))
-				|| (aaa.getMetadata("type").equals("THROWS")) || (aaa.getMetadata("type").equals("TypeParameter"))
-				|| (aaa.getMetadata("type").equals("Catch")) || (aaa.getMetadata("type").equals("LABEL"))
-				|| (aaa.getMetadata("type").equals("Parameter")) || (aaa.getMetadata("type").equals("Annotation"))
-				|| (aaa.getLabel().equals("EXPRESSION") || (aaa.getMetadata("type").equals("TypeReference"))
-						|| (aaa.getLabel().equals("TYPE")));
+				|| (aaa.getMetadata("type").equals("THROWS")) || (aaa.getMetadata("type").equals("THROWN"))
+				|| (aaa.getMetadata("type").equals("TypeParameter")) || (aaa.getMetadata("type").equals("Catch"))
+				|| (aaa.getMetadata("type").equals("LABEL")) || (aaa.getMetadata("type").equals("Parameter"))
+				|| (aaa.getMetadata("type").equals("Annotation")) || (aaa.getLabel().equals("EXPRESSION")
+				|| (aaa.getMetadata("type").equals("TypeReference")) || (aaa.getLabel().equals("TYPE")));
 	}
 
 	private static boolean shouldIgnore2(CtBodyHolder parent, AbstractVersionedTree aaa) {
@@ -1781,7 +1783,7 @@ public class ActionApplier {
 					String newQPName = ((CtPackage) parent).getQualifiedName();
 					for (CtPackageReference p : pRefToChange) {
 						if (p.getQualifiedName().startsWith(toCompAgainst)) {
-							p.setSimpleName(newQPName+p.getSimpleName().substring(toCompAgainst.length()));
+							p.setSimpleName(newQPName + p.getSimpleName().substring(toCompAgainst.length()));
 						}
 					}
 					// TODO update all refs to old package --'
@@ -1798,7 +1800,7 @@ public class ActionApplier {
 					// } else {
 					// 	((CtTypeReference)parent).setSimpleName(target.getLabel());
 					// }
-					((CtTypeReference)parent).setSimpleName(target.getLabel());
+					((CtTypeReference) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtBinaryOperator) {
 					((CtBinaryOperator<?>) parent).setKind(BinaryOperatorKind.valueOf(target.getLabel()));
 				} else if (parent instanceof CtUnaryOperator) {
@@ -1985,11 +1987,11 @@ public class ActionApplier {
 					// 		throw null;
 					// 	}
 					// }
-					((CtPackageReference)parent).setSimpleName(target.getLabel());
+					((CtPackageReference) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtExecutableReference) {
-					((CtExecutableReference)parent).setSimpleName(target.getLabel());
+					((CtExecutableReference) parent).setSimpleName(target.getLabel());
 				} else if (parent instanceof CtVariableReference) {
-					((CtVariableReference)parent).setSimpleName(target.getLabel());
+					((CtVariableReference) parent).setSimpleName(target.getLabel());
 				} else {
 					throw new UnsupportedOperationException(parent.getClass() + " for label");
 				}
@@ -2010,7 +2012,6 @@ public class ActionApplier {
 				// CtExtendedModifier actualTmod = ((CtModifiable) getSpoonEle(target.getParent())).getExtendedModifiers().stream()
 				// 		.filter(x -> x.getKind().equals(tmodk)).findFirst().orElse(null);
 
-				
 				parent.removeModifier(smodk);
 				parent.addModifier(tmodk);
 
