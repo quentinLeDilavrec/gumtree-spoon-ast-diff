@@ -445,8 +445,14 @@ public interface Flattener {
                     remaining.add(curr);
                 }
             }
-            if (avt2Index.size() != actions.size() + 1) {
-                throw null;
+            if (avt2Index.size() != maybePresentNodes.size() + 1) {
+                System.err.println("avt2Index.size() != actions.size() + 1:");
+                for (AbstractVersionedTree x : avt2Index.keySet()) {
+                    System.err.println(x);                    
+                }
+                for (AbstractVersionedTree x : maybePresentNodes.keySet()) {
+                    System.err.println(x);
+                }
             }
             List<ImmutablePair<Integer, Cluster>> rr = r.stream()
                     .map(x -> new ImmutablePair<>(avt2Index.get(x.getMaybePresentParent()), x)).collect(Collectors.toList());
