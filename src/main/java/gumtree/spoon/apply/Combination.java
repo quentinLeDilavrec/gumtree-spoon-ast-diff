@@ -254,7 +254,7 @@ public class Combination {
         public int minExposant() {
             int r = 0;
             for (int i = 0; i < leafs.length; i++) {
-                if (leafs[1] != 0) {
+                if (leafs[i] != 0) {
                     r = r + 1;
                 }
             }
