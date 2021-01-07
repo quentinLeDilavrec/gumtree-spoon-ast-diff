@@ -1534,7 +1534,8 @@ public class ActionApplier {
 		T r;
 		r = (T) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 		if (r == null) {
-			throw new MissingParentException("following ITree should contain a spoon object: " + tree.toShortString());
+			String treeString = tree.toTreeString();
+			throw new MissingParentException("following ITree should contain a spoon object: " + treeString.substring(0, Math.min(200, treeString.length())));
 		}
 		return r;
 	}
