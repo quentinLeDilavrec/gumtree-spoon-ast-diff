@@ -65,7 +65,7 @@ public interface Flattener {
             //     }
             //     return r;
             // }
-                }
+        }
     
         private final Cluster makeClust(AbstractVersionedTree root, AbstractVersionedTree maybePresentParent) {
             return new Cluster(root,maybePresentParent);
@@ -138,9 +138,12 @@ public interface Flattener {
                 targets.add(aa.getTarget());
                 // populate parents wanted in original
                 for (ITree t : aa.getTarget().getParents()) {
-                    if (original.maybePresentNodes.containsKey(t)) {
+                    if (original.maybePresentNodes.containsKey(t) && original.actions.contains(t.getMetadata(MyScriptGenerator.INSERT_ACTION))) {
                         targets.add((AbstractVersionedTree)t);
                     }
+                }
+                if (aa instanceof MyAction.MyDelete) {
+                    aux(original, aa.getTarget(), targets);
                 }
             }
             for (Entry<AbstractVersionedTree, Set<Cluster>> entry : original.maybePresentNodes.entrySet()) {
@@ -155,6 +158,20 @@ public interface Flattener {
             }
         }
     
+        private void aux(Clusterizer original, AbstractVersionedTree target, Set<AbstractVersionedTree> targets) {
+            for (AbstractVersionedTree t : target.getAllChildren()) {
+                if(this.maybePresentNodes.containsKey(t))
+                    continue;
+                if (original.maybePresentNodes.containsKey(t)) {
+                    if (original.actions.contains(t.getMetadata(MyScriptGenerator.DELETE_ACTION))) {
+                        targets.add((AbstractVersionedTree)t);
+                    }
+                } else {
+                    aux(original, t, targets);
+                }
+            }
+        }
+
         // public boolean isWanted(MyAction action) {
         //     return this.wanted.contains(action);
         // }
