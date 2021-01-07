@@ -1446,6 +1446,8 @@ public class ActionApplier {
 					((CtNewClass) parent).setExecutable(created);
 				} else if (parent instanceof CtAbstractInvocation) {
 					((CtAbstractInvocation) parent).setExecutable(created);
+				} else if (parent instanceof CtExecutableReferenceExpression) {
+					((CtExecutableReferenceExpression) parent).setExecutable(created);
 				} else {
 					throw new RuntimeException(parent.getClass().toString());
 				}
