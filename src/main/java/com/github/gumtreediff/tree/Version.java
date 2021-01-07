@@ -39,7 +39,18 @@ public interface Version extends Comparable<Version> {
             case PARALLEL:
                 throw new RuntimeException(COMP_RES.PARALLEL.name());
             default:
-                throw new RuntimeException(COMP_RES.UNKNOWN.name());
+                switch (other.partiallyCompareTo(this)) { // to satisfy permutivity prop
+                    case INFERIOR:
+                        return 1;
+                    case EQUAL:
+                        return 0;
+                    case SUPERIOR:
+                        return -1;
+                    case PARALLEL:
+                        throw new RuntimeException(COMP_RES.PARALLEL.name());
+                    default:
+                        throw new RuntimeException(COMP_RES.UNKNOWN.name());
+                }
         }
     }
 }
