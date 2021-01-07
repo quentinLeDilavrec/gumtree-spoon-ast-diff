@@ -439,7 +439,7 @@ public interface Flattener {
                             remaining.add(c);
                         }
                     } else {
-                        System.out.println("skipped" + curr);
+                        System.out.println("skipped " + curr);
                     }
                 } else {
                     remaining.add(curr);
