@@ -60,7 +60,7 @@ public class ApplierHelper<T> implements AutoCloseable {
     protected MultiDiffImpl mdiff;
     protected int leafsActionsLimit;
 
-    protected ApplierHelper(SpoonGumTreeBuilder scanner, AbstractVersionedTree middle, Diff diff,
+    public ApplierHelper(SpoonGumTreeBuilder scanner, AbstractVersionedTree middle, Diff diff,
             EvoStateMaintainer<T> evoStateMaintainer) {
         this.scanner = scanner;
         this.middle = middle;
