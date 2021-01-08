@@ -1690,7 +1690,7 @@ public class ActionApplier {
 
 	private static boolean shouldIgnore1(AbstractVersionedTree aaa) {
 		return (aaa.getMetadata("type").equals("MODIFIER")) || (aaa.getMetadata("type").equals("RETURN_TYPE"))
-				|| (aaa.getMetadata("type").equals("THROWS")) || (aaa.getMetadata("type").equals("THROWN"))
+				|| (aaa.getMetadata("type").equals("THROWS")) || (aaa.getLabel().equals("THROWN"))
 				|| (aaa.getMetadata("type").equals("TypeParameter")) || (aaa.getMetadata("type").equals("Catch"))
 				|| (aaa.getMetadata("type").equals("LABEL")) || (aaa.getMetadata("type").equals("Parameter"))
 				|| (aaa.getMetadata("type").equals("Annotation")) || (aaa.getLabel().equals("EXPRESSION")
