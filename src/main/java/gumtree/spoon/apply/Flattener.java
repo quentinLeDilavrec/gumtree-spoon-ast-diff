@@ -322,15 +322,14 @@ public interface Flattener {
                 if (primary == null || mpp == c.getRoot()) {
                     primary = c.getRoot();
                     mpp = c.getMaybePresentParent();
+                    needed.add(mpp);
+                    nodes.add(primary);
                 }
-                needed.add(mpp);
                 nodes.addAll(c.getNodes());
             }
             needed.removeAll(nodes);
             if (needed.size() > 1) {
-                throw null;
-            } else if (needed.size() == 1 && !needed.contains(null)) {
-                throw null;
+                return null;
             }
             return makeClust(primary, mpp, nodes);
         }
