@@ -419,10 +419,14 @@ public class MyUtils {
 						CtElement old = e;
 						e = e.getParent().getParent();
 						position = e.getPosition();
-						ss += ((DeclarationSourcePosition) position).getModifierSourceEnd()
-								- ((DeclarationSourcePosition) position).getSourceStart();
-						es -= ((DeclarationSourcePosition) position).getSourceEnd()
-								- ((DeclarationSourcePosition) position).getNameStart();
+						if (position instanceof DeclarationSourcePosition) {
+							ss += ((DeclarationSourcePosition) position).getModifierSourceEnd()
+									- ((DeclarationSourcePosition) position).getSourceStart();
+							es -= ((DeclarationSourcePosition) position).getSourceEnd()
+									- ((DeclarationSourcePosition) position).getNameStart();
+						} else {
+							position = e.getPosition();
+						}
 						break;// getSourceStart // getModifierSourceEnd // getNameStart //getSourceEnd
 					}
 					default: {
@@ -434,7 +438,7 @@ public class MyUtils {
 				}
 			}
 			compilationUnit = position.getCompilationUnit();
-			int correction = e.toString().length() - (position.getSourceEnd() - position.getSourceStart());
+			// int correction = e.toString().length() - (position.getSourceEnd() - position.getSourceStart());
 			start = position.getSourceStart() + ss;
 			end = Math.max(start, position.getSourceEnd() + es);// + correction;
 			position.getSourceStart();

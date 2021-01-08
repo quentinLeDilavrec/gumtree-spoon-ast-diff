@@ -1537,7 +1537,7 @@ public class ActionApplier {
 		if (r == null) {
 			String treeString = tree.toTreeString();
 			throw new MissingParentException("following ITree should contain a spoon object: "
-					+ treeString.substring(0, Math.min(200, treeString.length())));
+					+ treeString.substring(0, Math.min(1000, treeString.length())));
 		}
 		return r;
 	}
