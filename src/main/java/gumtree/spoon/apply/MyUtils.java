@@ -313,16 +313,23 @@ public class MyUtils {
 	 * @param version
 	 * @return
 	 */
-	public static <T> ImmutablePair<CtElement,SourcePosition> toNormalizedPreciseSpoon(ITree tree, Version version) {
+	public static <T> ImmutablePair<CtElement, SourcePosition> toNormalizedPreciseSpoon(ITree tree, Version version) {
 		CtElement ele = null;
 		if (tree instanceof AbstractVersionedTree) {
 			if (((AbstractVersionedTree) tree).getInsertVersion() == version) {
 				ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+			} else if (((AbstractVersionedTree) tree).getInsertVersion() == null) {
+				if (((AbstractVersionedTree) tree).getRemoveVersion() == null) {
+					ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+				} else if (version.partiallyCompareTo(
+						((AbstractVersionedTree) tree).getRemoveVersion()) == Version.COMP_RES.INFERIOR) {
+					ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+				} // if PARALLEL ?
 			}
 		} else {
 			ele = (CtElement) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 			if (ele == null) {
-				return new ImmutablePair<>(null,null);
+				return new ImmutablePair<>(null, null);
 			}
 		}
 		if (ele == null) {
@@ -349,25 +356,26 @@ public class MyUtils {
 			}
 		}
 		if (ele == null) {
-			return new ImmutablePair<>(null,null);
+			return new ImmutablePair<>(null, null);
 		}
 		SourcePosition position = ele.getPosition();
-        if (ele instanceof CtPackage) {
-        } else if (ele instanceof CtPackageReference && ele.isParentInitialized()
-                && ele.getParent() instanceof CtPackage) {
+		if (ele instanceof CtPackage) {
+		} else if (ele instanceof CtPackageReference && ele.isParentInitialized()
+				&& ele.getParent() instanceof CtPackage) {
 		} else if ((position == null || !position.isValidPosition())) {
 			// position = computePrecisePosition(ele);
-			return new ImmutablePair<>(null,null);
+			return new ImmutablePair<>(null, null);
 			// throw new RuntimeException(ele.getClass().toString());
 		}
-		return new ImmutablePair<CtElement,SourcePosition>(ele, position);
+		return new ImmutablePair<CtElement, SourcePosition>(ele, position);
 	}
 
 	public static SourcePosition computePrecisePosition(CtElement ele) {
 		CompilationUnit compilationUnit;
 		int start, end;
 		SourcePosition position = ele.getPosition();
-		if (position != null && position.isValidPosition() && (position instanceof SourcePositionImpl || ele instanceof CtTypeAccess)) {
+		if (position != null && position.isValidPosition()
+				&& (position instanceof SourcePositionImpl || ele instanceof CtTypeAccess)) {
 			return position;
 		} else if (ele instanceof CtReference || ele instanceof CtTypeAccess) {
 			CtElement e = ele;
@@ -411,8 +419,10 @@ public class MyUtils {
 						CtElement old = e;
 						e = e.getParent().getParent();
 						position = e.getPosition();
-						ss += ((DeclarationSourcePosition)position).getModifierSourceEnd() - ((DeclarationSourcePosition)position).getSourceStart();
-						es -= ((DeclarationSourcePosition)position).getSourceEnd() - ((DeclarationSourcePosition)position).getNameStart();
+						ss += ((DeclarationSourcePosition) position).getModifierSourceEnd()
+								- ((DeclarationSourcePosition) position).getSourceStart();
+						es -= ((DeclarationSourcePosition) position).getSourceEnd()
+								- ((DeclarationSourcePosition) position).getNameStart();
 						break;// getSourceStart // getModifierSourceEnd // getNameStart //getSourceEnd
 					}
 					default: {
@@ -424,7 +434,7 @@ public class MyUtils {
 				}
 			}
 			compilationUnit = position.getCompilationUnit();
-			int correction = e.toString().length()-(position.getSourceEnd()-position.getSourceStart());
+			int correction = e.toString().length() - (position.getSourceEnd() - position.getSourceStart());
 			start = position.getSourceStart() + ss;
 			end = Math.max(start, position.getSourceEnd() + es);// + correction;
 			position.getSourceStart();
