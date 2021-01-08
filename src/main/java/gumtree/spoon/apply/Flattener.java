@@ -23,6 +23,7 @@ import com.github.gumtreediff.actions.MyAction.ComposedAction;
 import com.github.gumtreediff.tree.AbstractVersionedTree;
 import com.github.gumtreediff.tree.ITree;
 
+import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import gumtree.spoon.apply.operations.MyScriptGenerator;
@@ -135,9 +136,10 @@ public interface Flattener {
             this.childCache = new HashMap<>();
             Set<AbstractVersionedTree> targets = new LinkedHashSet<>();
             for (AtomicAction<AbstractVersionedTree> aa : wanted) {
-                targets.add(aa.getTarget());
                 // populate parents wanted in original
-                for (ITree t : aa.getTarget().getParents()) {
+                List<ITree> tmp = aa.getTarget().getParents();
+                Collections.reverse(tmp);
+                for (ITree t : tmp) {
                     if (original.maybePresentNodes.containsKey(t) && original.actions.contains(t.getMetadata(MyScriptGenerator.INSERT_ACTION))) {
                         targets.add((AbstractVersionedTree)t);
                     }
@@ -145,6 +147,7 @@ public interface Flattener {
                 if (aa instanceof MyAction.MyDelete) {
                     aux(original, aa.getTarget(), targets);
                 }
+                targets.add(aa.getTarget());
             }
             for (Entry<AbstractVersionedTree, Set<Cluster>> entry : original.maybePresentNodes.entrySet()) {
                 for (Cluster c : entry.getValue()) {
@@ -163,6 +166,7 @@ public interface Flattener {
                 if(this.maybePresentNodes.containsKey(t))
                     continue;
                 if (original.maybePresentNodes.containsKey(t)) {
+                    aux(original, t, targets);
                     if (original.actions.contains(t.getMetadata(MyScriptGenerator.DELETE_ACTION))) {
                         targets.add((AbstractVersionedTree)t);
                     }
