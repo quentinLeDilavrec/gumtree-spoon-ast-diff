@@ -401,11 +401,9 @@ public class ApplierHelper<T> implements AutoCloseable {
         AbstractVersionedTree x = watching.getOrDefault(xx, xx);
         AbstractVersionedTree xName = watching.getOrDefault(xxName, xxName);
         CtMethod actualTest = (CtMethod) x.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-        // CtExecutableReference actualTestRef = (CtExecutableReference) xName
-        //         .getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-        // if (actualTest != actualTestRef.getParent()) {
-        //     throw new RuntimeException();
-        // }
+        if (actualTest == null) { // look like the method was deleted
+            return null;
+        }
         String simpname = actualTest.getSimpleName();
         String qualDeclClass = actualTest.getDeclaringType().getQualifiedName();
 
