@@ -339,20 +339,21 @@ public interface Flattener {
         }
     
         // x must not be null
-        private boolean isInLineage(AbstractVersionedTree x, AbstractVersionedTree n, Set<AbstractVersionedTree> cache) {
-            if (n == null || cache.contains(n)) {
+        private boolean isInLineage(AbstractVersionedTree x, AbstractVersionedTree n, Set<Cluster> cache) {
+            if (n == null) {
                 return false;
             }
             for (Cluster c : maybePresentNodes.get(n)) {
-                if (cache.contains(c.getMaybePresentParent())) {
+                if (cache.contains(c)) {
                     continue;
                 } else if (c.getMaybePresentParent() == x) {
                     return true;
-                } else if (isInLineage(x, c.getMaybePresentParent(), cache)) {
-                    return true;
-                }
+                } else {
+                    cache.add(c);
+                    if (isInLineage(x, c.getMaybePresentParent(), cache)) {
+                        return true;
+                }}
             }
-            cache.add(n);
             return false;
         }
     
