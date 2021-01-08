@@ -92,6 +92,8 @@ public abstract class AbstractVersionedTree implements ITree {
     public boolean existsAt(Version version) {
         if (this.insertVersion == null && this.removeVersion==null) {
             return true;
+        } else if (this.insertVersion == null && version == null) {
+            return true;
         } else if (version == null) {
             return false;
         } else if ((this.insertVersion==null || version.compareTo(this.insertVersion) >= 0)
