@@ -1,6 +1,7 @@
 package gumtree.spoon.apply;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -250,7 +251,7 @@ public interface Flattener {
             }
         }
     
-        protected Cluster compose(Cluster primary, Cluster... secondaries) {
+        private Cluster compose(Cluster primary, Collection<Cluster> secondaries) {
             LinkedHashSet<AbstractVersionedTree> secondaryNodes = new LinkedHashSet<>();
             secondaryNodes.addAll(primary.getNodes());
             for (Cluster secondary : secondaries) {
@@ -265,43 +266,25 @@ public interface Flattener {
             return r;
         }
     
-        private Cluster compose(Cluster c1, Cluster c2) {
-            AbstractVersionedTree primary;
-            AbstractVersionedTree mpp;
-            LinkedHashSet<AbstractVersionedTree> nodes = new LinkedHashSet<>();
+        private Cluster greatest(Cluster c1, Cluster c2) {
             if (c1.getNodes().contains(c2.getMaybePresentParent())) { // could be ? c1.root.equals(c2.getMaybePresentParent())
                 // c2 can be composed into c1
-                primary = c1.getRoot();
-                mpp = c1.getMaybePresentParent();
-                nodes.addAll(c1.getNodes());
-                nodes.addAll(c2.getNodes());
+                return c1;
             } else if (c2.getNodes().contains(c1.getMaybePresentParent())) { // idem with c2.getRoot().equals(c1.getMaybePresentParent()) ?
                 // c1 can be composed into c2
-                primary = c2.getRoot();
-                mpp = c2.getMaybePresentParent();
-                nodes.addAll(c2.getNodes());
-                nodes.addAll(c1.getNodes());
+                return c2;
             } else {
                 AbstractVersionedTree pc1 = c1.getMaybePresentParent();
                 AbstractVersionedTree pc2 = c2.getMaybePresentParent();
                 if (pc1 == pc2) {
                     // same constraining parent
-                    primary = c1.getRoot();
-                    mpp = c1.getMaybePresentParent();
-                    nodes.addAll(c1.getNodes());
-                    nodes.addAll(c2.getNodes());
+                    return c1;
                 } else if (pc2 == null || (pc1 != null && isInLineage(pc2, pc1, new HashSet<>()))) {
                     // c1 could be more constrained
-                    primary = c1.getRoot();// for now
-                    mpp = c1.getMaybePresentParent();
-                    nodes.addAll(c1.getNodes());
-                    nodes.addAll(c2.getNodes());
+                    return c1;
                 } else if (pc1 == null || isInLineage(pc1, pc2, new HashSet<>())) {
                     // c2 could be more constrained
-                    primary = c2.getRoot();// for now
-                    mpp = c2.getMaybePresentParent();
-                    nodes.addAll(c2.getNodes());
-                    nodes.addAll(c1.getNodes());
+                    return c2;
                 } else {
                     // cannot be merged (at least for now)
                     // could be merged if some respective parents were merged
@@ -309,7 +292,6 @@ public interface Flattener {
                     return null;
                 }
             }
-            return makeClust(primary, mpp, nodes);
         }
     
         private Cluster composeReversedLeaf(Cluster c1, Cluster toReverse) {
@@ -318,26 +300,61 @@ public interface Flattener {
         }
     
         private Cluster compose(Set<Cluster> cs) {
-            AbstractVersionedTree primary = null;
-            AbstractVersionedTree mpp = null;
-            LinkedHashSet<AbstractVersionedTree> nodes = new LinkedHashSet<>();
-            Set<AbstractVersionedTree> needed = new HashSet<>();
+            if (cs.size() == 2) {
+                Set<Cluster> tmp = new HashSet<>(cs);
+                Iterator<Cluster> it = cs.iterator();
+                Cluster greatest = greatest(it.next(), it.next());
+                tmp.remove(greatest);
+                return compose(greatest, tmp);
+            }
+            Map<AbstractVersionedTree,Set<Cluster>> indexPerNeed = new HashMap<>();
+            Set<AbstractVersionedTree> nodes = new HashSet<>();
             for (Cluster c : cs) {
-                if (primary == null || mpp == c.getRoot()) {
-                    primary = c.getRoot();
-                    mpp = c.getMaybePresentParent();
-                    needed.add(mpp);
-                    nodes.add(primary);
-                }
+                indexPerNeed.putIfAbsent(c.maybePresentParent, new HashSet<>());
+                indexPerNeed.get(c.maybePresentParent).add(c);
                 nodes.addAll(c.getNodes());
             }
-            needed.removeAll(nodes);
-            if (needed.size() > 1) { // TODO be less brutal, we might fall back to multiple clusters
-                return null;
+            Set<AbstractVersionedTree> rootsP = new HashSet<>(indexPerNeed.keySet());
+            rootsP.removeAll(nodes);
+
+            if (rootsP.size() == 1 || (rootsP.size() == 2 && rootsP.contains(null))) {
+                Cluster primary = null;
+                LinkedHashSet<Cluster> ordClusters = new LinkedHashSet<>();
+                for (AbstractVersionedTree p : rootsP) {
+                    if (p != null) {
+                        primary = indexPerNeed.get(p).iterator().next();
+                    }
+                    orderlyExtractClusters(p, indexPerNeed, ordClusters);
+                }
+                ordClusters.remove(primary);
+                return compose(primary, ordClusters);
+            } else {
+                // Set<Cluster> r = new HashSet<>();
+                // for (AbstractVersionedTree p : rootsP) {
+                //     LinkedHashSet<Cluster> ordClusters = new LinkedHashSet<>();
+                //     orderlyExtractClusters(p, indexPerNeed, ordClusters);
+                //     Cluster primary = indexPerNeed.get(p).iterator().next();
+                //     ordClusters.remove(primary);
+                //     r.add(compose(primary, ordClusters));
+                // }
+                return null; // TODO see if we should return the partial compositions, clusters repr partial compos are not as great as the one repr full compo
             }
-            return makeClust(primary, mpp, nodes);
         }
     
+        private void orderlyExtractClusters(AbstractVersionedTree x, Map<AbstractVersionedTree, Set<Cluster>> indexPerNeed,
+                LinkedHashSet<Cluster> ordClusters) {
+            for (Cluster c : indexPerNeed.getOrDefault(x, Collections.emptySet())) {
+                if (ordClusters.contains(x)) {
+                    System.out.println("avoided a loop in orderly extraction");
+                    continue;
+                }
+                ordClusters.add(c);
+                for (AbstractVersionedTree n : c.getNodes()) {
+                    orderlyExtractClusters(n, indexPerNeed, ordClusters);
+                }
+            }
+        }
+
         // x must not be null
         private boolean isInLineage(AbstractVersionedTree x, AbstractVersionedTree n, Set<Cluster> cache) {
             if (n == null) {
@@ -386,13 +403,7 @@ public interface Flattener {
                 mergeCandidates.addAll(tmp);
             }
             if (mergeCandidates.size() > 1 && !mergeCandidates.stream().anyMatch(x -> x.getNodes().containsAll(targets))) {
-                Cluster composed;
-                if (mergeCandidates.size() == 2) {
-                    Iterator<Cluster> it = mergeCandidates.iterator();
-                    composed = compose(it.next(), it.next());
-                } else {
-                    composed = compose(mergeCandidates);
-                }
+                Cluster composed = compose(mergeCandidates);
                 if (composed != null) {
                     // this.clusters.add(composed);
                     this.composingCache.put(composed, new LinkedHashSet<>(mergeCandidates));
