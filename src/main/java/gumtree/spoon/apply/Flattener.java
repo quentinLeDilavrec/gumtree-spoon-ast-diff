@@ -304,6 +304,9 @@ public interface Flattener {
                 Set<Cluster> tmp = new HashSet<>(cs);
                 Iterator<Cluster> it = cs.iterator();
                 Cluster greatest = greatest(it.next(), it.next());
+                if (greatest == null) {
+                    return null;
+                }
                 tmp.remove(greatest);
                 return compose(greatest, tmp);
             }
