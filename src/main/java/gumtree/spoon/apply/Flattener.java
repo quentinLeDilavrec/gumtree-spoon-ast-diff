@@ -332,7 +332,7 @@ public interface Flattener {
                 nodes.addAll(c.getNodes());
             }
             needed.removeAll(nodes);
-            if (needed.size() > 1) {
+            if (needed.size() > 1) { // TODO be less brutal, we might fall back to multiple clusters
                 return null;
             }
             return makeClust(primary, mpp, nodes);
@@ -376,12 +376,17 @@ public interface Flattener {
             Set<Cluster> mergeCandidates = new HashSet<>();
             for (AtomicAction<AbstractVersionedTree> aa : aas) {
                 assert actions.contains(aa);
-                Set<Cluster> tmp = this.maybePresentNodes.get(aa.getTarget());
-                tmp.removeIf(x -> !targets.containsAll(x.getNodes()));
+                assert this.maybePresentNodes.containsKey(aa.getTarget());
+                assert this.maybePresentNodes.get(aa.getTarget())!=null;
+                Set<Cluster> tmp = this.maybePresentNodes.getOrDefault(aa.getTarget(), Collections.emptySet());
+                tmp.removeIf(x -> {
+                    assert x!=null;
+                    return !targets.containsAll(x.getNodes());
+                });
                 mergeCandidates.addAll(tmp);
             }
-            Cluster composed;
             if (mergeCandidates.size() > 1 && !mergeCandidates.stream().anyMatch(x -> x.getNodes().containsAll(targets))) {
+                Cluster composed;
                 if (mergeCandidates.size() == 2) {
                     Iterator<Cluster> it = mergeCandidates.iterator();
                     composed = compose(it.next(), it.next());
