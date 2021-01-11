@@ -329,6 +329,9 @@ public interface Flattener {
                     }
                     orderlyExtractClusters(p, indexPerNeed, ordClusters);
                 }
+                if (primary == null) {
+                    primary = ordClusters.iterator().next();
+                }
                 ordClusters.remove(primary);
                 return compose(primary, ordClusters);
             } else {
