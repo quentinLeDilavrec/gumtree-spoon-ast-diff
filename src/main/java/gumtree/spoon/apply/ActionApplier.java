@@ -732,6 +732,8 @@ public class ActionApplier {
 				}
 				if (target.getLabel().equals(CtRole.CAST.name())) {
 					((CtExpression) parent).addTypeCast(created);
+				} else if (target.getLabel().equals(CtRole.BOUNDING_TYPE.name())) {
+					((CtWildcardReference) parent).setBoundingType(created);
 				} else if (target.getLabel().equals(CtRole.SUPER_TYPE.name())) {
 					((CtType) parent).setSuperclass(created);
 				} else if (target.getLabel().equals(CtRole.INTERFACE.name())) {
@@ -743,8 +745,7 @@ public class ActionApplier {
 					((CtTypeReference) parent).setDeclaringType(created);
 				} else if (parent instanceof CtArrayTypeReference) {
 					((CtArrayTypeReference) parent).setComponentType(created);
-				} else if (parent instanceof CtTypeReference) {
-					assert target.getLabel().equals(CtRole.TYPE_ARGUMENT.name());
+				} else if (parent instanceof CtTypeReference && target.getLabel().equals(CtRole.TYPE_ARGUMENT.name())) {
 					((CtTypeReference) parent).addActualTypeArgument(created);
 				} else if (parent instanceof CtTypeAccess) {
 					((CtTypeAccess) parent).setAccessedType(created);
