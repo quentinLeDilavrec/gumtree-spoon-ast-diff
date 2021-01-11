@@ -429,6 +429,12 @@ public class MyUtils {
 						}
 						break;// getSourceStart // getModifierSourceEnd // getNameStart //getSourceEnd
 					}
+					case ANNOTATION_TYPE: {
+						// TODO
+					}
+					case DECLARING_TYPE: {
+						// TODO
+					}
 					default: {
 						System.err.println(role.toString() + " not handled");
 						e = e.getParent();
@@ -447,12 +453,12 @@ public class MyUtils {
 		} else {
 			position = ele.getPosition();
 			if (position == null || !position.isValidPosition()) {
-				throw new RuntimeException(ele.getClass().toString());
-			} else {
-				compilationUnit = position.getCompilationUnit();
-				start = position.getSourceStart();
-				end = position.getSourceEnd();
+				System.err.println(ele.getClass().toString() + " should have a position");
+				position = computePrecisePosition(ele.getParent()); // TODO fix the cause, might be in spoon
 			}
+			compilationUnit = position.getCompilationUnit();
+			start = position.getSourceStart();
+			end = position.getSourceEnd();
 		}
 		return new SourcePositionImpl(compilationUnit, start, end, compilationUnit.getLineSeparatorPositions());
 	}
