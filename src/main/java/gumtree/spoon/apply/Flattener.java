@@ -410,7 +410,7 @@ public interface Flattener {
                 mergeCandidates.addAll(tmp);
             }
             
-            for (Cluster cluster : mergeCandidates) {
+            for (Cluster cluster : new HashSet<>(mergeCandidates)) {
                 completeNecessaryParentClusters(mergeCandidates, cluster);
             }
             if (mergeCandidates.size() > 1 && !mergeCandidates.stream().anyMatch(x -> x.getNodes().containsAll(targets))) {
