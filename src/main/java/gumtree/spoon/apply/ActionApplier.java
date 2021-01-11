@@ -715,8 +715,8 @@ public class ActionApplier {
 				break;
 			}
 			case "TypeReference": {
-				CtTypeReference sp = getSpoonEleStrict(source);
 				CtTypeReference created = factory.createTypeReference();
+				CtTypeReference sp = getSpoonEle(source);
 				CtElement parent = getSpoonEleStrict(parentTarget);
 				if (sp.getDeclaringType() != null) {
 					CtTypeReference tref = factory.Type().createReference(sp.getDeclaringType().getQualifiedName());
