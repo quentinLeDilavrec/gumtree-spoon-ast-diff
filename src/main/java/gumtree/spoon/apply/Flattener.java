@@ -132,7 +132,8 @@ public interface Flattener {
     
         public Clusterizer(Clusterizer original, Set<AtomicAction<AbstractVersionedTree>> wanted) {
             assert original.actions.containsAll(wanted);
-            this.actions = new LinkedHashSet<>();
+            this.actions = new LinkedHashSet<>(original.actions);
+            this.actions.retainAll(wanted);
             this.maybePresentNodes = new HashMap<>();
             this.childCache = new HashMap<>();
             Set<AbstractVersionedTree> targets = new LinkedHashSet<>();
@@ -408,6 +409,10 @@ public interface Flattener {
                 });
                 mergeCandidates.addAll(tmp);
             }
+            
+            for (Cluster cluster : mergeCandidates) {
+                completeNecessaryParentClusters(mergeCandidates, cluster);
+            }
             if (mergeCandidates.size() > 1 && !mergeCandidates.stream().anyMatch(x -> x.getNodes().containsAll(targets))) {
                 Cluster composed = compose(mergeCandidates);
                 if (composed != null) {
@@ -421,6 +426,18 @@ public interface Flattener {
                 }
             }
             return aas;
+        }
+
+        private void completeNecessaryParentClusters(Set<Cluster> mergeCandidates, Cluster c) {
+            if (!this.actions.contains(c.maybePresentParent.getMetadata(MyScriptGenerator.INSERT_ACTION)) 
+            && !this.actions.contains(c.maybePresentParent.getMetadata(MyScriptGenerator.DELETE_ACTION))) {
+                for (Cluster cc : this.maybePresentNodes.getOrDefault(c.maybePresentParent, Collections.emptySet())) {
+                    if (cc.nodes.size()==1) {
+                        mergeCandidates.add(cc);
+                        completeNecessaryParentClusters(mergeCandidates, cc);
+                    }
+                }
+            }
         }
     
         public Set<Cluster> getCluster(ComposedAction<AbstractVersionedTree> ca) {
