@@ -429,7 +429,7 @@ public interface Flattener {
         }
 
         private void completeNecessaryParentClusters(Set<Cluster> mergeCandidates, Cluster c) {
-            if (!this.actions.contains(c.maybePresentParent.getMetadata(MyScriptGenerator.INSERT_ACTION)) 
+            if (c.maybePresentParent != null && !this.actions.contains(c.maybePresentParent.getMetadata(MyScriptGenerator.INSERT_ACTION)) 
             && !this.actions.contains(c.maybePresentParent.getMetadata(MyScriptGenerator.DELETE_ACTION))) {
                 for (Cluster cc : this.maybePresentNodes.getOrDefault(c.maybePresentParent, Collections.emptySet())) {
                     if (cc.nodes.size()==1) {
