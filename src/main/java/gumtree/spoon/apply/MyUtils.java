@@ -433,8 +433,7 @@ public class MyUtils {
 						CtElement old = e;
 						e = e.getParent();
 						position = e.getPosition();
-						System.out.println(CtRole.ANNOTATION_TYPE.toString() + " parent has position of type" + e.getPosition().getClass());
-						// TODO no @ ? no parameters?
+						// System.out.println(CtRole.ANNOTATION_TYPE.toString() + " parent has position of type" + e.getPosition().getClass());
 						break;
 					}
 					case DECLARING_TYPE: {
