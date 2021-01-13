@@ -15,6 +15,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
+import java.util.logging.Logger;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
@@ -236,6 +237,7 @@ public interface Flattener {
     }
     
     class ComposingClusterizer extends Clusterizer {
+        static Logger logger = Logger.getLogger(ComposingClusterizer.class.getName());
         private final Map<Cluster, Set<Cluster>> composingCache;
         private Set<Cluster> inibiteds;
         public ComposingClusterizer(Clusterizer original, Set<AtomicAction<AbstractVersionedTree>> wanted) {
@@ -352,7 +354,7 @@ public interface Flattener {
                 LinkedHashSet<Cluster> ordClusters) {
             for (Cluster c : indexPerNeed.getOrDefault(x, Collections.emptySet())) {
                 if (ordClusters.contains(x)) {
-                    System.out.println("avoided a loop in orderly extraction");
+                    logger.warning("avoided a loop in orderly extraction");
                     continue;
                 }
                 ordClusters.add(c);
@@ -505,19 +507,19 @@ public interface Flattener {
                             remaining.add(c);
                         }
                     } else {
-                        System.out.println("skipped " + curr);
+                        logger.fine("skipped " + curr);
                     }
                 } else {
                     remaining.add(curr);
                 }
             }
             if (avt2Index.size() != maybePresentNodes.size() + 1) {
-                System.err.println("avt2Index.size() != actions.size() + 1:");
+                logger.warning("avt2Index.size() != actions.size() + 1:");
                 for (AbstractVersionedTree x : avt2Index.keySet()) {
-                    System.err.println(x);                    
+                    logger.warning(x.toString());                    
                 }
                 for (AbstractVersionedTree x : maybePresentNodes.keySet()) {
-                    System.err.println(x);
+                    logger.warning(x.toString());
                 }
             }
             List<ImmutablePair<Integer, Cluster>> rr = r.stream()
