@@ -389,8 +389,7 @@ public class ApplierHelper<T> implements AutoCloseable {
                     initialStatus = this.initState.get(aaction);
                     assert initialStatus != null;
                 }
-                Boolean currentStatus = this.evoState.reqState.get(aaction);
-                assert currentStatus != null;
+                Boolean currentStatus = this.evoState.reqState.getOrDefault(aaction, false);
 
                 if (!initialStatus && currentStatus) {
                     way = false;
