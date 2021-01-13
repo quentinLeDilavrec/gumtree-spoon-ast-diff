@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -198,11 +199,11 @@ public class ApplierHelper<T> implements AutoCloseable {
         Set<AtomicAction<AbstractVersionedTree>> wantedAA = new HashSet<>();
 
         ComposingClusterizer flat = Combination.flatten(evoState.globalClusterizer, wantedActions);
-        for (MyAction<?> ca : wantedActions) {
-            if (ca instanceof ComposedAction) {
-                flat.clusterize((ComposedAction<AbstractVersionedTree>) ca);
-            }
-        }
+        // for (MyAction<?> a : wantedActions) {
+        //     if (a instanceof ComposedAction) {
+        //         flat.clusterize((ComposedAction<AbstractVersionedTree>) a);
+        //     }
+        // }
         Set<Cluster> toBreak = new HashSet<>();
         LinkedList<Cluster> tryToBreak = new LinkedList<>();
         flat.setInibiteds(toBreak);
@@ -248,7 +249,7 @@ public class ApplierHelper<T> implements AutoCloseable {
         }
         Combination.CombinationHelper<Cluster> combs = Combination.build(flat, constrainedTree);
         logger.info("On track for at least 2^" + combs.minExposant() + " cases");
-        Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new HashMap<>();
+        Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new LinkedHashMap<>();
         do {
             Combination.CHANGE<Cluster> change = combs.next();
             boolean b = false;

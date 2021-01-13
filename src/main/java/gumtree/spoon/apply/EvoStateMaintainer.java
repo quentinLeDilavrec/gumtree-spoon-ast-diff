@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -38,7 +39,7 @@ public abstract class EvoStateMaintainer<T> {
     protected Map<AtomicAction<AbstractVersionedTree>, Set<T>> presentMap = new HashMap<>();
     // protected Map<Object, Set<T>> absentMap = new HashMap<>();
     protected Map<MyAction<AbstractVersionedTree>, Boolean> reqState = new HashMap<>(); // false by default
-    protected Set<T> validable = new HashSet<>();
+    protected Set<T> validable = new LinkedHashSet<>();
     // protected Consumer<Set<T>> validityLauncher;
 	public final Clusterizer globalClusterizer;
 
@@ -57,7 +58,7 @@ public abstract class EvoStateMaintainer<T> {
                 evoReqSize.put(evolution, evoReqSize.getOrDefault(evolution, 0) + 1);
             }
         }
-        Set<AtomicAction<AbstractVersionedTree>> allAA = new HashSet<>();
+        Set<AtomicAction<AbstractVersionedTree>> allAA = new LinkedHashSet<>();
         for (T evo : evoToEvo.keySet()) {
             Object ori = getOriginal(evo);
             if (ori instanceof MyAction) {
