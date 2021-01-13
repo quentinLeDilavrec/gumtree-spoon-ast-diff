@@ -61,6 +61,8 @@ public class ApplierHelper<T> implements AutoCloseable {
     protected MultiDiffImpl mdiff;
     protected int leafsActionsLimit;
 
+    protected final Map<MyAction<AbstractVersionedTree>, Boolean> initState;
+
     public ApplierHelper(SpoonGumTreeBuilder scanner, AbstractVersionedTree middle, Diff diff,
             EvoStateMaintainer<T> evoStateMaintainer) {
         this.scanner = scanner;
@@ -70,6 +72,7 @@ public class ApplierHelper<T> implements AutoCloseable {
         this.diff = diff;
         this.actions = (List) ((DiffImpl) diff).getAtomic();
         this.evoState = evoStateMaintainer;
+        this.initState = new HashMap<>(this.evoState.reqState);
     }
 
     public ApplierHelper(SpoonGumTreeBuilder scanner, MultiDiffImpl mdiff, Diff diff,
@@ -286,10 +289,10 @@ public class ApplierHelper<T> implements AutoCloseable {
                     if (b)
                         evoState.triggerCallback();
                 } catch (WrongAstContextException e) {
-                    waitingToBeApplied.put(n, change.way);
+                    waitingToBeApplied.put(n, way);
                 } catch (MissingParentException e) {
                     logger.log(Level.WARNING, "problem while applying atomic evolution", e);
-                    waitingToBeApplied.put(n, change.way);
+                    waitingToBeApplied.put(n, way);
                 }
             }
         } while (!combs.isInit());
@@ -364,8 +367,72 @@ public class ApplierHelper<T> implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        // TODO Auto-generated method stub
-        // TODO undo all changes on middle repr as spoon ast
+        Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new LinkedHashMap<>();
+        Set<AtomicAction<AbstractVersionedTree>> wantedAA = (Set)this.evoState.globalClusterizer.actions;
+        List<ImmutablePair<Integer, Cluster>> aas = this.evoState.globalClusterizer.getConstrainedTree();
+        Collections.reverse(aas);
+        for (ImmutablePair<Integer,Cluster> pair : aas) {
+            Cluster c = pair.getValue();
+
+			for (AbstractVersionedTree n : c.getNodes()) {
+                boolean way = true;
+                AtomicAction<AbstractVersionedTree> aaction = getAAction(n, way);
+                if (aaction==null) {
+                    aaction = getAAction(n, way);
+                }
+
+                Boolean initialStatus = this.initState.get(aaction);
+                if (initialStatus == null) {
+                    way = false;
+                    aaction = getAAction(n, way);
+                    assert aaction != null;
+                    initialStatus = this.initState.get(aaction);
+                    assert initialStatus != null;
+                }
+                Boolean currentStatus = this.evoState.reqState.get(aaction);
+                assert currentStatus != null;
+
+                if (!initialStatus && currentStatus) {
+                    way = false;
+                } else if (initialStatus && !currentStatus) {
+                    way = true;
+                } else {
+                    continue;
+                }
+
+                aaction = getAAction(n, way);
+
+                boolean inverted = aaction == null;
+                aaction = inverted ? getAAction(n, !way) : aaction;
+                try {
+                    auxApply(scanner, this.factory, aaction, wantedAA, inverted);
+                    waitingToBeApplied.remove(n);
+                    boolean waitingHasbeApplied;
+                    do {
+                        waitingHasbeApplied = false;
+                        Set<AbstractVersionedTree> toRm = new HashSet<>();
+                        for (AbstractVersionedTree node : waitingToBeApplied.keySet()) {
+                            try {
+                                AtomicAction<AbstractVersionedTree> action2 = getAAction(node,
+                                        waitingToBeApplied.get(node));
+                                boolean inverted2 = action2 == null;
+                                action2 = inverted2 ? getAAction(node, !waitingToBeApplied.get(node)) : action2;
+                                auxApply(scanner, this.factory, action2, wantedAA, inverted2);
+                                toRm.add(node);
+                                waitingHasbeApplied = true;
+                            } catch (WrongAstContextException | MissingParentException e) {
+                            }
+                        }
+                        toRm.forEach(x -> waitingToBeApplied.remove(x));
+                    } while (waitingHasbeApplied);
+                } catch (WrongAstContextException e) {
+                    waitingToBeApplied.put(n, way);
+                } catch (MissingParentException e) {
+                    logger.log(Level.WARNING, "problem while applying atomic evolution", e);
+                    waitingToBeApplied.put(n, way);
+                }
+            }
+        }
     }
 
     private Map<AbstractVersionedTree, AbstractVersionedTree> watching = new HashMap<>();
