@@ -60,6 +60,17 @@ public interface Flattener {
             public AbstractVersionedTree getRoot() {
                 return root;
             }
+
+            @Override
+            public String toString() {
+                StringBuilder r = new StringBuilder();
+                r.append(maybePresentParent);
+                for (AbstractVersionedTree x : nodes) {
+                    r.append(", ");
+                    r.append(x);
+                }
+                return r.toString();
+            }
     
             // public Set<Cluster> getChildren() {
             //     LinkedHashSet<Cluster> r = new LinkedHashSet<>();
