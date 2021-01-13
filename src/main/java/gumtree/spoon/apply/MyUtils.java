@@ -430,10 +430,20 @@ public class MyUtils {
 						break;// getSourceStart // getModifierSourceEnd // getNameStart //getSourceEnd
 					}
 					case ANNOTATION_TYPE: {
-						// TODO
+						CtElement old = e;
+						e = e.getParent();
+						position = e.getPosition();
+						System.out.println(CtRole.ANNOTATION_TYPE.toString() + " has position of type" + old.getPosition().getClass());
+						// TODO no @ ? no parameters?
+						break;
 					}
 					case DECLARING_TYPE: {
-						// TODO
+						CtElement old = e;
+						e = e.getParent();
+						position = e.getPosition();
+						System.out.println(CtRole.ANNOTATION_TYPE.toString() + " has position of type" + old.getPosition().getClass());
+						// TODO something like ? es = -(e.toString().length() - old.toString().length() - es);
+						break;
 					}
 					default: {
 						System.err.println(role.toString() + " not handled");
