@@ -35,6 +35,7 @@ public interface Flattener {
     public List<ImmutablePair<Integer, Clusterizer.Cluster>> getConstrainedTree();
 
     public class Clusterizer implements Flattener {
+        static Logger logger = Logger.getLogger(Clusterizer.class.getName());
         public final class Cluster {
             private AbstractVersionedTree root;
             private AbstractVersionedTree maybePresentParent;
@@ -202,43 +203,50 @@ public interface Flattener {
             remaining.add(null);
             while (!remaining.isEmpty()) {
                 Cluster curr = remaining.poll();
-                List<Cluster> childs = new ArrayList<>();
-                for (AbstractVersionedTree n : curr.getNodes()) {
-                    childs.addAll(childCache.getOrDefault(n, new HashSet<>()));
-                }
-                childs.sort((a, b) -> b.getNodes().size() - a.getNodes().size());
                 if (curr == null) {
+                    List<Cluster> childs = new ArrayList<>(childCache.getOrDefault(curr, Collections.emptySet()));
+                    childs.sort((a, b) -> b.getNodes().size() - a.getNodes().size());
                     for (Cluster c : childs) {
                         remaining.add(c);
                     }
                 } else if (avt2Index.containsKey(curr.getMaybePresentParent())) {
-                    boolean b = true;
+                    boolean ok = true;
                     for (AbstractVersionedTree n : curr.getNodes()) {
                         if (avt2Index.containsKey(n)) {
-                            b = false;
+                            ok = false;
                             break;
                         }
                         avt2Index.put(n, r.size());
                     }
-                    if (b) {
+                    if (ok) {
                         r.add(curr);
+                        List<Cluster> childs = new ArrayList<>();
+                        for (AbstractVersionedTree n : curr.getNodes()) {
+                            childs.addAll(childCache.getOrDefault(n, Collections.emptySet()));
+                        }
+                        childs.removeIf(x->{
+                            Set<AbstractVersionedTree> tmp = new HashSet<>(x.getNodes());
+                            tmp.retainAll(curr.getNodes());
+                            return tmp.size()!=0;
+                        });
+                        childs.sort((a, b) -> b.getNodes().size() - a.getNodes().size());
                         for (Cluster c : childs) {
                             remaining.add(c);
                         }
                     } else {
-                        System.err.println();
+                        logger.fine("skipped " + curr);
                     }
                 } else {
                     remaining.add(curr);
                 }
             }
             if (avt2Index.size() != maybePresentNodes.size() + 1) {
-                System.err.println("avt2Index.size() != actions.size() + 1:");
+                logger.warning("avt2Index.size() != actions.size() + 1:");
                 for (AbstractVersionedTree x : avt2Index.keySet()) {
-                    System.err.println(x);                    
+                    logger.warning(x.toString());                    
                 }
                 for (AbstractVersionedTree x : maybePresentNodes.keySet()) {
-                    System.err.println(x);
+                    logger.warning(x.toString());
                 }
             }
             List<ImmutablePair<Integer, Cluster>> rr = r.stream()
