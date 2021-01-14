@@ -375,22 +375,30 @@ public class ApplierHelper<T> implements AutoCloseable {
             Cluster c = pair.getValue();
 
 			for (AbstractVersionedTree n : c.getNodes()) {
-                boolean way = true;
-                AtomicAction<AbstractVersionedTree> aaction = getAAction(n, way);
-                if (aaction==null) {
-                    aaction = getAAction(n, way);
+                AtomicAction<AbstractVersionedTree> aactionR = getAAction(n, false);
+                AtomicAction<AbstractVersionedTree> aactionI = getAAction(n, true);
+
+                Boolean initialStatus = this.initState.get(aactionI);
+                if (initialStatus==null) {
+                    Boolean initialStatusR = this.initState.get(aactionR);
+                    if (initialStatusR==null) {
+                        initialStatusR = false;
+                    } else {
+                        initialStatus = !initialStatusR;
+                    }
                 }
 
-                Boolean initialStatus = this.initState.get(aaction);
-                if (initialStatus == null) {
-                    way = false;
-                    aaction = getAAction(n, way);
-                    assert aaction != null;
-                    initialStatus = this.initState.getOrDefault(aaction, false);
-                    assert initialStatus != null;
+                Boolean currentStatus = this.evoState.reqState.get(aactionI);
+                if (currentStatus==null) {
+                    Boolean currentStatusR = this.evoState.reqState.get(aactionR);
+                    if (currentStatusR==null) {
+                        currentStatusR = false;
+                    } else {
+                        currentStatus = !currentStatusR;
+                    }
                 }
-                Boolean currentStatus = this.evoState.reqState.getOrDefault(aaction, false);
 
+                boolean way;
                 if (!initialStatus && currentStatus) {
                     way = false;
                 } else if (initialStatus && !currentStatus) {
@@ -399,7 +407,7 @@ public class ApplierHelper<T> implements AutoCloseable {
                     continue;
                 }
 
-                aaction = getAAction(n, way);
+                AtomicAction<AbstractVersionedTree> aaction = getAAction(n, way);
 
                 boolean inverted = aaction == null;
                 aaction = inverted ? getAAction(n, !way) : aaction;
