@@ -286,8 +286,6 @@ public class ApplierHelper<T> implements AutoCloseable {
                         }
                         toRm.forEach(x -> waitingToBeApplied.remove(x));
                     } while (waitingHasbeApplied);
-                    if (b)
-                        evoState.triggerCallback();
                 } catch (WrongAstContextException e) {
                     waitingToBeApplied.put(n, way);
                 } catch (MissingParentException e) {
@@ -295,6 +293,8 @@ public class ApplierHelper<T> implements AutoCloseable {
                     waitingToBeApplied.put(n, way);
                 }
             }
+            if (b)
+                evoState.triggerCallback();
         } while (!combs.isInit());
         return launcher;
     }

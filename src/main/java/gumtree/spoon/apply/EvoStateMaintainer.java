@@ -91,7 +91,7 @@ public abstract class EvoStateMaintainer<T> {
     }
 
     protected void triggerCallback() {
-        getValidityLauncher().accept(Collections.unmodifiableSet(new HashSet<>(validable)));
+        getValidityLauncher().accept(Collections.unmodifiableSet(new LinkedHashSet<>(validable)));
     }
 
     public Fraction ratio(T e) {
@@ -99,7 +99,7 @@ public abstract class EvoStateMaintainer<T> {
     }
 
     public Set<T> getEvolutions(Set<T> e) {
-        Set<T> r = new HashSet<>();
+        Set<T> r = new LinkedHashSet<>();
         getEvolutions(e, r);
         return r;
     }
@@ -114,7 +114,7 @@ public abstract class EvoStateMaintainer<T> {
     }
 
     public Set<MyAction<AbstractVersionedTree>> getActions(Set<T> e) {
-        Set<MyAction<AbstractVersionedTree>> r = new HashSet<>();
+        Set<MyAction<AbstractVersionedTree>> r = new LinkedHashSet<>();
         for (T e1 : e) {
             Object original = getOriginal(e1);
             if (original instanceof Operation) {
