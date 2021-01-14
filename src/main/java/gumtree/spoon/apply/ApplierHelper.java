@@ -384,8 +384,10 @@ public class ApplierHelper<T> implements AutoCloseable {
                     if (initialStatusR==null) {
                         initialStatus = false;
                     } else {
-                        initialStatus = !initialStatusR;
+                        initialStatus = initialStatusR;
                     }
+                } else {
+                    initialStatus = !initialStatus;
                 }
 
                 Boolean currentStatus = this.evoState.reqState.get(aactionI);
@@ -394,8 +396,10 @@ public class ApplierHelper<T> implements AutoCloseable {
                     if (currentStatusR==null) {
                         currentStatus = false;
                     } else {
-                        currentStatus = !currentStatusR;
+                        currentStatus = currentStatusR;
                     }
+                } else {
+                    currentStatus = !currentStatus;
                 }
 
                 boolean way;
