@@ -11,6 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -535,10 +536,10 @@ public interface Flattener {
             if (avt2Index.size() != maybePresentNodes.size() + 1) {
                 logger.warning("avt2Index.size() != actions.size() + 1:");
                 for (AbstractVersionedTree x : avt2Index.keySet()) {
-                    logger.warning(x.toString());                    
+                    logger.warning(Objects.toString(x));                
                 }
                 for (AbstractVersionedTree x : maybePresentNodes.keySet()) {
-                    logger.warning(x.toString());
+                    logger.warning(Objects.toString(x));
                 }
             }
             List<ImmutablePair<Integer, Cluster>> rr = r.stream()
