@@ -440,8 +440,8 @@ public class MyUtils {
 						CtElement old = e;
 						e = e.getParent();
 						position = e.getPosition();
-						System.out.println(CtRole.DECLARING_TYPE.toString() + "parent has position of type" + e.getPosition().getClass());
-						// TODO something like ? es = -(e.toString().length() - old.toString().length() - es);
+						// System.out.println(CtRole.DECLARING_TYPE.toString() + " parent has position of type" + e.getPosition().getClass());
+						// // TODO something like ? es = -(e.toString().length() - old.toString().length() - es);
 						break;
 					}
 					default: {
