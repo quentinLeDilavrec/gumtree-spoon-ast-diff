@@ -30,7 +30,7 @@ import spoon.support.reflect.declaration.CtElementImpl;
  * 
  */
 public class CtWrapper<L> extends CtElementImpl {
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 8754161987319554L;
 
 	/**
 	 * The object to be wrapped
@@ -125,7 +125,7 @@ public class CtWrapper<L> extends CtElementImpl {
 
 	public static class CtModifierWrapper extends CtWrapper<CtExtendedModifier> {
 
-		private static final long serialVersionUID = 1L;
+		private static final long serialVersionUID = 4198498472178613L;
 
 		public CtModifierWrapper(CtExtendedModifier wrapped, CtElement parent) {
 			super(wrapped, parent, CtRole.MODIFIER);
@@ -142,7 +142,7 @@ public class CtWrapper<L> extends CtElementImpl {
 	 */
 	public static class CtRefWrapper extends CtWrapper<CtReference> {
 
-		private static final long serialVersionUID = 1L;
+		private static final long serialVersionUID = -89413497945L;
 
 		public CtRefWrapper(CtNamedElement parent) {
 			super(parent.getReference(), parent, CtRole.NAME);
@@ -159,7 +159,7 @@ public class CtWrapper<L> extends CtElementImpl {
 
 	public static class CtNamedWrapper extends CtWrapper<CtReference> {
 
-		private static final long serialVersionUID = 1L;
+		private static final long serialVersionUID = 4984919891981L;
 
 		public CtNamedWrapper(CtNamedElement parent) {
 			super(parent.getReference(), parent, CtRole.NAME);
@@ -186,7 +186,7 @@ public class CtWrapper<L> extends CtElementImpl {
 
 	public static class CtExeRefWrapper extends CtWrapper<CtReference> {
 
-		private static final long serialVersionUID = 1L;
+		private static final long serialVersionUID = 2746380936937872494L;
 
 		public CtExeRefWrapper(CtAbstractInvocation parent) {
 			super(parent.getExecutable(), parent, CtRole.EXECUTABLE_REF);
@@ -205,7 +205,7 @@ public class CtWrapper<L> extends CtElementImpl {
 
 	public static class CtVarRefWrapper extends CtWrapper<CtVariableReference> {
 
-		private static final long serialVersionUID = 1L;
+		private static final long serialVersionUID = -8974022445909979693L;
 
 		public CtVarRefWrapper(CtVariableAccess parent) {
 			super(parent.getVariable(), parent, CtRole.NAME);
