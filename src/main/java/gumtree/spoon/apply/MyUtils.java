@@ -4,6 +4,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import com.github.gumtreediff.actions.model.Delete;
 import com.github.gumtreediff.actions.model.Insert;
@@ -48,6 +49,7 @@ import spoon.support.compiler.jdt.JDTBasedSpoonCompiler;
 import spoon.support.reflect.cu.position.SourcePositionImpl;
 
 public class MyUtils {
+    static Logger logger = Logger.getLogger(ApplierHelper.class.getName());
 
 	public static Factory createFactory() {
 		Factory factory = new FactoryImpl(new DefaultCoreFactory(), new StandardEnvironment());
@@ -445,7 +447,7 @@ public class MyUtils {
 						break;
 					}
 					default: {
-						System.err.println(role.toString() + " not handled");
+						logger.warning(role.toString() + " not handled");
 						e = e.getParent();
 						position = e.getPosition();
 						break;
@@ -462,7 +464,7 @@ public class MyUtils {
 		} else {
 			position = ele.getPosition();
 			if (position == null || !position.isValidPosition()) {
-				System.err.println(ele.getClass().toString() + " should have a position");
+				logger.warning(ele.getClass().toString() + " should have a position, approximating to parent position");
 				position = computePrecisePosition(ele.getParent()); // TODO fix the cause, might be in spoon
 			}
 			compilationUnit = position.getCompilationUnit();
