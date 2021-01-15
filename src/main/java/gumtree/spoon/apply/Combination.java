@@ -595,8 +595,11 @@ public class Combination {
         log.append("\ndeps=");
         log.append(Arrays.toString(deps));
         logger.info(log.toString());
-        assert init.length > 0 && init.length == leafs.length && init.length == deps.length : init;
-        return new ReflectedConstrainedHelper<Cluster>(init, leafs, deps, nodes);
+        if (init.length>0) {
+            return new ReflectedConstrainedHelper<Cluster>(init, leafs, deps, nodes);
+        } else {
+            return null;            
+        }
     }
 
     // TODO expose non composed top level by "composing" them

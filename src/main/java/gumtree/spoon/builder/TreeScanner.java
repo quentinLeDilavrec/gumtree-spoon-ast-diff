@@ -128,8 +128,6 @@ public class TreeScanner extends CtScanner {
 				if (!parent.isParentInitialized()) {
 					return true;
 				}
-				CtType pt = parent instanceof CtType ? (CtType) parent : parent.getParent(CtType.class);
-				String top = pt.getTopLevelType().getQualifiedName();
 				if (parent.getRoleInParent() == null) {
 					return true;
 				} else if (parent instanceof CtTypeReference) {
@@ -145,6 +143,18 @@ public class TreeScanner extends CtScanner {
 							} else {
 								String tq = ((CtTypeReference) parent).getDeclaration().getTopLevelType()
 										.getQualifiedName();
+								CtType pt = parent instanceof CtType ? (CtType) parent : parent.getParent(CtType.class);
+								if (pt == null) {
+									System.err.println("missing parent type of" + parent.getClass());
+									System.err.println(parent);
+									return true;
+								}
+								if (pt.getTopLevelType() == null) {
+									System.err.println("missing top level of" + parent.getClass());
+									System.err.println(parent);
+									return true;
+								}
+								String top = pt.getTopLevelType().getQualifiedName();
 								return tq.equals(top);
 							}
 						}

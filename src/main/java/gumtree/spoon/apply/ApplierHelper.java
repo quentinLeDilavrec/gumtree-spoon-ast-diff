@@ -250,9 +250,12 @@ public class ApplierHelper<T> implements AutoCloseable {
             }
             j++;
         }
+        logger.info("On following constrain tree:\n" + constrainedTree);
+        if (constrainedTree.size()==0) {
+            return launcher;
+        }
         Combination.CombinationHelper<Cluster> combs = Combination.build(flat, constrainedTree);
         logger.info("On track for at least 2^" + combs.minExposant() + " cases");
-        logger.info("On following constrain tree:\n" + constrainedTree);
         Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new LinkedHashMap<>();
         do {
             Combination.CHANGE<Cluster> change = combs.next();
