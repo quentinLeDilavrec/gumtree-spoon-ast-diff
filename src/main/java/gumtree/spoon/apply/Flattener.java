@@ -467,10 +467,14 @@ public interface Flattener {
             Set<AbstractVersionedTree> targets = ca.getTarget();
             Set<Cluster> candidates = null;
             for (AbstractVersionedTree n : targets) {
+                Set<Cluster> cs = maybePresentNodes.get(n);
+                if (cs == null) {
+                    throw new RuntimeException("should not be null");
+                }
                 if (candidates == null) {
-                    candidates = new HashSet<>(maybePresentNodes.get(n));
+                    candidates = new HashSet<>(cs);
                 } else {
-                    candidates.retainAll(maybePresentNodes.get(n));
+                    candidates.retainAll(cs);
                 }
             }
             if (candidates != null) {
