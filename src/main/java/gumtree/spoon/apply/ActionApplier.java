@@ -1424,18 +1424,21 @@ public class ActionApplier {
 						if (parent.getRoleInParent().equals(CtRole.SUPER_TYPE)) {
 							((CtTypeParameter) parentparent).setSuperclass((CtTypeReference) parent);
 						} else {
-							throw new RuntimeException(parentparent.getClass().toString());
+							throw new RuntimeException(parentparent.getClass().toString() + " with role " + parent.getRoleInParent().toString());
 						}
 					} else if (parentparent instanceof CtType) {
+						// nothing to do
 					} else {
 						throw new RuntimeException(parentparent.getClass().toString());
 					}
 				} else if (parent instanceof CtExecutableReference) {
-					((CtExecutableReference) parent).isImplicit();//(created);
+					((CtExecutableReference) parent).isImplicit();// TODO
 				} else if (parent instanceof CtNewArray) {
-					((CtNewArray) parent).isImplicit();//(created);
+					((CtNewArray) parent).isImplicit();// TODO
+				} else if (parent instanceof CtClass) {
+					((CtClass) parent).isImplicit();// TODO
 				} else {
-					throw new RuntimeException(parent.getClass().toString());
+					throw new RuntimeException(parent.getClass().toString() + " with role " + target.getLabel());
 				}
 
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
