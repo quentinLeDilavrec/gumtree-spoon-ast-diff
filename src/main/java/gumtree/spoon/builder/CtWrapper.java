@@ -118,7 +118,10 @@ public class CtWrapper<L> extends CtElementImpl {
 		if (value instanceof CtElement && ((CtElement)value).getPosition().isValidPosition()) {
 			return ((CtElement)value).getPosition();
 		} else {
-			Logger.getLogger("CtWrapper").warning("Should handle position specifically ; value: "+ value.getClass() + "`\tposition: " + pp.getClass() + "\tparent: "+ parent.getClass());
+			if (value instanceof CtExtendedModifier && ((CtExtendedModifier)value).isImplicit()) {
+			} else {
+				Logger.getLogger("CtWrapper").warning("Should handle position specifically ; value: "+ value.getClass() + "`\tposition: " + pp.getClass() + "\tparent: "+ parent.getClass());
+			}
 			return pp;
 		}
 	}
