@@ -1429,7 +1429,7 @@ public class ActionApplier {
 					} else if (parentparent instanceof CtType) {
 						// nothing to do
 					} else {
-						throw new RuntimeException(parentparent.getClass().toString());
+						throw new RuntimeException(parentparent.getClass().toString() + " with role " + parent.getRoleInParent().toString());
 					}
 				} else if (parent instanceof CtExecutableReference) {
 					((CtExecutableReference) parent).isImplicit();// TODO
