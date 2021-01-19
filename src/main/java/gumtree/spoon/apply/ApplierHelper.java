@@ -300,7 +300,7 @@ public class ApplierHelper<T> implements AutoCloseable {
                     waitingToBeApplied.put(n, way);
                 } catch (MissingParentException e) {
                     logger.log(Level.WARNING, "problem while applying atomic evolution", e);
-                    waitingToBeApplied.put(n, way);
+                    // waitingToBeApplied.put(n, way);// taxing to much perfs and should not append if nodes would have been ordered correctly
                 }
             }
             if (b)
@@ -469,7 +469,7 @@ public class ApplierHelper<T> implements AutoCloseable {
                     waitingToBeApplied.put(n, way);
                 } catch (MissingParentException e) {
                     logger.log(Level.WARNING, "problem while applying atomic evolution", e);
-                    waitingToBeApplied.put(n, way);
+                    // waitingToBeApplied.put(n, way); // taxing to much perfs and should not append if nodes would have been ordered correctly
                 }
             }
         }
