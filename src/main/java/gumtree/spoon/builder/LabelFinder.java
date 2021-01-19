@@ -70,7 +70,12 @@ class LabelFinder extends CtInheritanceScanner {
 			} catch (Exception ee) {
 				System.err.println("named element without a position...");
 			}
+		} else if(pp.isValidPosition()) {
+			labEle = e.getReference();
+			labEle.setParent(e);
 		} else {
+			labEle = e.getReference();
+			labEle.setParent(e);
 			System.err.println(e.getClass()+" should have a position");
 		}
 	}
