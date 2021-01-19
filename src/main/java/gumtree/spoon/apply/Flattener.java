@@ -469,7 +469,8 @@ public interface Flattener {
             for (AbstractVersionedTree n : targets) {
                 Set<Cluster> cs = maybePresentNodes.get(n);
                 if (cs == null) {
-                    throw new RuntimeException("should not be null");
+                    logger.warning("cs should not be null, an avt is missing.");
+                    continue;
                 }
                 if (candidates == null) {
                     candidates = new HashSet<>(cs);
