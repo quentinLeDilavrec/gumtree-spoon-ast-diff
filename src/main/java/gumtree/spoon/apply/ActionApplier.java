@@ -849,6 +849,24 @@ public class ActionApplier {
 				created.setBody(factory.createBlock());
 				break;
 			}
+			case "TryWithResource": {
+				CtTryWithResource created = factory.createTryWithResource();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				if (parent instanceof CtBodyHolder) {
+					addInBody(factory, target, created, (CtBodyHolder) parent);
+				} else if (parent instanceof CtStatementList) {
+					addInBody(factory, target, created, (CtStatementList) parent);
+				} else if (parent instanceof CtSynchronized) {
+					addInBody(factory, target, created, (CtSynchronized) parent);
+				} else {
+					throw new UnsupportedOperationException(parent.getClass().toString());
+				}
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				created.setBody(factory.createBlock());
+				break;
+			}
 			case "Catch": {
 				CtCatch created = factory.createCatch();
 				CtElement sp = getSpoonEle(source);
@@ -1647,6 +1665,9 @@ public class ActionApplier {
 		} else if (target.getLabel().equals(CtRole.FOR_UPDATE.name())) {
 			((CtFor) parent).addForUpdate(created);
 			return;
+		} else if (target.getLabel().equals(CtRole.TRY_RESOURCE.name())) {
+			((CtTryWithResource) parent).addResource((CtLocalVariable)created);
+			return;
 		} else if (target.getLabel().equals(CtRole.EXPRESSION.name())) {
 			if (parent instanceof CtFor) {
 				((CtFor) parent).setExpression((CtExpression) created);
@@ -1693,12 +1714,12 @@ public class ActionApplier {
 	}
 
 	private static boolean shouldIgnore1(AbstractVersionedTree aaa) {
-		return (aaa.getMetadata("type").equals("MODIFIER")) || (aaa.getMetadata("type").equals("RETURN_TYPE"))
-				|| (aaa.getMetadata("type").equals("THROWS")) || (aaa.getLabel().equals("THROWN"))
-				|| (aaa.getMetadata("type").equals("TypeParameter")) || (aaa.getMetadata("type").equals("Catch"))
-				|| (aaa.getMetadata("type").equals("LABEL")) || (aaa.getMetadata("type").equals("Parameter"))
-				|| (aaa.getMetadata("type").equals("Annotation")) || (aaa.getLabel().equals("EXPRESSION")
-				|| (aaa.getMetadata("type").equals("TypeReference")) || (aaa.getLabel().equals("TYPE")));
+		return aaa.getMetadata("type").equals("MODIFIER") || aaa.getMetadata("type").equals("RETURN_TYPE")
+				|| aaa.getMetadata("type").equals("THROWS") || aaa.getLabel().equals("THROWN")
+				|| aaa.getMetadata("type").equals("TypeParameter") || aaa.getMetadata("type").equals("Catch")
+				|| aaa.getMetadata("type").equals("LABEL") || aaa.getMetadata("type").equals("Parameter")
+				|| aaa.getMetadata("type").equals("Annotation") || aaa.getLabel().equals("EXPRESSION")
+				|| aaa.getMetadata("type").equals("TypeReference") || aaa.getLabel().equals("TYPE");
 	}
 
 	private static boolean shouldIgnore2(CtBodyHolder parent, AbstractVersionedTree aaa) {
@@ -1708,7 +1729,8 @@ public class ActionApplier {
 				|| (parent instanceof CtFor && aaa.getLabel().equals(CtRole.FOR_INIT.name()))
 				|| (parent instanceof CtFor && aaa.getLabel().equals(CtRole.EXPRESSION.name()))
 				|| (parent instanceof CtWhile && aaa.getLabel().equals(CtRole.EXPRESSION.name()))
-				|| (parent instanceof CtDo && aaa.getLabel().equals(CtRole.EXPRESSION.name()));
+				|| (parent instanceof CtDo && aaa.getLabel().equals(CtRole.EXPRESSION.name()))
+				|| (parent instanceof CtTryWithResource && aaa.getLabel().equals(CtRole.TRY_RESOURCE.name()));
 	}
 
 	static void addInBody(Factory factory, AbstractVersionedTree target, CtStatement created, CtStatementList parent) {
