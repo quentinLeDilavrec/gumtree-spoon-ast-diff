@@ -155,7 +155,7 @@ public class TreeScanner extends CtScanner {
 									return true;
 								}
 								String top = pt.getTopLevelType().getQualifiedName();
-								return tq.equals(top);
+								return tq.equals(top) ? true : isToIgnoreAux(element.getParent());
 							}
 						}
 						// return true;
