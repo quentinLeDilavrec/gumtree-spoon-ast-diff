@@ -200,13 +200,18 @@ public class ApplierHelper<T> implements AutoCloseable {
 
     private Launcher applyCombActions(Collection<? extends MyAction<?>> wantedActions) {
         Set<AtomicAction<AbstractVersionedTree>> wantedAA = new HashSet<>();
-
-        ComposingClusterizer flat = Combination.flatten(evoState.globalClusterizer, wantedActions);
-        // for (MyAction<?> a : wantedActions) {
-        //     if (a instanceof ComposedAction) {
-        //         flat.clusterize((ComposedAction<AbstractVersionedTree>) a);
-        //     }
-        // }
+        Set<ComposedAction<AbstractVersionedTree>> composed2 = new HashSet<>();
+        for (MyAction<?> a : wantedActions) {
+            decompose(wantedAA, a);
+            if (a instanceof ComposedAction) {
+                composed2.add((ComposedAction)a);
+            }
+        }
+        Flattener.ComposingClusterizer flat = new Flattener.ComposingClusterizer(evoState.globalClusterizer, wantedAA);
+        for (ComposedAction<AbstractVersionedTree> ca : composed2) {
+            flat.clusterize(ca);
+        }
+        
         Set<Cluster> toBreak = new HashSet<>();
         LinkedList<Cluster> tryToBreak = new LinkedList<>();
         flat.setInibiteds(toBreak);
@@ -217,7 +222,6 @@ public class ApplierHelper<T> implements AutoCloseable {
             prevSize += x == 0 ? 0 : 1;
         }
         for (MyAction<?> a : wantedActions) {
-            decompose(wantedAA, a);
             if (a instanceof ComposedAction) {
                 tryToBreak.addAll(flat.getCluster((ComposedAction<AbstractVersionedTree>) a));
             }
