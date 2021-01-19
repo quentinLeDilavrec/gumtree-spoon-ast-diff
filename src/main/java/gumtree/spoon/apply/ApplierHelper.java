@@ -39,6 +39,9 @@ import gumtree.spoon.diff.Diff;
 import gumtree.spoon.diff.DiffImpl;
 import gumtree.spoon.diff.MultiDiffImpl;
 import spoon.Launcher;
+import spoon.reflect.cu.CompilationUnit;
+import spoon.reflect.cu.SourcePosition;
+import spoon.reflect.cu.position.NoSourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.factory.Factory;
@@ -211,7 +214,7 @@ public class ApplierHelper<T> implements AutoCloseable {
         for (ComposedAction<AbstractVersionedTree> ca : composed2) {
             flat.clusterize(ca);
         }
-        
+
         Set<Cluster> toBreak = new HashSet<>();
         LinkedList<Cluster> tryToBreak = new LinkedList<>();
         flat.setInibiteds(toBreak);
@@ -322,6 +325,7 @@ public class ApplierHelper<T> implements AutoCloseable {
         MyAction<AbstractVersionedTree> invertableAction = inverted ? invertAction(action) : action;
         if (invertableAction instanceof Insert) {
             ActionApplier.applyMyInsert(facto, scanner.getTreeContext(), (MyInsert) invertableAction);
+            setChanged(invertableAction);
             // Object dst =
             // invertableAction.getTarget().getMetadata(MyScriptGenerator.MOVE_DST_ACTION);
             AbstractVersionedTree dst = invertableAction.getTarget();
@@ -345,10 +349,12 @@ public class ApplierHelper<T> implements AutoCloseable {
                     auxApply(scanner, facto, compressed, otherWantedAA, inverted);
                 }
             }
+            setChanged(invertableAction);
             ActionApplier.applyMyDelete(facto, scanner.getTreeContext(), (MyDelete) invertableAction);
             // return evoState.set(invertableAction.getTarget(), false, true);
         } else if (invertableAction instanceof Update) {
             ActionApplier.applyMyUpdate(facto, scanner.getTreeContext(), (MyUpdate) invertableAction);
+            setChanged(invertableAction);
             AbstractVersionedTree target = invertableAction.getTarget();
             if (inverted) {
                 if (watching.containsKey(target)) {
@@ -370,6 +376,22 @@ public class ApplierHelper<T> implements AutoCloseable {
             throw new RuntimeException(action.getClass().getCanonicalName());
         }
         return evoState.set(action, inverted, true);
+    }
+
+    private void setChanged(MyAction<AbstractVersionedTree> invertableAction) {
+        CtElement ele = (CtElement)invertableAction.getTarget().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+        if (ele==null) {
+            return;
+        }
+        SourcePosition position = ele.getPosition();
+        if (position==null || position instanceof NoSourcePosition) {
+            return;
+        }
+        CompilationUnit cu = position.getCompilationUnit();
+        if (cu == null) {
+            return;
+        }
+        cu.putMetadata("changed", true);
     }
 
     @Override
