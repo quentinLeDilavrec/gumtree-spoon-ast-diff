@@ -1451,10 +1451,13 @@ public class ActionApplier {
 					}
 				} else if (parent instanceof CtExecutableReference) {
 					((CtExecutableReference) parent).isImplicit();// TODO
+					break;
 				} else if (parent instanceof CtNewArray) {
 					((CtNewArray) parent).isImplicit();// TODO
+					break;
 				} else if (parent instanceof CtClass) {
-					((CtClass) parent).isImplicit();// TODO
+					LOGGER.warning("this AST structure should not materialized");
+					break;
 				} else {
 					throw new RuntimeException(parent.getClass().toString() + " with role " + target.getLabel());
 				}
