@@ -393,6 +393,7 @@ public class MyUtils {
 						logger.warning(ele.getClass().toString() + " have no role and position");
 						e = e.getParent();
 						position = e.getPosition();
+						continue;
 					} else {
 						logger.warning(ele.getClass().toString() + " without a role nor a position nor a parent");
 						break;
