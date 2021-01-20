@@ -388,6 +388,16 @@ public class MyUtils {
 				if (e instanceof CtPackageReference && e.getParent() instanceof CtPackage) {
 					return e.getPosition();
 				}
+				if (role == null) {
+					if (e.isParentInitialized()) {
+						logger.warning(ele.getClass().toString() + " have no role and position");
+						e = e.getParent();
+						position = e.getPosition();
+					} else {
+						logger.warning(ele.getClass().toString() + " without a role nor a position nor a parent");
+						break;
+					}
+				}
 				switch (role) {
 					case ACCESSED_TYPE: {
 						CtElement old = e;
