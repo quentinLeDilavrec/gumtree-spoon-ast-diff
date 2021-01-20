@@ -389,7 +389,12 @@ public interface Flattener {
             if (n == null) {
                 return false;
             }
-            for (Cluster c : maybePresentNodes.get(n)) {
+            Set<Cluster> cs = maybePresentNodes.get(n);
+            if (cs == null) {
+                logger.warning("looks like " + n +" is not in the contrain tree");
+                return false;
+            }
+            for (Cluster c : cs) {
                 if (cache.contains(c)) {
                     continue;
                 } else if (c.getMaybePresentParent() == x) {
