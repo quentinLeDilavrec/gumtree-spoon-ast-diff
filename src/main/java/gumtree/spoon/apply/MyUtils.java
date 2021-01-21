@@ -32,6 +32,7 @@ import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtPackage;
+import spoon.reflect.declaration.CtParameter;
 import spoon.reflect.declaration.CtType;
 import spoon.reflect.declaration.CtTypeParameter;
 import spoon.reflect.factory.Factory;
@@ -39,6 +40,7 @@ import spoon.reflect.factory.FactoryImpl;
 import spoon.reflect.path.CtPath;
 import spoon.reflect.path.CtRole;
 import spoon.reflect.reference.CtPackageReference;
+import spoon.reflect.reference.CtParameterReference;
 import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtTypeReference;
 import spoon.reflect.reference.CtVariableReference;
@@ -389,14 +391,20 @@ public class MyUtils {
 					return e.getPosition();
 				}
 				if (role == null) {
-					if (e.isParentInitialized()) {
+					if (!e.isParentInitialized()) {
+						logger.warning(ele.getClass().toString() + " without a role nor a position nor a parent");
+						break;
+					} else if (e instanceof CtParameterReference && e.getParent() instanceof CtParameter) {
+						CtElement old = e;
+						e = e.getParent();
+						position = e.getPosition();
+						ss += e.toString().length() - ((CtParameterReference) old).getSimpleName().length();
+						continue;
+					} else {
 						logger.warning(ele.getClass().toString() + " have no role and position");
 						e = e.getParent();
 						position = e.getPosition();
 						continue;
-					} else {
-						logger.warning(ele.getClass().toString() + " without a role nor a position nor a parent");
-						break;
 					}
 				}
 				switch (role) {
