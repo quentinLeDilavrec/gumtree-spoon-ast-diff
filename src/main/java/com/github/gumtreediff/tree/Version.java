@@ -37,7 +37,7 @@ public interface Version extends Comparable<Version> {
             case SUPERIOR:
                 return 1;
             case PARALLEL:
-                throw new RuntimeException(COMP_RES.PARALLEL.name());
+                throw new RuntimeException(COMP_RES.PARALLEL.name() + this.toString() + " " + other.toString());
             default:
                 switch (other.partiallyCompareTo(this)) { // to satisfy permutivity prop
                     case INFERIOR:
@@ -47,9 +47,9 @@ public interface Version extends Comparable<Version> {
                     case SUPERIOR:
                         return -1;
                     case PARALLEL:
-                        throw new RuntimeException(COMP_RES.PARALLEL.name());
+                        throw new RuntimeException(COMP_RES.PARALLEL.name() + this.toString() + " " + other.toString());
                     default:
-                        throw new RuntimeException(COMP_RES.UNKNOWN.name());
+                        throw new RuntimeException(COMP_RES.UNKNOWN.name() + this.toString() + " " + other.toString());
                 }
         }
     }
