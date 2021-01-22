@@ -1565,10 +1565,8 @@ public class ActionApplier {
 		r = (T) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 		if (r == null) {
 			String treeString = tree.toTreeString();
-			throw new MissingParentException("following ITree with parent " + 
-				tree.getParent().toShortString() + 
-				" should contain a spoon object: \n" +
-				treeString.substring(0, Math.min(1000, treeString.length())));
+			throw new MissingParentException("node " + tree.toString() + " with parents " + 
+				tree.getParents().toString() + " should contain a spoon object");
 		}
 		return r;
 	}

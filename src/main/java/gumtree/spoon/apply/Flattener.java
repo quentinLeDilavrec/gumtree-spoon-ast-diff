@@ -545,11 +545,17 @@ public interface Flattener {
             }
             if (avt2Index.size() != maybePresentNodes.size() + 1) {
                 logger.warning("avt2Index.size() != actions.size() + 1:");
-                for (AbstractVersionedTree x : avt2Index.keySet()) {
-                    logger.warning(Objects.toString(x));                
+                logger.warning("additionals from avt2Index:");
+                Set<AbstractVersionedTree> tmp1 = new HashSet<>(avt2Index.keySet());
+                tmp1.removeAll(maybePresentNodes.keySet());
+                for (AbstractVersionedTree x : tmp1) {
+                    logger.warning(x==null? "null": Objects.toString(x.getParents())+","+x.toString());    
                 }
-                for (AbstractVersionedTree x : maybePresentNodes.keySet()) {
-                    logger.warning(Objects.toString(x));
+                logger.warning("addionals from maybePresentNodes:");
+                Set<AbstractVersionedTree> tmp2 = new HashSet<>(maybePresentNodes.keySet());
+                tmp2.removeAll(avt2Index.keySet());
+                for (AbstractVersionedTree x : tmp2) {
+                    logger.warning(x==null? "null": Objects.toString(x.getParents())+","+x.toString());
                 }
             }
             List<ImmutablePair<Integer, Cluster>> rr = r.stream()
