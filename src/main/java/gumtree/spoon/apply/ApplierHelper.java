@@ -262,7 +262,12 @@ public class ApplierHelper<T> implements AutoCloseable {
             return launcher;
         }
         Combination.CombinationHelper<Cluster> combs = Combination.build(flat, constrainedTree);
-        logger.info("On track for at least 2^" + combs.minExposant() + " cases");
+        if(combs.minExposant() > leafsActionsLimit) {
+            logger.info("Aborting applyCombActions because 2^" + combs.minExposant() + " cases is to much");
+            return launcher;
+        } else {
+            logger.info("On track for at least 2^" + combs.minExposant() + " cases");
+        }
         Map<AbstractVersionedTree, Boolean> waitingToBeApplied = new LinkedHashMap<>();
         do {
             Combination.CHANGE<Cluster> change = combs.next();
