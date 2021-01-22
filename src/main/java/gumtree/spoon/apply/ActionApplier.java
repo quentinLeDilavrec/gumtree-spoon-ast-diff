@@ -1344,6 +1344,8 @@ public class ActionApplier {
 					((CtTypedElement) parent).setType(created);
 				} else if (target.getLabel().equals(CtRole.THROWN.name())) {
 					((CtExecutable) parent).addThrownType(created);
+				} else if (target.getLabel().equals(CtRole.TYPE_ARGUMENT.name()) && parent instanceof CtExecutableReference) {
+					((CtExecutableReference) parent).addActualTypeArgument(created);
 				} else {
 					throw new UnsupportedOperationException(
 							parent.getClass().toString() + " as a parent is no handled for role " + target.getLabel());
@@ -1737,7 +1739,8 @@ public class ActionApplier {
 				|| (parent instanceof CtFor && aaa.getLabel().equals(CtRole.EXPRESSION.name()))
 				|| (parent instanceof CtWhile && aaa.getLabel().equals(CtRole.EXPRESSION.name()))
 				|| (parent instanceof CtDo && aaa.getLabel().equals(CtRole.EXPRESSION.name()))
-				|| (parent instanceof CtTryWithResource && aaa.getLabel().equals(CtRole.TRY_RESOURCE.name()));
+				|| (parent instanceof CtTryWithResource && aaa.getLabel().equals(CtRole.TRY_RESOURCE.name()))
+				|| (parent instanceof CtExecutableReference && aaa.getLabel().equals(CtRole.TYPE_ARGUMENT.name()));
 	}
 
 	static void addInBody(Factory factory, AbstractVersionedTree target, CtStatement created, CtStatementList parent) {
