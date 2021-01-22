@@ -747,6 +747,8 @@ public class ActionApplier {
 					((CtArrayTypeReference) parent).setComponentType(created);
 				} else if (parent instanceof CtTypeReference && target.getLabel().equals(CtRole.TYPE_ARGUMENT.name())) {
 					((CtTypeReference) parent).addActualTypeArgument(created);
+				} else if (parent instanceof CtIntersectionTypeReference && target.getLabel().equals(CtRole.BOUND.name())) {
+					((CtIntersectionTypeReference) parent).addBound(created);
 				} else if (parent instanceof CtTypeAccess) {
 					((CtTypeAccess) parent).setAccessedType(created);
 				} else if (parent instanceof CtField) {
