@@ -412,28 +412,40 @@ public class MyUtils {
 						CtElement old = e;
 						e = e.getParent();
 						position = e.getPosition();
-						ss += e.toString().length() - ((CtTypeReference) old).getSimpleName().length();
+						try {
+							ss += e.toString().length() - ((CtTypeReference) old).getSimpleName().length();
+						} catch (Exception ee) {
+						}
 						break;
 					}
 					case PACKAGE_REF: {
 						CtElement old = e;
 						e = e.getParent().getParent();
 						position = e.getPosition();
-						es -= e.toString().length() - ((CtPackageReference) old).getSimpleName().length();
+						try {
+							es -= e.toString().length() - ((CtPackageReference) old).getSimpleName().length();
+						} catch (Exception ee) {
+						}
 						break;
 					}
 					case TARGET: {
 						CtElement old = e;
 						e = e.getParent();
 						position = e.getPosition();
-						es = -(e.toString().length() - old.toString().length() - es);
+						try {
+							es = -(e.toString().length() - old.toString().length() - es);
+						} catch (Exception ee) {
+						}
 						break;
 					}
 					case VARIABLE: {
 						CtElement old = e;
 						e = e.getParent().getParent();
 						position = e.getPosition();
-						es -= e.toString().length() - ((CtVariableReference) old).getSimpleName().length();
+						try {
+							es -= e.toString().length() - ((CtVariableReference) old).getSimpleName().length();
+						} catch (Exception ee) {
+						}
 						break;
 					}
 					case TYPE: {
