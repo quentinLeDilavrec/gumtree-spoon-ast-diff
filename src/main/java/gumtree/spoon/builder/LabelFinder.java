@@ -85,7 +85,11 @@ class LabelFinder extends CtInheritanceScanner {
 		label = variableAccess.getVariable().getSimpleName();
 		CtVariableReference tmp = variableAccess.getVariable();
 		labEle = tmp;
-		labEle.setPosition(CtWrapper.makePosition(variableAccess.getPosition(), tmp.toString().length()));
+		try {
+			labEle.setPosition(CtWrapper.makePosition(variableAccess.getPosition(), tmp.toString().length()));
+		} catch (Exception e) {
+			labEle.setPosition(CtWrapper.makePosition(variableAccess.getPosition()));
+		}
 	}
 
 	@Override

@@ -8,6 +8,7 @@ import spoon.reflect.code.CtConstructorCall;
 import spoon.reflect.code.CtVariableAccess;
 import spoon.reflect.cu.SourcePosition;
 import spoon.reflect.cu.position.BodyHolderSourcePosition;
+import spoon.reflect.cu.position.CompoundSourcePosition;
 import spoon.reflect.cu.position.DeclarationSourcePosition;
 import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtNamedElement;
@@ -18,6 +19,9 @@ import spoon.reflect.reference.CtReference;
 import spoon.reflect.reference.CtVariableReference;
 import spoon.reflect.visitor.CtVisitor;
 import spoon.support.reflect.CtExtendedModifier;
+import spoon.support.reflect.cu.position.BodyHolderSourcePositionImpl;
+import spoon.support.reflect.cu.position.CompoundSourcePositionImpl;
+import spoon.support.reflect.cu.position.DeclarationSourcePositionImpl;
 import spoon.support.reflect.cu.position.SourcePositionImpl;
 import spoon.support.reflect.declaration.CtElementImpl;
 
@@ -57,7 +61,7 @@ public class CtWrapper<L> extends CtElementImpl {
 	@Override
 	public void accept(CtVisitor visitor) {
 		if (visitor instanceof CloneVisitorNewFactory) {
-			((CloneVisitorNewFactory)visitor).visitCtWrapper(this);
+			((CloneVisitorNewFactory) visitor).visitCtWrapper(this);
 		}
 	}
 
@@ -101,10 +105,12 @@ public class CtWrapper<L> extends CtElementImpl {
 	public CtPath getPath() {
 		return parent.getPath();
 	}
+
 	@Override
 	public <E extends CtElement> E setPosition(SourcePosition position) {
 		return super.setPosition(position);
 	}
+
 	@Override
 	public SourcePosition getPosition() {
 		if (super.getPosition().isValidPosition()) {
@@ -115,12 +121,13 @@ public class CtWrapper<L> extends CtElementImpl {
 		// 	DeclarationSourcePosition ppp = (DeclarationSourcePosition)pp;
 		// 	return new SourcePositionImpl(pp.getCompilationUnit(), ppp.getNameStart(), ppp.getNameEnd(), ppp.getCompilationUnit().getLineSeparatorPositions());
 		// } else 
-		if (value instanceof CtElement && ((CtElement)value).getPosition().isValidPosition()) {
-			return ((CtElement)value).getPosition();
+		if (value instanceof CtElement && ((CtElement) value).getPosition().isValidPosition()) {
+			return ((CtElement) value).getPosition();
 		} else {
-			if (value instanceof CtExtendedModifier && ((CtExtendedModifier)value).isImplicit()) {
+			if (value instanceof CtExtendedModifier && ((CtExtendedModifier) value).isImplicit()) {
 			} else {
-				Logger.getLogger("CtWrapper").warning("Should handle position specifically ; value: "+ value.getClass() + "`\tposition: " + pp.getClass() + "\tparent: "+ parent.getClass());
+				Logger.getLogger("CtWrapper").warning("Should handle position specifically ; value: " + value.getClass()
+						+ "`\tposition: " + pp.getClass() + "\tparent: " + parent.getClass());
 			}
 			return pp;
 		}
@@ -172,7 +179,7 @@ public class CtWrapper<L> extends CtElementImpl {
 		public SourcePosition getPosition() {
 			SourcePosition pp = parent.getPosition();
 			if (pp instanceof DeclarationSourcePosition) {
-				return makePosition((DeclarationSourcePosition)pp);
+				return makePosition((DeclarationSourcePosition) pp);
 			} else {
 				throw null;
 			}
@@ -181,10 +188,8 @@ public class CtWrapper<L> extends CtElementImpl {
 	}
 
 	public static SourcePositionImpl makePosition(DeclarationSourcePosition ppp) {
-		return new SourcePositionImpl(ppp.getCompilationUnit(), 
-		ppp.getNameStart(), 
-		ppp.getNameEnd(), 
-		ppp.getCompilationUnit().getLineSeparatorPositions());
+		return new SourcePositionImpl(ppp.getCompilationUnit(), ppp.getNameStart(), ppp.getNameEnd(),
+				ppp.getCompilationUnit().getLineSeparatorPositions());
 	}
 
 	public static class CtExeRefWrapper extends CtWrapper<CtReference> {
@@ -198,11 +203,9 @@ public class CtWrapper<L> extends CtElementImpl {
 		@Override
 		public SourcePosition getPosition() {
 			SourcePosition pp = parent.getPosition();
-			return new SourcePositionImpl(
-				pp.getCompilationUnit(), 
-				pp.getSourceStart(), 
-				pp.getSourceStart() + value.getSimpleName().length(), 
-				pp.getCompilationUnit().getLineSeparatorPositions());
+			return new SourcePositionImpl(pp.getCompilationUnit(), pp.getSourceStart(),
+					pp.getSourceStart() + value.getSimpleName().length(),
+					pp.getCompilationUnit().getLineSeparatorPositions());
 		}
 	}
 
@@ -222,11 +225,37 @@ public class CtWrapper<L> extends CtElementImpl {
 	}
 
 	public static SourcePosition makePosition(SourcePosition pp, int length) {
-		return new SourcePositionImpl(
-			pp.getCompilationUnit(), 
-			pp.getSourceStart(),
-			pp.getSourceStart() + length, 
-			pp.getCompilationUnit().getLineSeparatorPositions());
+		if (pp instanceof CompoundSourcePosition) {
+			CompoundSourcePosition p = (CompoundSourcePosition) pp;
+			return new SourcePositionImpl(p.getCompilationUnit(), p.getNameStart(), p.getNameEnd(),
+					p.getCompilationUnit().getLineSeparatorPositions());
+		} else {
+			return new SourcePositionImpl(pp.getCompilationUnit(), pp.getSourceStart(), pp.getSourceEnd(),
+					pp.getCompilationUnit().getLineSeparatorPositions());
+		}
+	}
+
+	public static SourcePosition makePosition(SourcePosition pp) {
+		if (pp instanceof BodyHolderSourcePosition) {
+			BodyHolderSourcePosition p = (BodyHolderSourcePosition) pp;
+			return new BodyHolderSourcePositionImpl(p.getCompilationUnit(), p.getSourceStart(), p.getSourceEnd(),
+					p.getModifierSourceStart(), p.getModifierSourceEnd(), p.getNameStart(), p.getNameEnd(),
+					p.getBodyStart(), p.getBodyEnd(), p.getCompilationUnit().getLineSeparatorPositions());
+		} else if (pp instanceof DeclarationSourcePosition) {
+			DeclarationSourcePosition p = (DeclarationSourcePosition) pp;
+			return new DeclarationSourcePositionImpl(p.getCompilationUnit(), p.getSourceStart(), p.getSourceEnd(),
+					p.getModifierSourceStart(), p.getModifierSourceEnd(), p.getNameStart(), p.getNameEnd(),
+					p.getCompilationUnit().getLineSeparatorPositions());
+		} else if (pp instanceof CompoundSourcePosition) {
+			CompoundSourcePosition p = (CompoundSourcePosition) pp;
+			return new CompoundSourcePositionImpl(p.getCompilationUnit(), p.getSourceStart(), p.getSourceEnd(),
+					p.getNameStart(), p.getNameEnd(), p.getCompilationUnit().getLineSeparatorPositions());
+		} else if (pp instanceof SourcePosition) {
+			return new SourcePositionImpl(pp.getCompilationUnit(), pp.getSourceStart(), pp.getSourceEnd(),
+					pp.getCompilationUnit().getLineSeparatorPositions());
+		} else {
+			return pp;
+		}
 	}
 
 	// TODO test those ops on positions
