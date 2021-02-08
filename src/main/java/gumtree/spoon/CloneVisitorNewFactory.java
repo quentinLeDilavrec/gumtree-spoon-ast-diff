@@ -58,7 +58,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 			return null;
 		CompilationUnit newcu = this.factory.CompilationUnit().getMap().get(pos.getFile().getPath());
 		if (newcu == null) {
-			this.cloneHelper.clone(pos.getCompilationUnit());
+			newcu = this.cloneHelper.clone(pos.getCompilationUnit());
 			this.factory.CompilationUnit().getMap().put(pos.getFile().getPath(), newcu);
 		}
 		return clonePositionAux(pos, newcu);
