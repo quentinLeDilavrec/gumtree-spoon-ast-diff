@@ -1699,6 +1699,8 @@ public class ActionApplier {
 			((CtAnnotation) parent).addValue("value", created);
 		} else if (parent instanceof CtLambda) {
 			((CtLambda) parent).setExpression(created);
+		} else if (parent instanceof CtAnnotationMethod) {
+			((CtAnnotationMethod) parent).setDefaultExpression(created);
 		} else {
 			throw new UnsupportedOperationException(
 					parent.getClass().toString() + " as a parent is no handled for " + created.getClass().toString());
