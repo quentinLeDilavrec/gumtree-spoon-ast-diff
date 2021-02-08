@@ -46,6 +46,7 @@ import spoon.reflect.declaration.CtElement;
 import spoon.reflect.declaration.CtMethod;
 import spoon.reflect.factory.Factory;
 import spoon.reflect.reference.CtExecutableReference;
+import spoon.support.reflect.cu.position.PartialSourcePositionImpl;
 
 public class ApplierHelper<T> implements AutoCloseable {
     Logger logger = Logger.getLogger(ApplierHelper.class.getName());
@@ -384,12 +385,24 @@ public class ApplierHelper<T> implements AutoCloseable {
     }
 
     private void setChanged(MyAction<AbstractVersionedTree> invertableAction) {
-        CtElement ele = (CtElement)invertableAction.getTarget().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+        AbstractVersionedTree target = invertableAction.getTarget();
+        setChanged(target);
+    }
+
+    private void setChanged(AbstractVersionedTree target) {
+        CtElement ele = (CtElement)target.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
         if (ele==null) {
+            if (target.getParent() != null){
+                setChanged(target.getParent());
+            }
             return;
         }
         SourcePosition position = ele.getPosition();
-        if (position==null || position instanceof NoSourcePosition) {
+        if (position==null) {
+            return;
+        } else if (position instanceof PartialSourcePositionImpl) {
+
+        } else if (position instanceof NoSourcePosition) {
             return;
         }
         CompilationUnit cu = position.getCompilationUnit();
