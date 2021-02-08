@@ -1177,7 +1177,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 	public void visitCtCompilationUnit(CtCompilationUnit compilationUnit) {
 		CtCompilationUnit aCtCompilationUnit = this.factory.Core().createCompilationUnit();
 		this.builder.copy(compilationUnit, aCtCompilationUnit);
-		aCtCompilationUnit.setPosition(clonePosition(compilationUnit.getPosition()));
+		// CAUTION do not clone position here even if there is one, cause an infinite loop
 		aCtCompilationUnit.setComments(this.cloneHelper.clone(compilationUnit.getComments()));
 		aCtCompilationUnit.setAnnotations(this.cloneHelper.clone(compilationUnit.getAnnotations()));
 		aCtCompilationUnit.setPackageDeclaration(this.cloneHelper.clone(compilationUnit.getPackageDeclaration()));
