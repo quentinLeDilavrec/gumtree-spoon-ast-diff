@@ -1176,10 +1176,11 @@ public class CloneVisitorNewFactory extends CtScanner {
 
 	@java.lang.Override
 	public void visitCtCompilationUnit(CtCompilationUnit compilationUnit) {
-		Object path = compilationUnit.getFile()==null? null:compilationUnit.getFile().getPath();
+		String path = compilationUnit.getFile()==null ? null:compilationUnit.getFile().getPath();
 		CtCompilationUnit aCtCompilationUnit = this.factory.CompilationUnit().getMap().get(path);
 		if (aCtCompilationUnit == null) {
 			aCtCompilationUnit = this.factory.Core().createCompilationUnit();
+			this.factory.CompilationUnit().getMap().put(path, (CompilationUnit)aCtCompilationUnit);
 		} else {
 			this.other = aCtCompilationUnit;
 			return;
