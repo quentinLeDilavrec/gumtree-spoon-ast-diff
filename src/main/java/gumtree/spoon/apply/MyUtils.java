@@ -368,7 +368,7 @@ public class MyUtils {
 				&& ele.getParent() instanceof CtPackage) {
 		} else if ((position == null || !position.isValidPosition())) {
 			// position = computePrecisePosition(ele);
-			return new ImmutablePair<>(null, null);
+			return new ImmutablePair<>(ele, computePrecisePosition(ele));
 			// throw new RuntimeException(ele.getClass().toString());
 		}
 		return new ImmutablePair<CtElement, SourcePosition>(ele, position);
