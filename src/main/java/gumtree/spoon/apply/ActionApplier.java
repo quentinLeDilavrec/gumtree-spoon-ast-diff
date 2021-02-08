@@ -1543,6 +1543,49 @@ public class ActionApplier {
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
 				break;
 			}
+			case "AnnotationMethod": {
+				CtAnnotationMethod created = factory.createAnnotationMethod();
+				CtElement sp = getSpoonEle(source);
+				CtAnnotationType parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				created.setDefaultMethod(((CtMethod) sp).isDefaultMethod());
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				parent.addMethod(created);
+				created.setSimpleName("placeHolder" + parent.getMethods().size());
+				if (created.isAbstract()) {
+					break;
+				}
+				if (parent instanceof CtInterface && !created.isDefaultMethod()) {
+					break;
+				}
+				created.setBody(factory.createBlock());
+				break;
+			}
+			case "AnnotationType": {
+				CtAnnotationType created = factory.createAnnotationType();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				if (parent == null) {
+					factory.getModel().getRootPackage().addType(created);
+				} else if (parent instanceof CtPackage) {
+					created.setSimpleName("PlaceHolder" + ((CtPackage) parent).getTypes().size());
+					((CtPackage) parent).addType(created);
+				} else {
+					((CtType) parent).addNestedType(created);
+				}
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				break;
+			}
+			case "AnnotationFieldAccess": {
+				CtAnnotationFieldAccess created = factory.createAnnotationFieldAccess();
+				CtElement sp = getSpoonEle(source);
+				CtElement parent = getSpoonEleStrict(parentTarget);
+				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
+				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
+				addExpressionToParent(parent, created, target.getLabel());
+				break;
+			}
 			default: {
 				LOGGER.warning(targetType + " is no handled");
 				throw new AssertionError(targetType + " is no handled");
