@@ -54,29 +54,33 @@ class LabelFinder extends CtInheritanceScanner {
 		label = e.getSimpleName();
 		// labEle = new CtWrapper.CtNamedWrapper(e);
 		SourcePosition pp = e.getPosition();
-		if (pp instanceof DeclarationSourcePosition) {
-			labEle = e.getReference();
-			labEle.setParent(e);
-			labEle.setPosition(CtWrapper.makePosition((DeclarationSourcePosition) pp));
-		} else if (e instanceof CtPackage) {
-			labEle = e.getReference();
-			labEle.setParent(e);
-		} else if(pp instanceof NoSourcePosition) {
-			labEle = e.getReference();
-			labEle.setParent(e);
-			// labEle.setPosition(new PartialSourcePositionImpl(e.getParent().getPosition().getCompilationUnit()));
-			try {
+		try {
+			if (pp instanceof DeclarationSourcePosition) {
+				labEle = e.getReference();
+				labEle.setParent(e);
+				labEle.setPosition(CtWrapper.makePosition((DeclarationSourcePosition) pp));
+			} else if (e instanceof CtPackage) {
+				labEle = e.getReference();
+				labEle.setParent(e);
+			} else if(pp instanceof NoSourcePosition) {
+				labEle = e.getReference();
+				labEle.setParent(e);
+				// labEle.setPosition(new PartialSourcePositionImpl(e.getParent().getPosition().getCompilationUnit()));
+				try {
+					System.err.println(e.getClass()+" should have a position");
+				} catch (Exception ee) {
+					System.err.println("named element without a position...");
+				}
+			} else if(pp.isValidPosition()) {
+				labEle = e.getReference();
+				labEle.setParent(e);
+			} else {
+				labEle = e.getReference();
+				labEle.setParent(e);
 				System.err.println(e.getClass()+" should have a position");
-			} catch (Exception ee) {
-				System.err.println("named element without a position...");
 			}
-		} else if(pp.isValidPosition()) {
-			labEle = e.getReference();
-			labEle.setParent(e);
-		} else {
-			labEle = e.getReference();
-			labEle.setParent(e);
-			System.err.println(e.getClass()+" should have a position");
+		} catch (Exception exc) {
+			System.err.println(exc.toString());
 		}
 	}
 
