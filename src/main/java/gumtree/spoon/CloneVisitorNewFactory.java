@@ -1176,7 +1176,14 @@ public class CloneVisitorNewFactory extends CtScanner {
 
 	@java.lang.Override
 	public void visitCtCompilationUnit(CtCompilationUnit compilationUnit) {
-		CtCompilationUnit aCtCompilationUnit = this.factory.Core().createCompilationUnit();
+		Object path = compilationUnit.getFile()==null? null:compilationUnit.getFile().getPath();
+		CtCompilationUnit aCtCompilationUnit = this.factory.CompilationUnit().getMap().get(path);
+		if (aCtCompilationUnit == null) {
+			aCtCompilationUnit = this.factory.Core().createCompilationUnit();
+		} else {
+			this.other = aCtCompilationUnit;
+			return;
+		}
 		this.builder.copy(compilationUnit, aCtCompilationUnit);
 		// CAUTION do not clone position here even if there is one, cause an infinite loop
 		aCtCompilationUnit.setComments(this.cloneHelper.clone(compilationUnit.getComments()));
