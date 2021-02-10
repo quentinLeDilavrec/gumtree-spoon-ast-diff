@@ -1609,7 +1609,7 @@ public class ActionApplier {
 			List<ITree> parents = tree.getParents();
 			throw new MissingParentException("node " + tree.toString() + 
 				" with parents " + parents.toString() + 
-				" with debuggingUpdate " + parents.stream().map(x->x.getMetadata("debuggingUpdate")).collect(Collectors.toList()) + 
+				" with debuggingUpdate " + tree.getMetadata("debuggingUpdate") + 
 				" should contain a spoon object");
 		}
 		return r;
