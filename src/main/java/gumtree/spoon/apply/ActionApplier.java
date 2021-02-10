@@ -1309,10 +1309,8 @@ public class ActionApplier {
 				created.setPosition(new MyOtherCloner(factory).clone(sp.getPosition(), parent));
 				created.setImplicit(((CtTypeParameter) sp).isImplicit());
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, created);
-				if (parent instanceof CtType) {
-					((CtType) parent).addFormalCtTypeParameter(created);
-				} else if (parent instanceof CtMethod) {
-					((CtMethod) parent).addFormalCtTypeParameter(created);
+				if (parent instanceof CtFormalTypeDeclarer) {
+					((CtFormalTypeDeclarer) parent).addFormalCtTypeParameter(created);
 				} else {
 					throw new UnsupportedOperationException(parent.getClass().toString());
 				}
