@@ -390,14 +390,18 @@ public class ApplierHelper<T> implements AutoCloseable {
     }
 
     private void setChanged(AbstractVersionedTree target) {
-        CtElement ele = (CtElement)target.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
-        if (ele==null) {
+        Object e = target.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+        if (e==null) {
             if (target.getParent() != null){
                 setChanged(target.getParent());
             }
             return;
         }
-        SourcePosition position = ele.getPosition();
+        if (!(e instanceof CtElement)) {
+            logger.warning(e.getClass().toString());
+            return;
+        }
+        SourcePosition position = ((CtElement)e).getPosition();
         if (position==null) {
             return;
         } else if (position instanceof PartialSourcePositionImpl) {
