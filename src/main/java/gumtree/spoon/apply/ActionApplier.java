@@ -1608,8 +1608,11 @@ public class ActionApplier {
 		r = (T) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 		if (r == null) {
 			String treeString = tree.toTreeString();
-			throw new MissingParentException("node " + tree.toString() + " with parents " + 
-				tree.getParents().toString() + " should contain a spoon object");
+			List<ITree> parents = tree.getParents();
+			throw new MissingParentException("node " + tree.toString() + 
+				" with parents " + parents.toString() + 
+				" with debuggingUpdate " + parents.stream().map(x->x.getMetadata("debuggingUpdate")).collect(Collectors.toList()) + 
+				" should contain a spoon object");
 		}
 		return r;
 	}
@@ -2117,6 +2120,7 @@ public class ActionApplier {
 			case "RETURN_TYPE":
 				CtElement old = getSpoonEleStrict(source);
 				source.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
+				source.setMetadata("debuggingUpdate", true);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, old);
 				break;
 			default:
