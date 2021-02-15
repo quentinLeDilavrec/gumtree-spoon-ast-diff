@@ -319,18 +319,7 @@ public class MyUtils {
 	 */
 	public static <T> ImmutablePair<CtElement, SourcePosition> toNormalizedPreciseSpoon(ITree tree, Version version) {
 		CtElement ele = null;
-		if (tree instanceof AbstractVersionedTree) {
-			if (((AbstractVersionedTree) tree).getInsertVersion() == version) {
-				ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-			} else if (((AbstractVersionedTree) tree).getInsertVersion() == null) {
-				if (((AbstractVersionedTree) tree).getRemoveVersion() == null) {
-					ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-				} else if (version.partiallyCompareTo(
-						((AbstractVersionedTree) tree).getRemoveVersion()) == Version.COMP_RES.INFERIOR) {
-					ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
-				} // if PARALLEL ?
-			}
-		} else {
+		if (!(tree instanceof AbstractVersionedTree)){
 			ele = (CtElement) tree.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
 			if (ele == null) {
 				return new ImmutablePair<>(null, null);
@@ -341,6 +330,18 @@ public class MyUtils {
 					.getMetadata(MyScriptGenerator.ORIGINAL_SPOON_OBJECT_PER_VERSION);
 			if (map != null) {
 				ele = map.get(version);
+			}
+		}
+		if (ele == null) {
+			if (((AbstractVersionedTree) tree).getInsertVersion() == version) {
+				ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+			} else if (((AbstractVersionedTree) tree).getInsertVersion() == null) {
+				if (((AbstractVersionedTree) tree).getRemoveVersion() == null) {
+					ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+				} else if (version != null && version.partiallyCompareTo(
+						((AbstractVersionedTree) tree).getRemoveVersion()) == Version.COMP_RES.INFERIOR) {
+					ele = (CtElement) tree.getMetadata(VersionedTree.ORIGINAL_SPOON_OBJECT);
+				} // if PARALLEL ?
 			}
 		}
 		if (ele == null) {
