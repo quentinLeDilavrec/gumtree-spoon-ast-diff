@@ -364,8 +364,10 @@ public class MyUtils {
 		}
 		SourcePosition position = ele.getPosition();
 		if (ele instanceof CtPackage) {
+			return new ImmutablePair<>(ele, null);
 		} else if (ele instanceof CtPackageReference && ele.isParentInitialized()
 				&& ele.getParent() instanceof CtPackage) {
+			return new ImmutablePair<>(ele, null);
 		} else if ((position == null || !position.isValidPosition())) {
 			// position = computePrecisePosition(ele);
 			return new ImmutablePair<>(ele, computePrecisePosition(ele));
@@ -491,7 +493,7 @@ public class MyUtils {
 			end = Math.max(start, position.getSourceEnd() + es);// + correction;
 			position.getSourceStart();
 		} else if (ele instanceof CtPackage) {
-			return null;
+			return ele.getPosition();
 		} else {
 			position = ele.getPosition();
 			if (position == null || !position.isValidPosition()) {
