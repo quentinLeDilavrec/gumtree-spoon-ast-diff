@@ -9,10 +9,13 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.management.RuntimeErrorException;
 
 import com.github.gumtreediff.actions.MyAction;
 import com.github.gumtreediff.actions.MyAction.AtomicAction;
@@ -208,7 +211,7 @@ public class ApplierHelper<T> implements AutoCloseable {
         for (MyAction<?> a : wantedActions) {
             decompose(wantedAA, a);
             if (a instanceof ComposedAction) {
-                composed2.add((ComposedAction)a);
+                composed2.add((ComposedAction) a);
             }
         }
         Flattener.ComposingClusterizer flat = new Flattener.ComposingClusterizer(evoState.globalClusterizer, wantedAA);
@@ -259,10 +262,16 @@ public class ApplierHelper<T> implements AutoCloseable {
             j++;
         }
         logger.info("On following constrain tree:\n" + constrainedTree);
-        if (constrainedTree.size()==0) {
+        if (constrainedTree.size() == 0) {
             return launcher;
         }
-        Combination.CombinationHelper<Cluster> combs = Combination.build(flat, constrainedTree);
+        Combination.CombinationHelper<Cluster> combs;
+        try {
+            combs = Combination.build(flat, constrainedTree);
+        } catch (MultipleConstraintsException e) {
+            logger.log(Level.WARNING, "got a constrainedTree with multiple constraints", e);
+            return launcher;
+        }
         if(combs.minExposant() > leafsActionsLimit) {
             logger.info("Aborting applyCombActions because 2^" + combs.minExposant() + " cases is to much");
             return launcher;
@@ -330,6 +339,7 @@ public class ApplierHelper<T> implements AutoCloseable {
             boolean inverted) throws WrongAstContextException, MissingParentException {
         MyAction<AbstractVersionedTree> invertableAction = inverted ? invertAction(action) : action;
         if (invertableAction instanceof Insert) {
+            assertInsertable(invertableAction);
             ActionApplier.applyMyInsert(facto, scanner.getTreeContext(), (MyInsert) invertableAction);
             setChanged(invertableAction);
             // Object dst =
@@ -382,6 +392,21 @@ public class ApplierHelper<T> implements AutoCloseable {
             throw new RuntimeException(action.getClass().getCanonicalName());
         }
         return evoState.set(action, inverted, true);
+    }
+
+    private void assertInsertable(MyAction<AbstractVersionedTree> invertableAction) throws MissingParentException {
+        AbstractVersionedTree target = invertableAction.getTarget();
+        AbstractVersionedTree parent = target.getParent();
+        if (parent == null) {
+            throw new MissingParentException("parent of " + target.toString() + " is null");
+        } else if (parent.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT)==null) {
+            throw new MissingParentException("parent "+ parent.toString()+" of " + target.toString() + " is not populated" +
+            " with parents " + parent.getParents() +
+            " considering i=" + Objects.toString(parent.getMetadata("inserted")) +
+            ", d=" + Objects.toString(parent.getMetadata("deleted")) +
+            ", u=" + Objects.toString(parent.getMetadata("updated")) + 
+            ", -u=" + Objects.toString(parent.getMetadata("unupdated")));
+        }
     }
 
     private void setChanged(MyAction<AbstractVersionedTree> invertableAction) {

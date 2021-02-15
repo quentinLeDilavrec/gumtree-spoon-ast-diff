@@ -315,7 +315,8 @@ public class Combination {
             }
         }
 
-        ReflectedConstrainedHelper(int[] init, int[] leafs, int[] deps, T[] nodeList) {
+        ReflectedConstrainedHelper(int[] init, int[] leafs, int[] deps, T[] nodeList)
+                throws MultipleConstraintsException {
             this.reflectedHelper = new Reflected.ReflectedHelper(
                     BINARY.encode(filterInitLeafs(propagate(init, deps, leafs), leafs)));
             this.nodeList = nodeList;
@@ -372,7 +373,7 @@ public class Combination {
             System.out.print("" + change.content + " " + change.way);
         }
 
-        private static int[] propagate(int[] init, int[] deps, int[] leafs) {
+        private static int[] propagate(int[] init, int[] deps, int[] leafs) throws MultipleConstraintsException {
             int[] r = new int[init.length];
             int toPropagate = -1;
             for (int i = r.length - 1; i >= 0; i--) {
@@ -388,7 +389,7 @@ public class Combination {
                                 toPropagate = i;
                                 r[i] = 1;
                             } else {
-                                throw new RuntimeException(
+                                throw new MultipleConstraintsException(
                                         "index " + toPropagate + " is already missing children, index " + i
                                                 + " cannot also miss one at the same time");
                             }
@@ -580,7 +581,8 @@ public class Combination {
         return flat;
     }
 
-    public static ReflectedConstrainedHelper<Cluster> build(Flattener.Clusterizer flat, List<ImmutablePair<Integer, Cluster>> l) {
+    public static ReflectedConstrainedHelper<Cluster> build(Flattener.Clusterizer flat, List<ImmutablePair<Integer, Cluster>> l)
+            throws MultipleConstraintsException {
         int[] init = l.stream().map(x -> flat.getActions().contains(x.right.getRoot().getMetadata(MyScriptGenerator.DELETE_ACTION)) ? 1 : 0).mapToInt(Integer::intValue)
                 .toArray();//Combination.initialState(l);
         int[] leafs = Combination.detectLeafs(l);
@@ -634,7 +636,7 @@ public class Combination {
         return IntStream.range(0, init.length).filter(i -> leafs[i] != 0).map(i -> init[i]).toArray();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws MultipleConstraintsException {
         int[] init = new int[] { 1, 1, 1, 0, 1, 0, 1 }; // { 1, 1, 1, 0, 0, 0, 1 } case not handled for now (ie. half
                                                         // way intermediate cases)
         ReflectedConstrainedHelper<Integer> h = new ReflectedConstrainedHelper<>(init,

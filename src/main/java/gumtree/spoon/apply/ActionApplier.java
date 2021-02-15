@@ -3,6 +3,7 @@ package gumtree.spoon.apply;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -47,6 +48,7 @@ public class ActionApplier {
 		AbstractVersionedTree target = action.getTarget();
 		AbstractVersionedTree parentTarget = target.getParent();
 		String targetType = (String) target.getMetadata("type");
+		target.setMetadata("inserted", false);
 		switch (targetType) {
 			case "LABEL": {
 				CtElement parent = getSpoonEleStrict(parentTarget);
@@ -1590,6 +1592,7 @@ public class ActionApplier {
 				// throw new UnsupportedOperationException(targetType + " is no handled");
 			}
 		}
+		target.setMetadata("inserted", true);
 	}
 
 	private static <T extends CtElement> T getSpoonEle(ITree tree) {
@@ -1608,9 +1611,11 @@ public class ActionApplier {
 			String treeString = tree.toTreeString();
 			List<ITree> parents = tree.getParents();
 			throw new MissingParentException("node " + tree.toString() + 
-				" with parents " + parents.toString() + 
-				" with debuggingUpdate " + tree.getMetadata("debuggingUpdate") + 
-				" should contain a spoon object");
+				" with parents " + parents.toString() + " should contain a spoon object" + 
+				" considering i=" + Objects.toString(tree.getMetadata("inserted")) +
+				", d=" + Objects.toString(tree.getMetadata("deleted")) +
+				", u=" + Objects.toString(tree.getMetadata("updated")) + 
+				", -u=" + Objects.toString(tree.getMetadata("unupdated")));
 		}
 		return r;
 	}
@@ -1819,6 +1824,7 @@ public class ActionApplier {
 		AbstractVersionedTree target = action.getTarget();
 		AbstractVersionedTree parentTarget = target.getParent();
 		CtElement ele = (CtElement) target.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
+		target.setMetadata("deleted", false);
 		if (ele != null) {
 			try {
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
@@ -1833,6 +1839,7 @@ public class ActionApplier {
 				throw new WrongAstContextException("while deleting", e);
 			}
 		}
+		target.setMetadata("deleted", true);
 	}
 
 	public static void applyMyUpdate(Factory factory, TreeContext ctx, MyUpdate action) throws MissingParentException {
@@ -1843,6 +1850,8 @@ public class ActionApplier {
 		ITree source = action.getNode();
 		// ITree source = action.getSource();
 		// TODO find previously instanciated thing to uninstantiat it after instanciating target
+		target.setMetadata("updated", false);
+		source.setMetadata("unupdated", false);
 		switch (targetType) {
 			case "LABEL": {
 				CtElement parent = getSpoonEleStrict(parentTarget);
@@ -2100,6 +2109,7 @@ public class ActionApplier {
 				// 	actualTmod.setImplicit(false);
 				// }
 				source.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
+				source.setMetadata("unupdated", true);
 				CtExtendedModifier newV = ((CtModifiable) parent).getExtendedModifiers().stream()
 						.filter(x -> x.getKind().equals(tmodk)).findAny().orElse(null);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, newV);
@@ -2118,12 +2128,14 @@ public class ActionApplier {
 			case "RETURN_TYPE":
 				CtElement old = getSpoonEleStrict(source);
 				source.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, null);
-				source.setMetadata("debuggingUpdate", true);
+				source.setMetadata("unupdated", true);
 				target.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, old);
 				break;
 			default:
 				LOGGER.warning(targetType + " is no handled");
 		}
+		source.setMetadata("unupdated", true);
+		target.setMetadata("updated", true);
 	}
 
 	// public static <T extends Move & AAction<Move>> void applyMyMove(Factory factory, TreeContext ctx, T action) {

@@ -40,7 +40,7 @@ import spoon.support.compiler.VirtualFile;
 public class GrayCodeReflectedTest {
 
     @Test
-    public void treeTest() {
+    public void treeTest() throws MultipleConstraintsException {
         String contentsLeft = "class X {void f(){} void g(){f();} void h(){g();}}";
         String contentsRight = "class X {class Y{void g(){f();}}}";
         Factory leftF = MyUtils.makeFactory(new VirtualFile(contentsLeft, "X.java"));
