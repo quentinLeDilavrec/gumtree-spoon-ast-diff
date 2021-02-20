@@ -10,6 +10,7 @@ import com.github.gumtreediff.tree.ITree;
 
 import gumtree.spoon.builder.CtWrapper;
 import gumtree.spoon.builder.SpoonGumTreeBuilder;
+import spoon.experimental.CtUnresolvedImport;
 import spoon.reflect.CtModelImpl.CtRootPackage;
 import spoon.reflect.code.*;
 import spoon.reflect.cu.CompilationUnit;
@@ -1089,14 +1090,25 @@ public class CloneVisitorNewFactory extends CtScanner {
 
 	@java.lang.Override
 	public void visitCtImport(final CtImport ctImport) {
-		CtImport aCtImport = this.factory.Core().createImport();
-		this.builder.copy(ctImport, aCtImport);
-		aCtImport.setPosition(clonePosition(ctImport.getPosition()));
-		aCtImport.setReference(assertNotNull(this.cloneHelper.clone(ctImport.getReference())));
-		aCtImport.setAnnotations(this.cloneHelper.clone(ctImport.getAnnotations()));
-		aCtImport.setComments(this.cloneHelper.clone(ctImport.getComments()));
-		this.cloneHelper.tailor(ctImport, aCtImport);
-		this.other = aCtImport;
+		if (ctImport instanceof CtUnresolvedImport) {
+			CtImport aCtImport = this.factory.Core().createUnresolvedImport();
+			this.builder.copy(ctImport, aCtImport);
+			aCtImport.setPosition(clonePosition(ctImport.getPosition()));
+			((CtUnresolvedImport)aCtImport).setUnresolvedReference(((CtUnresolvedImport)ctImport).getUnresolvedReference());
+			aCtImport.setAnnotations(this.cloneHelper.clone(ctImport.getAnnotations()));
+			aCtImport.setComments(this.cloneHelper.clone(ctImport.getComments()));
+			this.cloneHelper.tailor(ctImport, aCtImport);
+			this.other = aCtImport;
+		} else {
+			CtImport aCtImport = this.factory.Core().createImport();
+			this.builder.copy(ctImport, aCtImport);
+			aCtImport.setPosition(clonePosition(ctImport.getPosition()));
+			aCtImport.setReference(assertNotNull(this.cloneHelper.clone(ctImport.getReference())));
+			aCtImport.setAnnotations(this.cloneHelper.clone(ctImport.getAnnotations()));
+			aCtImport.setComments(this.cloneHelper.clone(ctImport.getComments()));
+			this.cloneHelper.tailor(ctImport, aCtImport);
+			this.other = aCtImport;
+		}
 	}
 	
 
