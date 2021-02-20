@@ -1,5 +1,6 @@
 package gumtree.spoon.apply.operations;
 
+import spoon.experimental.CtUnresolvedImport;
 import spoon.reflect.code.*;
 import spoon.reflect.declaration.*;
 import spoon.reflect.reference.*;
@@ -951,13 +952,23 @@ public class MyCloneVisitor extends CtScanner {
 	// auto-generated, see spoon.generating.CloneVisitorGenerator
 	@java.lang.Override
 	public void visitCtImport(final CtImport ctImport) {
-		CtImport aCtImport = ctImport.getFactory().Core().createImport();
-		this.builder.copy(ctImport, aCtImport);
-		aCtImport.setReference(this.cloneHelper.clone(ctImport.getReference()));
-		aCtImport.setAnnotations(this.cloneHelper.clone(ctImport.getAnnotations()));
-		aCtImport.setComments(this.cloneHelper.clone(ctImport.getComments()));
-		this.cloneHelper.tailor(ctImport, aCtImport);
-		this.other = aCtImport;
+		if (ctImport instanceof CtUnresolvedImport) {
+			CtImport aCtImport = ctImport.getFactory().Core().createUnresolvedImport();
+			this.builder.copy(ctImport, aCtImport);
+			((CtUnresolvedImport)aCtImport).setUnresolvedReference(((CtUnresolvedImport)ctImport).getUnresolvedReference());
+			aCtImport.setAnnotations(this.cloneHelper.clone(ctImport.getAnnotations()));
+			aCtImport.setComments(this.cloneHelper.clone(ctImport.getComments()));
+			this.cloneHelper.tailor(ctImport, aCtImport);
+			this.other = aCtImport;
+		} else {
+			CtImport aCtImport = ctImport.getFactory().Core().createImport();
+			this.builder.copy(ctImport, aCtImport);
+			aCtImport.setReference(this.cloneHelper.clone(ctImport.getReference()));
+			aCtImport.setAnnotations(this.cloneHelper.clone(ctImport.getAnnotations()));
+			aCtImport.setComments(this.cloneHelper.clone(ctImport.getComments()));
+			this.cloneHelper.tailor(ctImport, aCtImport);
+			this.other = aCtImport;
+		}
 	}
 
 	// auto-generated, see spoon.generating.CloneVisitorGenerator
