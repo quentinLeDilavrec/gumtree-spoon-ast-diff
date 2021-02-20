@@ -1092,11 +1092,19 @@ public class CloneVisitorNewFactory extends CtScanner {
 		CtImport aCtImport = this.factory.Core().createImport();
 		this.builder.copy(ctImport, aCtImport);
 		aCtImport.setPosition(clonePosition(ctImport.getPosition()));
-		aCtImport.setReference(this.cloneHelper.clone(ctImport.getReference()));
+		aCtImport.setReference(assertNotNull(this.cloneHelper.clone(ctImport.getReference())));
 		aCtImport.setAnnotations(this.cloneHelper.clone(ctImport.getAnnotations()));
 		aCtImport.setComments(this.cloneHelper.clone(ctImport.getComments()));
 		this.cloneHelper.tailor(ctImport, aCtImport);
 		this.other = aCtImport;
+	}
+	
+
+	private CtReference assertNotNull(CtReference clone) {
+		if (clone == null) {
+			throw new RuntimeException("reference is null");
+		}
+		return clone;
 	}
 
 	@java.lang.Override
