@@ -37,11 +37,13 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
     final Granularity granularity;
     Version beforeVersion;
     Version afterVersion;
+    private Map<Version, Map<ITree, AbstractVersionedTree>> mappingPerVersion;
 
-    public MyScriptGenerator(AbstractVersionedTree middle, Granularity granularity) {
-        super(middle);
+    public MyScriptGenerator(AbstractVersionedTree middle, Version initialVersion , Map<Version,Map<ITree,AbstractVersionedTree>> mappingPerVersion, Granularity granularity) {
+        super(middle, initialVersion);
         this.middle = middle;
         this.granularity = granularity;
+        this.mappingPerVersion = mappingPerVersion;
     }
 
     @Override
@@ -187,7 +189,7 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
                 z.insertChild(w, k);
                 Action action = addInsert(x, w);
                 addInsertAction(action, w);
-                mdForMiddle(x, w);
+                mdForMiddle(x, w, mappingPerVersion.get(this.afterVersion));
             } else {
                 w = cpyMappings.getSrc(x);
                 if (!x.equals(origDst)) { // TODO => x != origDst // Case of the root
@@ -207,7 +209,7 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
                         // deleted.add(w);
                         // // copyToOrig.put(w, x);
                         // copyToOrig.put(newTree, x);
-                        mdForMiddle(x, newTree);
+                        mdForMiddle(x, newTree, mappingPerVersion.get(this.afterVersion));
 
                         // Action uact = new MyAction.MyInsert(Update.class, w, wbis);
                         // addDeleteAction(uact, w);
@@ -261,7 +263,7 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
                         Action action = addUpdate(w, newTree);
                         addDeleteAction(action, w);
                         addInsertAction(action, newTree);
-                        mdForMiddle(x, newTree);
+                        mdForMiddle(x, newTree, mappingPerVersion.get(this.afterVersion));
                     } else if (!z.equals(v)) {
                         // x was moved from z to y
                         // in intermediate: w is was moved from v to z,
@@ -275,7 +277,7 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
                         // deleted.add(w);
                         // // copyToOrig.put(w, x);
                         // copyToOrig.put(newTree, x);
-                        mdForMiddle(x, newTree);
+                        mdForMiddle(x, newTree, mappingPerVersion.get(this.afterVersion));
                         switch (granularity) {
                             case COMPOSE: {
                                 // Action mact = new MyAction.MyMove(w, newTree);
@@ -307,7 +309,7 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
                             }
                         }
                     } else {
-                        mdForMiddle(x, w);
+                        mdForMiddle(x, w, mappingPerVersion.get(this.afterVersion));
                     }
 
                 }
@@ -325,13 +327,14 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
 
     public static String ORIGINAL_SPOON_OBJECT_PER_VERSION = "ORIGINAL_SPOON_OBJECT_PER_VERSION";
 
-    private void mdForMiddle(ITree original, AbstractVersionedTree middle) {
+    private void mdForMiddle(ITree original, AbstractVersionedTree middle, Map<ITree,AbstractVersionedTree> mapping) {
         CtElement ele = (CtElement) original.getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
         if (ele == null) {
             ele = (CtElement) original.getParent().getMetadata(SpoonGumTreeBuilder.SPOON_OBJECT);
             middle = middle.getParent();
         } else {
-            ele.putMetadata(VersionedTree.MIDDLE_GUMTREE_NODE, middle);
+            mapping.put(original, middle);
+            // ele.putMetadata(VersionedTree.MIDDLE_GUMTREE_NODE, middle); // might cause mem leak
         }
         if (ele == null || middle == null) {
             return;
@@ -446,7 +449,7 @@ public class MyScriptGenerator extends VersionedEditScriptGenerator {
                         // // copyToOrig.put((AbstractVersionedTree) a, x);
                         // copyToOrig.put(newTree, x);
                         alreadyAna.add(b);
-                        mdForMiddle(b, newTree);
+                        mdForMiddle(b, newTree, mappingPerVersion.get(this.afterVersion));
                         switch (granularity) {
                             case COMPOSE: {
                                 // Action mact = new MyAction.MyMove(w, newTree);

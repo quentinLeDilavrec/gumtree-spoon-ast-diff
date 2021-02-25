@@ -3,8 +3,10 @@ package gumtree.spoon.diff;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -60,31 +62,41 @@ public class MultiDiffImpl implements Diff {
 	//  * Context of the spoon diff.
 	//  */
 	// private final TreeContext context;
-	private ITree lastSpoon;
+	private ITree lastSpooned;
 	private List<Diff> diffs = new ArrayList<>();
 	AbstractVersionedTree middle;
 	private Version lastVersion;
+	private Map<Version, Map<ITree, AbstractVersionedTree>> mappingPerVersion = new HashMap<>();
+
+	public Map<ITree, AbstractVersionedTree> getMapping(Version version) {
+		return Collections.unmodifiableMap(mappingPerVersion.get(version));
+	}
+	
+	private final MyScriptGenerator actionGenerator;
 
 	public AbstractVersionedTree getMiddle() {
 		return middle;
 	}
 
-	public MultiDiffImpl(ITree initialSpoon, Version version) {
-		this.lastSpoon = initialSpoon;
+	public MultiDiffImpl(ITree initialSpooned, Version version) {
+		this.lastSpooned = initialSpooned;
 		this.lastVersion = version;
-		middle = VersionedTree.deepCopySpoon(initialSpoon);
-		
-		Set<Version> visitedVersions =  new HashSet<>();
-		visitedVersions.add(version);
-		middle.setMetadata("visitedVersions", visitedVersions);
+		VersionedTree.AVTfromITreeAlongSpoon avTfromITreeAlongSpoon = new VersionedTree.AVTfromITreeAlongSpoon(
+				initialSpooned);
+		middle = avTfromITreeAlongSpoon.cloned;
+
+		this.mappingPerVersion.put(version, avTfromITreeAlongSpoon.getMappingFromOri());
+		this.actionGenerator = new MyScriptGenerator(middle, version, this.mappingPerVersion, getGlobalGranularity());
 	}
 
 	public DiffImpl compute(ITree rootSpoonRight, Version versionRight) {
-		ITree rootSpoonLeft = this.lastSpoon;
+		ITree rootSpoonLeft = this.lastSpooned;
 		Version rootVersionLeft = this.lastVersion;
-		this.lastSpoon = rootSpoonRight;
+		this.lastSpooned = rootSpoonRight;
 		this.lastVersion = versionRight;
-		DiffImpl r = new DiffImpl(new MyScriptGenerator(middle, getGlobalGranularity()), rootSpoonLeft, rootSpoonRight,rootVersionLeft,versionRight);
+		this.mappingPerVersion.put(versionRight, new HashMap<>());
+		DiffImpl r = new DiffImpl(actionGenerator, rootSpoonLeft,
+				rootSpoonRight, rootVersionLeft, versionRight);
 		diffs.add(r);
 		return r;
 	}

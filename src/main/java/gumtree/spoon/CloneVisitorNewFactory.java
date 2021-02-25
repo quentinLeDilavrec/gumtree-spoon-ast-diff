@@ -596,6 +596,7 @@ public class CloneVisitorNewFactory extends CtScanner {
 	private <T extends CtModifiable> Set<CtExtendedModifier> cloneModifiers(final T m, T aCtMethod) {
 		return this.cloneHelper.clone(m.getExtendedModifiers().stream()
 				.map(x -> {
+					// TODO do not access GUMTREE_NODE
 					ITree aaa = (ITree)m.getMetadata(SpoonGumTreeBuilder.GUMTREE_NODE);
 					if (aaa!=null) {
 						for (ITree y : aaa.getChildren()) {

@@ -41,16 +41,6 @@ public class NodeCreator extends CtInheritanceScanner {
 		if (m.getModifiers().isEmpty())
 			return;
 
-		// // We add the type of modifiable element
-		// String type = MODIFIERS + getClassName(m.getClass().getSimpleName());
-		// ITree modifiers = builder.createNode(type, "Modifiers");
-
-		// // We create a virtual node
-		// modifiers.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, new
-		// CtVirtualElement(type, m, m.getExtendedModifiers()));
-
-		// // ensuring an order (instead of hashset)
-		// // otherwise some flaky tests in CI
 		Set<CtExtendedModifier> modifiers1 = new TreeSet<>(new Comparator<CtExtendedModifier>() {
 			@Override
 			public int compare(CtExtendedModifier o1, CtExtendedModifier o2) {
@@ -87,44 +77,6 @@ public class NodeCreator extends CtInheritanceScanner {
 		return simpleName.replace("Ct", "").replace("Impl", "");
 	}
 
-	// @Override
-	// public <T> void scanCtVariable(CtVariable<T> e) {
-	// 	CtTypeReference<T> type = e.getType();
-	// 	if (type != null) {
-	// 		// TODO manage as standard CtTypeReference that have the role TYPE
-	// 		ITree variableType = builder.createNode("VARIABLE_TYPE",
-	// 				builder.getTypeName(type.getClass().getSimpleName()));
-	// 		variableType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
-	// 		type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, variableType);
-	// 		genericTransfo(type, variableType);
-	// 		builder.addSiblingNode(variableType);
-	// 	}
-	// }
-
-	// @Override
-	// public <T> void visitCtMethod(CtMethod<T> e) {
-	// 	// add the return type of the method
-	// 	CtTypeReference<T> type = e.getType();
-	// 	if (type != null) {
-	// 		// TODO manage as standard CtTypeReference that have the role TYPE
-	// 		ITree returnType = builder.createNode("RETURN_TYPE", builder.getTypeName(type.getClass().getSimpleName()));
-	// 		returnType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, type);
-	// 		type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, returnType);
-	// 		genericTransfo(type, returnType);
-	// 		builder.addSiblingNode(returnType);
-	// 	}
-
-	// 	for (CtTypeReference<?> thrown : e.getThrownTypes()) {
-	// 		ITree thrownType = builder.createNode("THROWS", builder.getTypeName(thrown.getClass().getSimpleName()));
-	// 		thrownType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, thrown);
-	// 		type.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, thrownType);
-	// 		genericTransfo(thrown, thrownType);
-	// 		builder.addSiblingNode(thrownType);
-	// 	}
-
-	// 	super.visitCtMethod(e);
-	// }
-
 	private <T> void genericTransfo(CtTypeReference<T> parametrizedType, ITree parametrizedTypeTree) {
 		ITree label = builder.createNode("LABEL", extracted(parametrizedType));//.replace("$", ".")); 
 		// TODO simple or qual ? should build qual myself for implicit ones
@@ -150,50 +102,4 @@ public class NodeCreator extends CtInheritanceScanner {
 		}
 	}
 
-	// private static <T> void computeExpliciteQualName(ITree parametrizedTypeTree, CtTypeReference<T> type) {
-	// 	// if (type.getDeclaringType() != null) {
-	// 	// 	computeExpliciteQualName(type.getDeclaringType()) + CtType.INNERTTYPE_SEPARATOR + type.getSimpleName();
-	// 	// } else if (type.getPackage() != null && !type.getPackage().isUnnamedPackage()) {
-	// 	// 	type.getPackage().getSimpleName() + CtPackage.PACKAGE_SEPARATOR + type.getSimpleName();
-	// 	// } else {
-	// 	// 	type.getSimpleName();
-	// 	// }
-	// }
-
-	// @Override
-	// public void scanCtReference(CtReference reference) {
-	// 	if (!builder.nodifiedLabel) {
-	// 		if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.SUPER_TYPE) {
-	// 			ITree superType = builder.createNode("SUPER_CLASS",
-	// 					builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
-	// 			// CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent()); // TODO ckeck why
-	// 			// superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
-	// 			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, reference);
-	// 			reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
-	// 			genericTransfo((CtTypeReference<?>) reference, superType);
-	// 			builder.addSiblingNode(superType);
-	// 		} else if (reference instanceof CtTypeReference && reference.getRoleInParent() == CtRole.INTERFACE) {
-	// 			ITree superType = builder.createNode("INTERFACE",
-	// 					builder.getTypeName(((CtTypeReference<?>) reference).getClass().getSimpleName()));
-	// 			// CtWrapper<CtReference> k = new CtWrapper<CtReference>(reference, reference.getParent());
-	// 			// superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, k);
-	// 			superType.setMetadata(SpoonGumTreeBuilder.SPOON_OBJECT, reference);
-	// 			reference.putMetadata(SpoonGumTreeBuilder.GUMTREE_NODE, superType);
-	// 			genericTransfo((CtTypeReference<?>) reference, superType);
-	// 			builder.addSiblingNode(superType);
-	// 		} else {
-	// 			super.scanCtReference(reference);
-	// 		}
-	// 	}
-	// }
-
-	// @Override
-	// public <T> void scanCtTypedElement(CtTypedElement<T> typedElement) {
-	// if (typedElement instanceof CtAnnotation) {
-	// CtAnnotation<?> annot = (CtAnnotation<?>) typedElement;
-
-	// } else {
-	// super.scanCtTypedElement(typedElement);
-	// }
-	// }
 }

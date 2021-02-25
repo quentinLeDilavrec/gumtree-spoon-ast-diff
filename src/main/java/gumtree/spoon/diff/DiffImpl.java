@@ -83,32 +83,8 @@ public class DiffImpl implements Diff {
 
 		final Matcher matcher = new CompositeMatchers.ClassicGumtree(rootSpoonLeft, rootSpoonRight, mappingsComp);
 		matcher.match();
-
 		this.editScript = actionGenerator.computeActions(matcher, beforeVersion,
 				afterVersion);
-
-		// this.atomicActionsList = actions.asList();
-		// this.composedActionsList = (List)actions.getComposed();
-
-		// ActionClassifier actionClassifier = new ActionClassifier(multiMappingsComp.asSet(), atomicActionsList);
-		// // Bugfix: the Action classifier must be executed *BEFORE* the convertToSpoon
-		// // because it writes meta-data on the trees
-		// this.rootOperations = wrapSpoon(actionClassifier.getRootActions());
-		// this.allOperations = wrapSpoon(atomicActionsList);
-
-		// this._mappingsComp = mappingsComp;
-
-		// for (int i = 0; i < this.getAllOperations().size(); i++) {
-		// 	Operation operation = this.getAllOperations().get(i);
-		// 	if (operation instanceof MoveOperation) {
-		// 		if (operation.getSrcNode() != null) {
-		// 			operation.getSrcNode().putMetadata("isMoved", true);
-		// 		}
-		// 		if (operation.getDstNode() != null) {
-		// 			operation.getDstNode().putMetadata("isMoved", true);
-		// 		}
-		// 	}
-		// }
 	}
 
 	private List<Operation> wrapSpoon(List<Action> actions) {

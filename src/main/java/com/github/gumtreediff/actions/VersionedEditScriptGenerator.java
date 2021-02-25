@@ -25,9 +25,10 @@ public abstract class VersionedEditScriptGenerator {
     // private VersionedEditScriptGenerator() {
     // }
 
-    public VersionedEditScriptGenerator(AbstractVersionedTree middle) {
+    public VersionedEditScriptGenerator(AbstractVersionedTree middle, Version initialVersion) {
         // this.middle = middle;
-        this.visitedVersions = (Set<Version>) middle.getMetadata("visitedVersions");
+        this.visitedVersions = new HashSet<>();
+        visitedVersions.add(initialVersion);
     }
 
     public final VersionedEditScript computeActions(Matcher matcher, Version beforeVersion, Version afterVersion) {
