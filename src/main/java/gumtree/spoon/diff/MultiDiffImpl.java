@@ -69,7 +69,11 @@ public class MultiDiffImpl implements Diff {
 	private Map<Version, Map<ITree, AbstractVersionedTree>> mappingPerVersion = new HashMap<>();
 
 	public Map<ITree, AbstractVersionedTree> getMapping(Version version) {
-		return Collections.unmodifiableMap(mappingPerVersion.get(version));
+		Map<ITree, AbstractVersionedTree> r = mappingPerVersion.get(version);
+		if (r == null) {
+			throw new RuntimeException("map with keys: " + mappingPerVersion.keySet() + " does not contain " + version);
+		}
+		return Collections.unmodifiableMap(r);
 	}
 	
 	private final MyScriptGenerator actionGenerator;
