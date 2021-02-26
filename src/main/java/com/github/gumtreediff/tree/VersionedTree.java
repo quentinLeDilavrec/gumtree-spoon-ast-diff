@@ -110,9 +110,9 @@ public class VersionedTree extends AbstractVersionedTree {
 
         public AVTfromITreeAlongSpoon(ITree ori) {
             cloned = unpopulatedDC(ori);
-            // result.setMetadata("Cloner", cloner);
-            // result.setMetadata("Launcher", cloner.getLauncher());
-            // result.setMetadata("Factory", cloner.getLauncher().getFactory());
+            cloned.setMetadata("Cloner", cloner);
+            cloned.setMetadata("Launcher", cloner.getLauncher());
+            cloned.setMetadata("Factory", cloner.getLauncher().getFactory());
         }
 
         private AbstractVersionedTree unpopulatedDC(ITree currentOrig) {
